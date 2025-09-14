@@ -22,7 +22,7 @@ export interface Invoice {
   supplier: string;
   amount: number;
   due_date: string;
-  status: 'SENT_TO_XERO' | 'XERO_DRAFT' | 'AWAITING_PAYMENT' | 'PAID';
+  status: 'READY' | 'NEW SUPPLIER' | 'REVIEW' | 'PAID';
   xero_bill_id: string;
   drive_embed_url: string;
   drive_view_url: string;
