@@ -1,0 +1,301 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, Camera, X, Send, Check, AlertTriangle } from 'lucide-react';
+import { Invoice, PaymentData } from '@/types/invoice';
+import { paymentMethodOptions } from '@/data/mockData';
+import { useToast } from '@/hooks/use-toast';
+
+interface PaymentSectionProps {
+  invoice: Invoice;
+  onMarkAsPaid: (data: PaymentData) => Promise<void>;
+  onSkip: () => void;
+  loading?: boolean;
+}
+
+export const PaymentSection: React.FC<PaymentSectionProps> = ({
+  invoice,
+  onMarkAsPaid,
+  onSkip,
+  loading = false
+}) => {
+  const [imageData, setImageData] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [email, setEmail] = useState(invoice.supplier_email || '');
+  const [message, setMessage] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('Bank Transfer');
+  const [dragOver, setDragOver] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      
+      for (let item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const blob = item.getAsFile();
+          if (blob) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              setImageData(event.target?.result as string);
+              toast({
+                title: "Screenshot captured!",
+                description: "Payment proof has been added.",
+              });
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [toast]);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImageData(event.target?.result as string);
+      };
+      reader.readAsDataURL(imageFile);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImageData(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMarkAsPaidWithRemittance = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter a supplier email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const paymentData: PaymentData = {
+      email,
+      message,
+      payment_method: paymentMethod as any,
+      image_base64: imageData || undefined
+    };
+
+    await onMarkAsPaid(paymentData);
+  };
+
+  const handleMarkAsPaidOnly = async () => {
+    const paymentData: PaymentData = {
+      email: '',
+      message: '',
+      payment_method: paymentMethod as any,
+      image_base64: imageData || undefined
+    };
+
+    await onMarkAsPaid(paymentData);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-AU', {
+      style: 'currency',
+      currency: 'AUD'
+    }).format(amount);
+  };
+
+  return (
+    <div className="dashboard-card p-6">
+      <h3 className="section-header">Payment Confirmation</h3>
+
+      {/* Payment Proof Upload */}
+      <div className="space-y-4">
+        <Label className="text-base font-medium">Payment Proof</Label>
+        
+        <div 
+          className={`upload-area ${dragOver ? 'dragover' : ''} ${imageData ? 'border-success' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onClick={() => !imageData && document.getElementById('file-input')?.click()}
+        >
+          {!imageData ? (
+            <div className="space-y-4">
+              <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
+              <div className="text-center">
+                <h4 className="text-lg font-medium mb-2">Drop your remittance screenshot here</h4>
+                <p className="text-muted-foreground mb-4">or click to browse files</p>
+                <div className="flex items-center justify-center gap-2 text-sm text-primary">
+                  <Camera className="h-4 w-4" />
+                  <span>💡 Press Ctrl+V to paste from clipboard</span>
+                </div>
+              </div>
+              <input
+                id="file-input"
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="relative">
+                <img 
+                  src={imageData} 
+                  alt="Payment proof" 
+                  className="max-h-64 w-auto mx-auto rounded-lg shadow-medium"
+                />
+                <Button
+                  variant="ghost-destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 bg-background/80 hover:bg-background"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setImageData(null);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-success">
+                <Check className="h-4 w-4" />
+                <span className="text-sm font-medium">Payment proof uploaded</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Payment Method */}
+        <div className="space-y-2">
+          <Label htmlFor="payment-method">Payment Method</Label>
+          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {paymentMethodOptions.map((method) => (
+                <SelectItem key={method} value={method}>
+                  {method}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Email Configuration */}
+        <div className="space-y-4 pt-4 border-t border-border">
+          <Label className="text-base font-medium">Email Remittance</Label>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Supplier Email</Label>
+            <div className="flex gap-2">
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="supplier@company.com"
+                className="flex-1"
+              />
+              {!invoice.supplier_email && (
+                <div className="flex items-center">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                </div>
+              )}
+            </div>
+            {!invoice.supplier_email && (
+              <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="message">Custom Message (Optional)</Label>
+            <Textarea
+              id="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Add a custom message to the remittance email..."
+              maxLength={500}
+              rows={3}
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {message.length}/500 characters
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Summary */}
+        <div className="p-4 bg-muted rounded-lg space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Invoice:</span>
+            <span className="font-medium">{invoice.invoice_number}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Supplier:</span>
+            <span className="font-medium">{invoice.supplier}</span>
+          </div>
+          <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
+            <span>Amount:</span>
+            <span>{formatCurrency(invoice.amount)}</span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-3 pt-4">
+          <Button
+            variant="default"
+            size="lg"
+            onClick={handleMarkAsPaidWithRemittance}
+            disabled={loading || !email}
+            className="w-full"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {loading ? 'Processing...' : 'Mark as Paid & Send Remittance'}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={handleMarkAsPaidOnly}
+            disabled={loading}
+            className="w-full"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Mark as Paid Only
+          </Button>
+          
+          <Button
+            variant="ghost"
+            onClick={onSkip}
+            disabled={loading}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Skip to Next Invoice
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
