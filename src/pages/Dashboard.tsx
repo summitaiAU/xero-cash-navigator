@@ -5,14 +5,14 @@ import { PaymentSection } from '@/components/PaymentSection';
 import { InvoiceNavigation } from '@/components/InvoiceNavigation';
 import { CompletionScreen } from '@/components/CompletionScreen';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
-import { mockInvoices } from '@/data/mockData';
+import { fetchInvoices, updateInvoicePaymentStatus } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 
 export const Dashboard: React.FC = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [completedInvoices, setCompletedInvoices] = useState<Set<string>>(new Set());
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({
     xeroSynced: false,
@@ -20,6 +20,28 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false
   });
   const { toast } = useToast();
+
+  // Load invoices from Supabase on mount
+  useEffect(() => {
+    const loadInvoices = async () => {
+      try {
+        setLoading(true);
+        const fetchedInvoices = await fetchInvoices();
+        setInvoices(fetchedInvoices);
+      } catch (error) {
+        console.error('Failed to load invoices:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load invoices. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInvoices();
+  }, [toast]);
 
   const currentInvoice = invoices[currentIndex];
   const isCompleted = currentInvoice && completedInvoices.has(currentInvoice.id);
@@ -127,20 +149,27 @@ export const Dashboard: React.FC = () => {
 
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update the invoice in state
-      const updatedInvoices = invoices.map(inv => 
-        inv.id === currentInvoice.id 
-          ? { ...inv, xero_data: { ...inv.xero_data, ...updates } }
-          : inv
-      );
-      setInvoices(updatedInvoices);
-      
-      setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+      // Fetch updated Xero data
+      if (currentInvoice.xero_bill_id) {
+        const xeroData = await invoiceService.getXeroData(currentInvoice.xero_bill_id);
+        
+        // Update the invoice in state
+        const updatedInvoices = invoices.map(inv => 
+          inv.id === currentInvoice.id 
+            ? { ...inv, xero_data: { ...inv.xero_data, ...xeroData, ...updates } }
+            : inv
+        );
+        setInvoices(updatedInvoices);
+        
+        setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+      }
     } catch (error) {
       console.error('Failed to update Xero:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch Xero data. Please try again.",
+        variant: "destructive",
+      });
       throw error;
     } finally {
       setLoading(false);
@@ -152,8 +181,8 @@ export const Dashboard: React.FC = () => {
 
     setLoading(true);
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Update invoice status in Supabase
+      await updateInvoicePaymentStatus(currentInvoice.id, true);
       
       // Mark as completed
       setCompletedInvoices(prev => new Set([...prev, currentInvoice.id]));
@@ -238,6 +267,18 @@ export const Dashboard: React.FC = () => {
         onRestart={handleRestart}
         onExportReport={handleExportReport}
       />
+    );
+  }
+
+  if (loading && invoices.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <h1 className="text-2xl font-bold mb-2">Loading Invoices</h1>
+          <p className="text-muted-foreground">Fetching your invoices from the database...</p>
+        </div>
+      </div>
     );
   }
 
