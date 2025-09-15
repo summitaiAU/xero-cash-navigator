@@ -8,6 +8,9 @@ import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
 import { fetchInvoices, updateInvoicePaymentStatus } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { LogOut, User } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -21,6 +24,23 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false
   });
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out",
+        description: "You've been successfully signed out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Sign out failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   // Load invoices from Supabase on mount
   useEffect(() => {
@@ -316,8 +336,20 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-dashboard-bg">
       {/* Header */}
       <header className="bg-card border-b border-border shadow-soft">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span>{user?.email}</span>
+            </div>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 
