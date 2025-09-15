@@ -20,9 +20,9 @@ interface XeroSectionProps {
 }
 
 // Exact mapping functions as specified
-const processWebhookData = (webhookArray: XeroWebhookInvoice[]): ProcessedXeroData => {
-  // Webhook is always an array, get first invoice
-  const invoice = webhookArray[0];
+const processWebhookData = (webhookData: XeroWebhookInvoice[] | XeroWebhookInvoice): ProcessedXeroData => {
+  // Handle both array and single object responses
+  const invoice = Array.isArray(webhookData) ? webhookData[0] : webhookData;
   
   return {
     // Header fields
