@@ -180,14 +180,26 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         }
       }
       
-      // Validate response structure
-      if (!result[0]?.Invoices?.[0]) {
-        throw new Error('Invalid response from approval service');
+      // Validate response structure - expecting array with status and Invoices
+      if (!Array.isArray(result) || !result[0]) {
+        throw new Error('Invalid response format from approval service');
+      }
+      
+      const responseData = result[0];
+      
+      // Check if the approval was successful
+      if (responseData.Status !== 'OK') {
+        throw new Error(`Approval failed with status: ${responseData.Status}`);
+      }
+      
+      // Validate we have the updated invoice data
+      if (!responseData.Invoices?.[0]) {
+        throw new Error('No invoice data returned from approval service');
       }
       
       // Update local state with approved invoice
-      const approvedInvoice = result[0].Invoices[0];
-      const updatedData = processWebhookData([approvedInvoice]);
+      const approvedInvoice = responseData.Invoices[0];
+      const updatedData = processWebhookData(approvedInvoice);
       setXeroData(updatedData);
       
       toast({
