@@ -171,20 +171,42 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         body: formData
       });
 
-      const result = await response.json();
-      
-      if (response.ok && result[0]?.ok) {
-        setRemittanceResponse(`✅ Remittance sent successfully to ${result[0].emailed_to}. File uploaded to Drive: ${result[0].file_name}`);
-        toast({
-          title: "Remittance sent!",
-          description: `Successfully sent to ${result[0].emailed_to}`,
-        });
+      if (response.ok) {
+        try {
+          const responseData = await response.json();
+          const isSuccess = Array.isArray(responseData) 
+            ? responseData.some(item => item.remittance_sent === true)
+            : responseData.remittance_sent === true;
+
+          if (isSuccess) {
+            const successItem = Array.isArray(responseData) 
+              ? responseData.find(item => item.remittance_sent === true)
+              : responseData;
+            
+            setRemittanceResponse(`✅ Remittance sent successfully`);
+            toast({
+              title: "Remittance sent!",
+              description: "Successfully uploaded and forwarded remittance",
+            });
+          } else {
+            throw new Error('Remittance not sent successfully');
+          }
+        } catch (error) {
+          console.error('Failed to parse response or remittance not sent:', error);
+          setRemittanceResponse(`❌ Error: Failed to upload and forward remittance`);
+          toast({
+            title: "Failed to send remittance",
+            description: "Failed to upload and forward remittance",
+            variant: "destructive",
+          });
+        }
       } else {
-        const errorMsg = result[0]?.error || 'Unknown error occurred';
-        setRemittanceResponse(`❌ Error: ${errorMsg}`);
+        const errorText = await response.text();
+        console.error('Upload failed:', errorText);
+        setRemittanceResponse(`❌ Error: Upload failed`);
         toast({
           title: "Failed to send remittance",
-          description: errorMsg,
+          description: "Failed to upload and forward remittance",
           variant: "destructive",
         });
       }
