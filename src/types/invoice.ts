@@ -6,8 +6,11 @@ export interface LineItem {
 }
 
 export interface XeroData {
-  status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID';
+  status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
   reference: string;
+  contact?: string;
+  date?: string;
+  due_date?: string;
   account_code: string;
   tax_rate: number;
   subtotal: number;

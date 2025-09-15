@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   RefreshCw, 
   ExternalLink, 
@@ -22,12 +23,14 @@ import { useToast } from '@/hooks/use-toast';
 interface XeroSectionProps {
   invoice: Invoice;
   onUpdate: (updates: any) => void;
+  onSync: () => void;
   loading?: boolean;
 }
 
 export const XeroSection: React.FC<XeroSectionProps> = ({ 
   invoice, 
   onUpdate, 
+  onSync,
   loading = false 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -39,6 +42,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       style: 'currency',
       currency: 'AUD'
     }).format(amount);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Not set';
+    
+    // Handle Xero date format /Date(timestamp)/
+    if (dateString.startsWith('/Date(')) {
+      const timestamp = parseInt(dateString.match(/\d+/)?.[0] || '0');
+      return new Date(timestamp).toLocaleDateString('en-AU');
+    }
+    
+    return new Date(dateString).toLocaleDateString('en-AU');
   };
 
   const calculateTotals = (lineItems: LineItem[]) => {
@@ -126,263 +141,271 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }
   };
 
-  const amountMatches = Math.abs(editedData.total - invoice.amount) < 0.01;
+  const amountMatches = Math.abs((editedData?.total || 0) - invoice.amount) < 0.01;
+  const hasXeroData = invoice.xero_data && Object.keys(invoice.xero_data).length > 0;
 
   return (
     <div className="dashboard-card p-6 relative">
-      {loading && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
-            <p className="text-sm text-muted-foreground">Loading Xero data...</p>
-          </div>
-        </div>
-      )}
-      
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h3 className="section-header mb-0">Xero Invoice</h3>
-          {editedData.status === 'DRAFT' && (
-            <Badge className="badge-draft">Draft</Badge>
+          {hasXeroData && editedData.status === 'DRAFT' && (
+            <Badge variant="secondary">Draft</Badge>
           )}
-          {editedData.status === 'AWAITING_PAYMENT' && (
-            <Badge className="badge-success">Awaiting Payment</Badge>
+          {hasXeroData && editedData.status === 'AWAITING_PAYMENT' && (
+            <Badge variant="default">Awaiting Payment</Badge>
+          )}
+          {hasXeroData && editedData.status === 'AUTHORISED' && (
+            <Badge variant="default">Authorised</Badge>
           )}
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" disabled={loading}>
+          <Button variant="outline" size="sm" onClick={onSync} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Sync
+            {loading ? 'Syncing...' : 'Sync'}
           </Button>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => window.open(`https://xero.com/bill/${invoice.xero_bill_id}`, '_blank')}
-          >
-            <ExternalLink className="h-4 w-4 mr-2" />
-            Open in Xero
-          </Button>
-        </div>
-      </div>
-
-      {/* Transaction Details */}
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="reference">Reference</Label>
-            {isEditing ? (
-              <Input
-                id="reference"
-                value={editedData.reference}
-                onChange={(e) => setEditedData({ ...editedData, reference: e.target.value })}
-                placeholder="Enter reference"
-              />
-            ) : (
-              <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted">
-                {editedData.reference || 'No reference'}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Amount</Label>
-            <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted font-medium">
-              {formatCurrency(invoice.amount)}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="account">Account</Label>
-            {isEditing ? (
-              <Select
-                value={editedData.account_code}
-                onValueChange={(value) => setEditedData({ ...editedData, account_code: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select account" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accountOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted">
-                {accountOptions.find(opt => opt.value === editedData.account_code)?.label || 'Not selected'}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tax-rate">Tax Rate</Label>
-            {isEditing ? (
-              <Select
-                value={editedData.tax_rate.toString()}
-                onValueChange={(value) => {
-                  const newTaxRate = parseInt(value);
-                  const newLineItems = editedData.line_items.map(item => ({
-                    ...item,
-                    tax_amount: (item.amount * newTaxRate) / 100
-                  }));
-                  const totals = calculateTotals(newLineItems);
-                  setEditedData({
-                    ...editedData,
-                    tax_rate: newTaxRate,
-                    line_items: newLineItems,
-                    ...totals
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {taxRateOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value.toString()}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted">
-                {editedData.tax_rate}%
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Line Items */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label className="text-base font-medium">Line Items</Label>
-            {isEditing && (
-              <Button variant="ghost" size="sm" onClick={addLineItem}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Item
-              </Button>
-            )}
-          </div>
-
-          <div className="space-y-3">
-            {editedData.line_items.map((item, index) => (
-              <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-3 p-4 border border-border rounded-lg">
-                <div className="md:col-span-2 space-y-2">
-                  <Label>Description</Label>
-                  {isEditing ? (
-                    <Input
-                      value={item.description}
-                      onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                      placeholder="Enter description"
-                    />
-                  ) : (
-                    <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted text-sm">
-                      {item.description}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Amount</Label>
-                  {isEditing ? (
-                    <Input
-                      type="number"
-                      value={item.amount}
-                      onChange={(e) => handleLineItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      step="0.01"
-                    />
-                  ) : (
-                    <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted text-sm">
-                      {formatCurrency(item.amount)}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-end gap-2">
-                  <div className="flex-1 space-y-2">
-                    <Label>Tax</Label>
-                    <div className="flex items-center h-9 px-3 rounded-md border border-border bg-muted text-sm">
-                      {formatCurrency(item.tax_amount)}
-                    </div>
-                  </div>
-                  {isEditing && editedData.line_items.length > 1 && (
-                    <Button
-                      variant="ghost-destructive"
-                      size="icon"
-                      onClick={() => removeLineItem(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Summary */}
-        <div className="border-t border-border pt-4">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Subtotal:</span>
-              <span>{formatCurrency(editedData.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Tax:</span>
-              <span>{formatCurrency(editedData.tax)}</span>
-            </div>
-            <div className="flex justify-between text-base font-medium border-t border-border pt-2">
-              <span>Total:</span>
-              <div className="flex items-center gap-2">
-                <span>{formatCurrency(editedData.total)}</span>
-                {amountMatches ? (
-                  <CheckCircle className="h-4 w-4 text-success" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                )}
-              </div>
-            </div>
-            {!amountMatches && (
-              <div className="text-sm text-warning">
-                Difference: {formatCurrency(editedData.total - invoice.amount)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-          {!isEditing ? (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Edit3 className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-              {editedData.status === 'DRAFT' && amountMatches && (
-                <Button variant="success" onClick={handleApprove}>
-                  Approve Bill
-                </Button>
-              )}
-            </>
-          ) : (
-            <>
-              <Button onClick={handleSave} disabled={!amountMatches}>
-                <Save className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-              <Button variant="ghost" onClick={handleCancel}>
-                <X className="h-4 w-4 mr-2" />
-                Cancel
-              </Button>
-            </>
+          {invoice.xero_bill_id && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.open(`https://go.xero.com/AccountsPayable/View.aspx?InvoiceID=${invoice.xero_bill_id}`, '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in Xero
+            </Button>
           )}
         </div>
       </div>
+
+      {loading ? (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-9 w-full" />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+        </div>
+      ) : !hasXeroData ? (
+        <div className="text-center py-8">
+          <p className="text-muted-foreground mb-4">No Xero data available</p>
+          <Button onClick={onSync} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Load Xero Data
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Header Information */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">To</Label>
+              <div className="font-medium">{editedData?.contact || invoice.supplier || 'No contact'}</div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
+              <div>{formatDate(editedData?.date || '')}</div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
+              <div>{formatDate(editedData?.due_date || invoice.due_date)}</div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
+              <div className="font-medium">{invoice.invoice_number || 'No number'}</div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="reference">Reference</Label>
+              {isEditing ? (
+                <Input
+                  id="reference"
+                  value={editedData?.reference || ''}
+                  onChange={(e) => setEditedData({ ...editedData, reference: e.target.value })}
+                  placeholder="Enter reference"
+                />
+              ) : (
+                <div className="flex items-center h-9 px-3 rounded-md border border-border bg-background">
+                  {editedData?.reference || 'No reference'}
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
+              <div>Australian Dollar</div>
+            </div>
+          </div>
+
+          {/* Line Items Table */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-medium">Items</Label>
+              {isEditing && (
+                <Button variant="outline" size="sm" onClick={addLineItem}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Item
+                </Button>
+              )}
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-sm font-medium text-muted-foreground">
+                <div className="col-span-1 p-3">Item</div>
+                <div className="col-span-4 p-3 border-l border-border">Description</div>
+                <div className="col-span-1 p-3 border-l border-border text-right">Qty.</div>
+                <div className="col-span-2 p-3 border-l border-border text-right">Price</div>
+                <div className="col-span-2 p-3 border-l border-border">Account</div>
+                <div className="col-span-1 p-3 border-l border-border">Tax rate</div>
+                <div className="col-span-1 p-3 border-l border-border text-right">Amount</div>
+              </div>
+
+              {(editedData?.line_items || []).map((item, index) => (
+                <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
+                  <div className="col-span-1 p-3 flex items-center justify-center">
+                    <div className="w-6 h-6 bg-muted rounded flex items-center justify-center text-xs">
+                      {index + 1}
+                    </div>
+                  </div>
+                  
+                  <div className="col-span-4 p-3 border-l border-border">
+                    {isEditing ? (
+                      <Input
+                        value={item.description}
+                        onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                        placeholder="Enter description"
+                        className="h-8"
+                      />
+                    ) : (
+                      <div className="text-sm">{item.description || 'No description'}</div>
+                    )}
+                  </div>
+                  
+                  <div className="col-span-1 p-3 border-l border-border text-right">
+                    <div className="text-sm">1</div>
+                  </div>
+                  
+                  <div className="col-span-2 p-3 border-l border-border">
+                    {isEditing ? (
+                      <Input
+                        type="number"
+                        value={item.amount}
+                        onChange={(e) => handleLineItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        step="0.01"
+                        className="h-8 text-right"
+                      />
+                    ) : (
+                      <div className="text-sm text-right">{formatCurrency(item.amount)}</div>
+                    )}
+                  </div>
+                  
+                  <div className="col-span-2 p-3 border-l border-border">
+                    <div className="text-sm">{item.account_code} - Expenses</div>
+                  </div>
+                  
+                  <div className="col-span-1 p-3 border-l border-border">
+                    <div className="text-sm">GST ({editedData?.tax_rate || 10}%)</div>
+                  </div>
+                  
+                  <div className="col-span-1 p-3 border-l border-border flex items-center justify-between">
+                    <div className="text-sm font-medium">{formatCurrency(item.amount + item.tax_amount)}</div>
+                    {isEditing && (editedData?.line_items || []).length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeLineItem(index)}
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Totals */}
+          <div className="flex justify-end">
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(editedData?.subtotal || 0)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Total tax:</span>
+                <span>{formatCurrency(editedData?.tax || 0)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
+                <span>Total:</span>
+                <div className="flex items-center gap-2">
+                  <span>AUD {formatCurrency(editedData?.total || 0)}</span>
+                  {amountMatches ? (
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  )}
+                </div>
+              </div>
+              {!amountMatches && (
+                <div className="text-sm text-amber-600">
+                  Difference: {formatCurrency((editedData?.total || 0) - invoice.amount)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
+            {!isEditing ? (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+                {editedData?.status === 'DRAFT' && amountMatches && (
+                  <Button onClick={handleApprove}>
+                    Approve Bill
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button onClick={handleSave} disabled={!amountMatches}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={handleCancel}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
