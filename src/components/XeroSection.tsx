@@ -130,15 +130,37 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   // Edit mode functions
   const startEditing = () => {
-    if (!webhookData[0]) return;
-    const invoice = webhookData[0];
+    console.log('Edit button clicked', { webhookData, xeroData });
+    
+    // Use xeroData if webhookData is not available
+    if (!webhookData[0] && !xeroData) {
+      console.error('No data available for editing');
+      return;
+    }
+    
+    // Construct editable data from available source
+    const sourceData = webhookData[0] || {
+      InvoiceNumber: xeroData?.invoiceNumber || '',
+      DateString: xeroData?.issueDate ? `${xeroData.issueDate.split('/').reverse().join('-')}T00:00:00` : '',
+      DueDateString: xeroData?.dueDate ? `${xeroData.dueDate.split('/').reverse().join('-')}T00:00:00` : '',
+      Reference: xeroData?.reference || '',
+      CurrencyCode: xeroData?.currency || 'AUD',
+      LineItems: xeroData?.lineItems?.map((item, index) => ({
+        Description: item.description || '',
+        Quantity: item.quantity || 0,
+        UnitAmount: item.unitAmount || 0,
+        AccountCode: item.account?.split(' -')[0] || '429',
+        TaxType: item.taxRate === 'GST (10%)' ? 'INPUT' : 'NONE'
+      })) || []
+    };
+    
     setEditableData({
-      invoiceNumber: invoice.InvoiceNumber || '',
-      issueDate: invoice.DateString ? invoice.DateString.split('T')[0] : '',
-      dueDate: invoice.DueDateString ? invoice.DueDateString.split('T')[0] : '',
-      reference: invoice.Reference || '',
-      currency: invoice.CurrencyCode || 'AUD',
-      lineItems: (invoice.LineItems || []).map((item, index) => ({
+      invoiceNumber: sourceData.InvoiceNumber || '',
+      issueDate: sourceData.DateString ? sourceData.DateString.split('T')[0] : '',
+      dueDate: sourceData.DueDateString ? sourceData.DueDateString.split('T')[0] : '',
+      reference: sourceData.Reference || '',
+      currency: sourceData.CurrencyCode || 'AUD',
+      lineItems: (sourceData.LineItems || []).map((item: any, index: number) => ({
         id: `item_${Date.now()}_${index}`,
         description: item.Description || '',
         quantity: item.Quantity || 0,
@@ -149,6 +171,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     });
     setIsEditing(true);
     setSaveError(null);
+    console.log('Edit mode enabled');
   };
 
   const cancelEditing = () => {
@@ -903,8 +926,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 <>
                   <Button 
                     onClick={startEditing}
-                    variant="outline"
-                    className="text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
+                    disabled={!hasXeroData}
+                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit
