@@ -5,6 +5,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
+    .neq('status', 'PAID')
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -24,7 +25,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
     due_date: invoice.due_date || '',
     status: (invoice.status as 'READY' | 'NEW SUPPLIER' | 'REVIEW' | 'PAID') || 'READY',
     xero_bill_id: invoice.xero_invoice_id || '',
-    drive_embed_url: invoice.google_drive_link || '',
+    drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
     supplier_email: invoice.email_id || '',
     xero_data: {
