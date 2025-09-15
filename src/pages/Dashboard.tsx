@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PDFViewer } from '@/components/PDFViewer';
 import { XeroSection } from '@/components/XeroSection';
 import { PaymentSection } from '@/components/PaymentSection';
+import { PaidInvoiceSection } from '@/components/PaidInvoiceSection';
 import { InvoiceNavigation } from '@/components/InvoiceNavigation';
 import { CompletionScreen } from '@/components/CompletionScreen';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
@@ -24,6 +25,7 @@ export const Dashboard: React.FC = () => {
     paymentUploaded: false,
     remittanceSent: false
   });
+  const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -184,6 +186,7 @@ export const Dashboard: React.FC = () => {
       setCurrentIndex(currentIndex + 1);
       resetProcessingStatus();
       scrollToTop();
+      setShowSuccessOverlay(false);
     }
   };
 
@@ -267,6 +270,9 @@ export const Dashboard: React.FC = () => {
         remittanceSent: !!paymentData.email 
       }));
 
+      // Show success overlay temporarily
+      setShowSuccessOverlay(true);
+
       toast({
         title: "Payment processed!",
         description: `Invoice ${currentInvoice.invoice_number} marked as paid.`,
@@ -274,6 +280,7 @@ export const Dashboard: React.FC = () => {
 
       // Auto-advance after 2 seconds
       setTimeout(() => {
+        setShowSuccessOverlay(false);
         if (currentIndex < invoices.length - 1) {
           handleNext();
         }
@@ -296,6 +303,25 @@ export const Dashboard: React.FC = () => {
 
   const handleSkip = () => {
     handleNext();
+  };
+
+  const handleReprocessPayment = async () => {
+    if (!currentInvoice) return;
+    
+    // Remove from completed invoices to allow reprocessing
+    setCompletedInvoices(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(currentInvoice.id);
+      return newSet;
+    });
+
+    // Reset processing status
+    resetProcessingStatus();
+    
+    toast({
+      title: "Invoice reopened",
+      description: "You can now reprocess this payment.",
+    });
   };
 
   const handleRestart = () => {
@@ -431,12 +457,19 @@ export const Dashboard: React.FC = () => {
                   loading={isXeroLoading}
                 />
                 
-                <PaymentSection
-                  invoice={currentInvoice}
-                  onMarkAsPaid={handleMarkAsPaid}
-                  onSkip={handleSkip}
-                  loading={loading}
-                />
+                {isCompleted ? (
+                  <PaidInvoiceSection
+                    invoice={currentInvoice}
+                    onReprocess={handleReprocessPayment}
+                  />
+                ) : (
+                  <PaymentSection
+                    invoice={currentInvoice}
+                    onMarkAsPaid={handleMarkAsPaid}
+                    onSkip={handleSkip}
+                    loading={loading}
+                  />
+                )}
                 
                 {/* Extra spacing at bottom for better scrolling */}
                 <div className="h-6"></div>
@@ -496,17 +529,24 @@ export const Dashboard: React.FC = () => {
             loading={isXeroLoading}
           />
           
-          <PaymentSection
-            invoice={currentInvoice}
-            onMarkAsPaid={handleMarkAsPaid}
-            onSkip={handleSkip}
-            loading={loading}
-          />
+          {isCompleted ? (
+            <PaidInvoiceSection
+              invoice={currentInvoice}
+              onReprocess={handleReprocessPayment}
+            />
+          ) : (
+            <PaymentSection
+              invoice={currentInvoice}
+              onMarkAsPaid={handleMarkAsPaid}
+              onSkip={handleSkip}
+              loading={loading}
+            />
+          )}
         </main>
       </div>
 
-      {/* Global Success Overlay */}
-      {isCompleted && (
+      {/* Global Success Overlay - Only show temporarily after payment */}
+      {showSuccessOverlay && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-card p-8 rounded-lg shadow-large text-center animate-fade-in">
             <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
