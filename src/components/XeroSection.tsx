@@ -213,53 +213,55 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           </Button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Header Information */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-            <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-6 py-4">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">To</Label>
               <div className="font-medium">{editedData?.contact || invoice.supplier || 'No contact'}</div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
               <div>{formatDate(editedData?.date || '')}</div>
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
               <div>{formatDate(editedData?.due_date || invoice.due_date)}</div>
             </div>
-            
-            <div className="space-y-2">
+          </div>
+          
+          <div className="grid grid-cols-3 gap-6 py-2">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
               <div className="font-medium">{invoice.invoice_number || 'No number'}</div>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="reference">Reference</Label>
+            <div className="space-y-1">
+              <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
               {isEditing ? (
                 <Input
-                  id="reference"
                   value={editedData?.reference || ''}
                   onChange={(e) => setEditedData({ ...editedData, reference: e.target.value })}
                   placeholder="Enter reference"
+                  className="h-8"
                 />
               ) : (
-                <div className="flex items-center h-9 px-3 rounded-md border border-border bg-background">
+                <div className={`py-1 px-2 rounded text-sm ${!editedData?.reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
                   {editedData?.reference || 'No reference'}
                 </div>
               )}
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
               <div>Australian Dollar</div>
             </div>
           </div>
 
           {/* Line Items Table */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-base font-medium">Items</Label>
               {isEditing && (
@@ -272,24 +274,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-sm font-medium text-muted-foreground">
-                <div className="col-span-1 p-3">Item</div>
-                <div className="col-span-4 p-3 border-l border-border">Description</div>
-                <div className="col-span-1 p-3 border-l border-border text-right">Qty.</div>
-                <div className="col-span-2 p-3 border-l border-border text-right">Price</div>
-                <div className="col-span-2 p-3 border-l border-border">Account</div>
-                <div className="col-span-1 p-3 border-l border-border">Tax rate</div>
-                <div className="col-span-1 p-3 border-l border-border text-right">Amount</div>
+                <div className="col-span-1 p-2 text-center">Item</div>
+                <div className="col-span-4 p-2 border-l border-border">Description</div>
+                <div className="col-span-1 p-2 border-l border-border text-center">Qty.</div>
+                <div className="col-span-1 p-2 border-l border-border text-center">Price</div>
+                <div className="col-span-2 p-2 border-l border-border text-center">Account</div>
+                <div className="col-span-2 p-2 border-l border-border text-center">Tax rate</div>
+                <div className="col-span-1 p-2 border-l border-border text-center">Amount</div>
               </div>
 
               {(editedData?.line_items || []).map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                  <div className="col-span-1 p-3 flex items-center justify-center">
-                    <div className="w-6 h-6 bg-muted rounded flex items-center justify-center text-xs">
-                      {index + 1}
-                    </div>
+                  <div className="col-span-1 p-2 flex items-center justify-center">
+                    <div className="text-sm">{index + 1}</div>
                   </div>
                   
-                  <div className="col-span-4 p-3 border-l border-border">
+                  <div className="col-span-4 p-2 border-l border-border">
                     {isEditing ? (
                       <Input
                         value={item.description}
@@ -302,11 +302,11 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                     )}
                   </div>
                   
-                  <div className="col-span-1 p-3 border-l border-border text-right">
+                  <div className="col-span-1 p-2 border-l border-border text-center">
                     <div className="text-sm">1</div>
                   </div>
                   
-                  <div className="col-span-2 p-3 border-l border-border">
+                  <div className="col-span-1 p-2 border-l border-border text-center">
                     {isEditing ? (
                       <Input
                         type="number"
@@ -314,29 +314,29 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         onChange={(e) => handleLineItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
                         placeholder="0.00"
                         step="0.01"
-                        className="h-8 text-right"
+                        className="h-8 text-center"
                       />
                     ) : (
-                      <div className="text-sm text-right">{formatCurrency(item.amount)}</div>
+                      <div className="text-sm">${item.amount.toFixed(2)}</div>
                     )}
                   </div>
                   
-                  <div className="col-span-2 p-3 border-l border-border">
+                  <div className="col-span-2 p-2 border-l border-border text-center">
                     <div className="text-sm">{item.account_code} - Expenses</div>
                   </div>
                   
-                  <div className="col-span-1 p-3 border-l border-border">
-                    <div className="text-sm">GST ({editedData?.tax_rate || 10}%)</div>
+                  <div className="col-span-2 p-2 border-l border-border text-center">
+                    <div className="text-sm">GST (10%)</div>
                   </div>
                   
-                  <div className="col-span-1 p-3 border-l border-border flex items-center justify-between">
-                    <div className="text-sm font-medium">{formatCurrency(item.amount + item.tax_amount)}</div>
+                  <div className="col-span-1 p-2 border-l border-border flex items-center justify-center">
+                    <div className="text-sm font-medium">${(item.amount + item.tax_amount).toFixed(2)}</div>
                     {isEditing && (editedData?.line_items || []).length > 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => removeLineItem(index)}
-                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        className="h-6 w-6 p-0 ml-2 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -349,7 +349,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
           {/* Totals */}
           <div className="flex justify-end">
-            <div className="w-64 space-y-2">
+            <div className="w-64 space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
                 <span>{formatCurrency(editedData?.subtotal || 0)}</span>
