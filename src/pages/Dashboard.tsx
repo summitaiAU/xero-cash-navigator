@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
+import SodhiLogo from '@/assets/sodhi-logo.svg';
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -365,8 +366,12 @@ export const Dashboard: React.FC = () => {
         {/* Fixed Header */}
         <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
-            <div>
-              <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+                <p className="text-sm text-muted-foreground">Process invoices and manage payments</p>
+              </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
               <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
@@ -433,8 +438,12 @@ export const Dashboard: React.FC = () => {
         {/* Scrollable Header for Mobile/Tablet */}
         <header className="bg-card border-b border-border shadow-soft">
           <div className="max-w-screen-2xl mx-auto px-3 md:px-4 py-2 md:py-3 flex justify-between items-center">
-            <div>
-              <h1 className="text-lg md:text-xl font-bold text-gradient-primary">Payment Dashboard</h1>
+            <div className="flex items-center gap-3">
+              <img src={SodhiLogo} alt="Sodhi Logo" className="h-6 w-auto" />
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-gradient-primary">Payment Dashboard</h1>
+                <p className="text-xs text-muted-foreground">Process invoices and manage payments</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">

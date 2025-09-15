@@ -75,7 +75,8 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, isPaid: bool
     .from('invoices')
     .update({ 
       status: 'PAID',
-      remittance_sent: isPaid
+      remittance_sent: isPaid,
+      paid_date: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
