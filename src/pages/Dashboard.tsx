@@ -458,8 +458,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Navigation Bar - Remove green border */}
-        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20" style={{ top: desktopOffset.header }}>
+        {/* Fixed Navigation Bar */}
+        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20 pt-4" style={{ top: desktopOffset.header }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
