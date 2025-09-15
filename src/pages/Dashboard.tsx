@@ -35,6 +35,11 @@ export const Dashboard: React.FC = () => {
   const navRef = React.useRef<HTMLDivElement | null>(null);
   const rightScrollRef = React.useRef<HTMLDivElement | null>(null);
   const desktopOffset = useSafeOffsets(headerRef.current, navRef.current, { headerFallback: 64, navFallback: 56 });
+  const SAFE_MIN_HEADER = 72; // px fallback for header
+  const SAFE_MIN_NAV = 64;    // px fallback for nav
+  const SAFETY = 12;          // extra buffer to prevent overlap
+  const navTop = Math.max(desktopOffset.header, SAFE_MIN_HEADER);
+  const contentTop = Math.max(desktopOffset.total, SAFE_MIN_HEADER + SAFE_MIN_NAV) + SAFETY;
 
   const handleSignOut = async () => {
     try {
@@ -418,7 +423,7 @@ export const Dashboard: React.FC = () => {
       {/* Desktop Layout */}
       <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
         {/* Fixed Header */}
-        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
+        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30 min-h-16">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
@@ -441,7 +446,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Navigation Bar */}
-        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20 pt-4" style={{ top: desktopOffset.header }}>
+        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20 min-h-14" style={{ top: navTop }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
@@ -454,8 +459,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Layout Container - Increased top spacing */}
-        <div className="fixed left-0 right-0 bottom-0" style={{ top: desktopOffset.total }}>
+        {/* Fixed Layout Container - Rugged safe top offset */}
+        <div className="fixed left-0 right-0 bottom-0" style={{ top: contentTop }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
             {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
             <div className="w-1/2 h-full flex-shrink-0">
