@@ -37,6 +37,13 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   const [savingEmail, setSavingEmail] = useState(false);
   const { toast } = useToast();
 
+  // Update email when invoice changes
+  useEffect(() => {
+    setEmail(invoice.remittance_email || '');
+    setShowAddEmail(false);
+    setNewSupplierEmail('');
+  }, [invoice.id]);
+
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -359,7 +366,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                     {email ? email : (
                       <span className="flex items-center gap-2 text-muted-foreground">
                         <Plus className="h-4 w-4" />
-                        Add Email +
+                        Add Email
                       </span>
                     )}
                   </SelectValue>
@@ -371,7 +378,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                   <SelectItem value="add_email">
                     <span className="flex items-center gap-2">
                       <Plus className="h-4 w-4" />
-                      Add Email +
+                      Add Email
                     </span>
                   </SelectItem>
                 </SelectContent>
