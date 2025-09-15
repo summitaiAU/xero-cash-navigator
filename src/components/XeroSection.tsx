@@ -595,104 +595,108 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             
             {/* Desktop Table View */}
             {isEditing ? (
-              <div className="hidden lg:block border border-border rounded-lg overflow-visible">
-                <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                  <div className="col-span-1 p-3 text-center">Item</div>
-                  <div className="col-span-3 p-3 border-l border-border">Description</div>
-                  <div className="col-span-1 p-3 border-l border-border text-center">Qty</div>
-                  <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
-                  <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
-                  <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
-                  <div className="col-span-1 p-3 border-l border-border text-center">Amount</div>
-                  <div className="col-span-1 p-3 border-l border-border">Actions</div>
+              <div className="hidden lg:block border border-border rounded-lg overflow-visible relative">
+                <div className="bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                  <div className="flex">
+                    <div className="w-12 p-3 text-center flex-shrink-0">Item</div>
+                    <div className="flex-1 min-w-0 p-3 border-l border-border">Description</div>
+                    <div className="w-20 p-3 border-l border-border text-center flex-shrink-0">Qty</div>
+                    <div className="w-24 p-3 border-l border-border text-center flex-shrink-0">Unit Price</div>
+                    <div className="w-24 p-3 border-l border-border text-center flex-shrink-0">Account</div>
+                    <div className="w-24 p-3 border-l border-border text-center flex-shrink-0">Tax</div>
+                    <div className="w-24 p-3 border-l border-border text-center flex-shrink-0">Amount</div>
+                    <div className="w-16 p-3 border-l border-border text-center flex-shrink-0">Actions</div>
+                  </div>
                 </div>
 
                 {editableData?.lineItems?.map((item: any, index: number) => {
                   const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
                   return (
-                    <div key={item.id} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                      <div className="col-span-1 p-3 flex items-center justify-center">
-                        <div className="text-sm">{index + 1}</div>
-                      </div>
-                      
-                      <div className="col-span-3 p-3 border-l border-border">
-                        <Textarea
-                          value={item.description}
-                          onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                          className="text-sm min-h-[60px] resize-none"
-                          placeholder="Item description"
-                        />
-                      </div>
-                      
-                      <div className="col-span-1 p-3 border-l border-border">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.quantity}
-                          onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
-                          className="text-sm text-center"
-                        />
-                      </div>
-                      
-                      <div className="col-span-2 p-3 border-l border-border">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.unitAmount}
-                          onChange={(e) => updateLineItem(index, 'unitAmount', e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                      
-                      <div className="col-span-2 p-3 border-l border-border">
-                        <Input
-                          type="text"
-                          value={item.accountCode}
-                          onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                      
-                      <div className="col-span-1 p-3 border-l border-border">
-                        <select
-                          value={item.taxType}
-                          onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                          className="relative z-10 w-full min-w-[120px] px-2 py-1 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring"
-                        >
-                          <option value="INPUT">INPUT</option>
-                          <option value="NONE">NONE</option>
-                        </select>
-                      </div>
-                      
-                      <div className="col-span-1 p-3 border-l border-border text-right flex items-center">
-                        <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
-                      </div>
-                      
-                      <div className="col-span-1 p-3 border-l border-border flex items-center justify-center">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeLineItem(index)}
-                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    <div key={item.id} className="border-b border-border last:border-b-0 hover:bg-muted/20 relative">
+                      <div className="flex min-h-[80px]">
+                        <div className="w-12 p-3 flex items-center justify-center flex-shrink-0">
+                          <div className="text-sm font-medium">{index + 1}</div>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 p-3 border-l border-border">
+                          <Textarea
+                            value={item.description}
+                            onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                            className="text-sm min-h-[54px] resize-none w-full"
+                            placeholder="Item description"
+                          />
+                        </div>
+                        
+                        <div className="w-20 p-3 border-l border-border flex items-center flex-shrink-0">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.quantity || ''}
+                            onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
+                            className="text-sm text-center w-full"
+                            placeholder="0"
+                          />
+                        </div>
+                        
+                        <div className="w-24 p-3 border-l border-border flex items-center flex-shrink-0">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={item.unitAmount || ''}
+                            onChange={(e) => updateLineItem(index, 'unitAmount', e.target.value)}
+                            className="text-sm w-full"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        
+                        <div className="w-24 p-3 border-l border-border flex items-center flex-shrink-0">
+                          <Input
+                            type="text"
+                            value={item.accountCode}
+                            onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
+                            className="text-sm w-full"
+                          />
+                        </div>
+                        
+                        <div className="w-24 p-3 border-l border-border flex items-center flex-shrink-0 relative">
+                          <select
+                            value={item.taxType}
+                            onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
+                            className="absolute inset-3 z-20 w-auto min-w-[72px] h-[40px] px-2 py-1 text-xs border border-input bg-background rounded focus:ring-2 focus:ring-ring focus:border-ring shadow-sm"
+                          >
+                            <option value="INPUT">INPUT</option>
+                            <option value="NONE">NONE</option>
+                          </select>
+                        </div>
+                        
+                        <div className="w-24 p-3 border-l border-border flex items-center justify-end flex-shrink-0">
+                          <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
+                        </div>
+                        
+                        <div className="w-16 p-3 border-l border-border flex items-center justify-center flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLineItem(index)}
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 h-8 w-8 p-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
                 })}
                 
-                <div className="bg-muted/20">
-                  <div className="col-span-12 p-3">
-                    <Button
-                      variant="outline"
-                      onClick={addLineItem}
-                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Line Item
-                    </Button>
-                  </div>
+                <div className="bg-muted/20 p-3">
+                  <Button
+                    variant="outline"
+                    onClick={addLineItem}
+                    className="text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Line Item
+                  </Button>
                 </div>
               </div>
             ) : (
