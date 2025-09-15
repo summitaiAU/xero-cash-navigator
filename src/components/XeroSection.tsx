@@ -3,13 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { 
   RefreshCw, 
   ExternalLink, 
   CheckCircle, 
   AlertTriangle,
   Check,
-  Loader2
+  Loader2,
+  Edit,
+  Save,
+  X,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -112,7 +118,165 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const [xeroLoading, setXeroLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  
+  // Edit mode state management
+  const [isEditing, setIsEditing] = useState(false);
+  const [editableData, setEditableData] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [webhookData, setWebhookData] = useState<XeroWebhookInvoice[]>([]);
+  
   const { toast } = useToast();
+
+  // Edit mode functions
+  const startEditing = () => {
+    if (!webhookData[0]) return;
+    const invoice = webhookData[0];
+    setEditableData({
+      invoiceNumber: invoice.InvoiceNumber || '',
+      issueDate: invoice.DateString ? invoice.DateString.split('T')[0] : '',
+      dueDate: invoice.DueDateString ? invoice.DueDateString.split('T')[0] : '',
+      reference: invoice.Reference || '',
+      currency: invoice.CurrencyCode || 'AUD',
+      lineItems: (invoice.LineItems || []).map((item, index) => ({
+        id: `item_${Date.now()}_${index}`,
+        description: item.Description || '',
+        quantity: item.Quantity || 0,
+        unitAmount: item.UnitAmount || 0,
+        accountCode: item.AccountCode || '429',
+        taxType: item.TaxType || 'INPUT'
+      }))
+    });
+    setIsEditing(true);
+    setSaveError(null);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditableData(null);
+    setSaveError(null);
+  };
+
+  // Real-time calculation functions
+  const calculateLineItemSubtotal = (quantity: number, unitAmount: number) => {
+    return (quantity || 0) * (unitAmount || 0);
+  };
+
+  const calculateTaxAmount = (subtotal: number, taxType: string) => {
+    return taxType === 'INPUT' ? subtotal * 0.1 : 0;
+  };
+
+  const calculateInvoiceTotals = (lineItems: any[]) => {
+    const subtotal = lineItems.reduce((sum, item) => {
+      return sum + calculateLineItemSubtotal(item.quantity, item.unitAmount);
+    }, 0);
+    
+    const totalTax = lineItems.reduce((sum, item) => {
+      const itemSubtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
+      return sum + calculateTaxAmount(itemSubtotal, item.taxType);
+    }, 0);
+    
+    return { subtotal, totalTax, total: subtotal + totalTax };
+  };
+
+  const updateLineItem = (index: number, field: string, value: any) => {
+    if (!editableData) return;
+    const updatedLineItems = [...editableData.lineItems];
+    updatedLineItems[index] = {
+      ...updatedLineItems[index],
+      [field]: field === 'quantity' || field === 'unitAmount' ? parseFloat(value) || 0 : value
+    };
+    setEditableData({ ...editableData, lineItems: updatedLineItems });
+  };
+
+  const addLineItem = () => {
+    if (!editableData) return;
+    setEditableData({
+      ...editableData,
+      lineItems: [...editableData.lineItems, {
+        id: Date.now() + Math.random(),
+        description: '', 
+        quantity: 0, 
+        unitAmount: 0,
+        accountCode: '429', 
+        taxType: 'INPUT'
+      }]
+    });
+  };
+
+  const removeLineItem = (index: number) => {
+    if (!editableData) return;
+    setEditableData({
+      ...editableData,
+      lineItems: editableData.lineItems.filter((_: any, i: number) => i !== index)
+    });
+  };
+
+  // Save function with webhook integration
+  const saveInvoice = async () => {
+    if (!editableData || !webhookData[0]) return;
+    
+    setIsSaving(true);
+    setSaveError(null);
+    
+    try {
+      const payload = {
+        invoice_details: {
+          Invoices: [{
+            Type: webhookData[0].Type || 'ACCPAY',
+            Status: webhookData[0].Status || 'DRAFT',
+            CurrencyCode: editableData.currency,
+            Contact: { Name: webhookData[0].Contact?.Name || 'Unknown Contact' },
+            InvoiceNumber: editableData.invoiceNumber,
+            Date: editableData.issueDate,
+            DueDate: editableData.dueDate,
+            Reference: editableData.reference,
+            LineAmountTypes: 'Exclusive',
+            LineItems: editableData.lineItems.map((item: any) => ({
+              Description: item.description,
+              Quantity: item.quantity,
+              UnitAmount: item.unitAmount,
+              AccountCode: item.accountCode,
+              TaxType: item.taxType
+            }))
+          }]
+        }
+      };
+      
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/346bb7cc-233c-4dce-a721-e09e258fd1c3', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result[0]?.error?.message || `HTTP ${response.status}: Save failed`);
+      }
+      
+      if (result[0]?.Status === 'OK' && result[0]?.Invoices?.[0]) {
+        const updatedInvoice = result[0].Invoices[0];
+        // Update webhook data and process it
+        setWebhookData([updatedInvoice]);
+        setXeroData(processWebhookData([updatedInvoice]));
+        setIsEditing(false);
+        setEditableData(null);
+        toast({ title: 'Invoice Saved', description: 'Invoice changes saved successfully.' });
+      } else {
+        throw new Error('Invalid response from update service');
+      }
+    } catch (error: any) {
+      setSaveError(error.message);
+      toast({
+        title: 'Save Failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Fetch Xero invoice from webhook
   const fetchXeroData = async () => {
@@ -147,6 +311,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       // Process the webhook data
       const processed = processWebhookData(webhookResponse);
       setXeroData(processed);
+      
+      // Store raw webhook data for editing
+      setWebhookData(webhookResponse);
       
     } catch (error: any) {
       console.error('Fetch Xero invoice failed', error);
@@ -311,31 +478,76 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
-              <div className="text-sm md:text-base">{xeroData.issueDate}</div>
+              {isEditing ? (
+                <Input
+                  type="date"
+                  value={editableData?.issueDate || ''}
+                  onChange={(e) => setEditableData({...editableData, issueDate: e.target.value})}
+                />
+              ) : (
+                <div className="text-sm md:text-base">{xeroData.issueDate}</div>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-              <div className="text-sm md:text-base">{xeroData.dueDate}</div>
+              {isEditing ? (
+                <Input
+                  type="date"
+                  value={editableData?.dueDate || ''}
+                  onChange={(e) => setEditableData({...editableData, dueDate: e.target.value})}
+                />
+              ) : (
+                <div className="text-sm md:text-base">{xeroData.dueDate}</div>
+              )}
             </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
-              <div className="font-medium text-sm md:text-base break-words">{xeroData.invoiceNumber}</div>
+              {isEditing ? (
+                <Input
+                  type="text"
+                  value={editableData?.invoiceNumber || ''}
+                  onChange={(e) => setEditableData({...editableData, invoiceNumber: e.target.value})}
+                />
+              ) : (
+                <div className="font-medium text-sm md:text-base break-words">{xeroData.invoiceNumber}</div>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
-              <div className={`py-2 px-3 rounded text-sm break-words ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : 'bg-muted'}`}>
-                {xeroData.reference || 'No reference'}
-              </div>
+              {isEditing ? (
+                <Input
+                  type="text"
+                  value={editableData?.reference || ''}
+                  onChange={(e) => setEditableData({...editableData, reference: e.target.value})}
+                />
+              ) : (
+                <div className={`py-2 px-3 rounded text-sm break-words ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : 'bg-muted'}`}>
+                  {xeroData.reference || 'No reference'}
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
-              <div className="text-sm md:text-base">{xeroData.currency}</div>
+              {isEditing ? (
+                <select
+                  value={editableData?.currency || 'AUD'}
+                  onChange={(e) => setEditableData({...editableData, currency: e.target.value})}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="AUD">AUD</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </select>
+              ) : (
+                <div className="text-sm md:text-base">{xeroData.currency}</div>
+              )}
             </div>
           </div>
 
@@ -343,111 +555,327 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="space-y-4">
             <Label className="text-base font-medium">Items</Label>
             
-            {/* Desktop Table View - Now with full width */}
-            <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                <div className="col-span-1 p-3 text-center">Item</div>
-                <div className="col-span-3 p-3 border-l border-border">Description</div>
-                <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
-                <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
-                <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
-                <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
-                <div className="col-span-2 p-3 border-l border-border text-center">Amount</div>
-              </div>
+            {/* Desktop Table View */}
+            {isEditing ? (
+              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                  <div className="col-span-1 p-3 text-center">Item</div>
+                  <div className="col-span-3 p-3 border-l border-border">Description</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Qty</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Amount</div>
+                  <div className="col-span-1 p-3 border-l border-border">Actions</div>
+                </div>
 
-              {xeroData.lineItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                  <div className="col-span-1 p-3 flex items-center justify-center">
-                    <div className="text-sm">{item.itemNumber}</div>
-                  </div>
-                  
-                  <div className="col-span-3 p-3 border-l border-border">
-                    <div className="text-sm break-words pr-2">{item.description || 'No description'}</div>
-                  </div>
-                  
-                  <div className="col-span-1 p-3 border-l border-border text-center">
-                    <div className="text-sm">{item.quantity}</div>
-                  </div>
-                  
-                  <div className="col-span-2 p-3 border-l border-border text-center">
-                    <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
-                  </div>
-                  
-                  <div className="col-span-2 p-3 border-l border-border">
-                    <div className="text-xs break-words leading-tight">{item.account}</div>
-                  </div>
-                  
-                  <div className="col-span-1 p-3 border-l border-border text-center">
-                    <div className="text-xs break-words">{item.taxRate}</div>
-                  </div>
-                  
-                  <div className="col-span-2 p-3 border-l border-border text-right">
-                    <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
+                {editableData?.lineItems?.map((item: any, index: number) => {
+                  const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
+                  return (
+                    <div key={item.id} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
+                      <div className="col-span-1 p-3 flex items-center justify-center">
+                        <div className="text-sm">{index + 1}</div>
+                      </div>
+                      
+                      <div className="col-span-3 p-3 border-l border-border">
+                        <Input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                          className="text-sm"
+                          placeholder="Item description"
+                        />
+                      </div>
+                      
+                      <div className="col-span-1 p-3 border-l border-border">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.quantity}
+                          onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
+                          className="text-sm text-center"
+                        />
+                      </div>
+                      
+                      <div className="col-span-2 p-3 border-l border-border">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unitAmount}
+                          onChange={(e) => updateLineItem(index, 'unitAmount', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      <div className="col-span-2 p-3 border-l border-border">
+                        <Input
+                          type="text"
+                          value={item.accountCode}
+                          onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      
+                      <div className="col-span-1 p-3 border-l border-border">
+                        <select
+                          value={item.taxType}
+                          onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
+                          className="w-full px-2 py-1 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="INPUT">INPUT</option>
+                          <option value="NONE">NONE</option>
+                        </select>
+                      </div>
+                      
+                      <div className="col-span-1 p-3 border-l border-border text-right flex items-center">
+                        <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
+                      </div>
+                      
+                      <div className="col-span-1 p-3 border-l border-border flex items-center justify-center">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeLineItem(index)}
+                          className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                <div className="bg-muted/20">
+                  <div className="col-span-12 p-3">
+                    <Button
+                      variant="outline"
+                      onClick={addLineItem}
+                      className="text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Line Item
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                  <div className="col-span-1 p-3 text-center">Item</div>
+                  <div className="col-span-3 p-3 border-l border-border">Description</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Amount</div>
+                </div>
+
+                {xeroData.lineItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
+                    <div className="col-span-1 p-3 flex items-center justify-center">
+                      <div className="text-sm">{item.itemNumber}</div>
+                    </div>
+                    
+                    <div className="col-span-3 p-3 border-l border-border">
+                      <div className="text-sm break-words pr-2">{item.description || 'No description'}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-3 border-l border-border text-center">
+                      <div className="text-sm">{item.quantity}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border text-center">
+                      <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border">
+                      <div className="text-xs break-words leading-tight">{item.account}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-3 border-l border-border text-center">
+                      <div className="text-xs break-words">{item.taxRate}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border text-right">
+                      <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-3">
-              {xeroData.lineItems.map((item, index) => (
-                <div key={index} className="border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="font-medium text-sm">Item #{item.itemNumber}</div>
-                    <div className="font-bold text-right">{formatCurrency(item.amount)}</div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Description</Label>
-                      <div className="text-sm break-words">{item.description || 'No description'}</div>
+              {isEditing ? (
+                editableData?.lineItems?.map((item: any, index: number) => {
+                  const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
+                  return (
+                    <div key={item.id} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-sm">Item #{index + 1}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-right">{formatCurrency(subtotal)}</div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLineItem(index)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Description</Label>
+                          <Input
+                            type="text"
+                            value={item.description}
+                            onChange={(e) => updateLineItem(index, 'description', e.target.value)}
+                            className="mt-1"
+                            placeholder="Item description"
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Quantity</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.quantity}
+                              onChange={(e) => updateLineItem(index, 'quantity', e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Unit Price</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.unitAmount}
+                              onChange={(e) => updateLineItem(index, 'unitAmount', e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Account</Label>
+                            <Input
+                              type="text"
+                              value={item.accountCode}
+                              onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">Tax Rate</Label>
+                            <select
+                              value={item.taxType}
+                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
+                              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <option value="INPUT">INPUT</option>
+                              <option value="NONE">NONE</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                xeroData.lineItems.map((item, index) => (
+                  <div key={index} className="border border-border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-medium text-sm">Item #{item.itemNumber}</div>
+                      <div className="font-bold text-right">{formatCurrency(item.amount)}</div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">Quantity</Label>
-                        <div className="text-sm">{item.quantity}</div>
+                        <Label className="text-xs text-muted-foreground">Description</Label>
+                        <div className="text-sm break-words">{item.description || 'No description'}</div>
                       </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Unit Price</Label>
-                        <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Quantity</Label>
+                          <div className="text-sm">{item.quantity}</div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Unit Price</Label>
+                          <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Account</Label>
-                        <div className="text-xs break-words">{item.account}</div>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Tax Rate</Label>
-                        <div className="text-xs">{item.taxRate}</div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Account</Label>
+                          <div className="text-xs break-words">{item.account}</div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Tax Rate</Label>
+                          <div className="text-xs">{item.taxRate}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
+              
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  onClick={addLineItem}
+                  className="w-full text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Line Item
+                </Button>
+              )}
             </div>
           </div>
 
           {/* Totals - Responsive */}
           <div className="flex justify-end">
             <div className="w-full max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span className="font-medium">{formatCurrency(xeroData.subtotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Total tax:</span>
-                <span className="font-medium">{formatCurrency(xeroData.totalTax)}</span>
-              </div>
-              <div className="flex justify-between text-base md:text-lg font-bold border-t border-border pt-2">
-                <span>Total:</span>
-                <div className="flex items-center gap-2">
-                  <span>{formatCurrency(xeroData.total)}</span>
-                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                </div>
-              </div>
+              {(() => {
+                const totals = isEditing && editableData 
+                  ? calculateInvoiceTotals(editableData.lineItems)
+                  : { 
+                      subtotal: xeroData?.subtotal || 0, 
+                      totalTax: xeroData?.totalTax || 0, 
+                      total: xeroData?.total || 0 
+                    };
+                
+                return (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span className={`font-medium ${isEditing ? 'text-blue-600 font-semibold' : ''}`}>
+                        {formatCurrency(totals.subtotal)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Total tax:</span>
+                      <span className={`font-medium ${isEditing ? 'text-blue-600 font-semibold' : ''}`}>
+                        {formatCurrency(totals.totalTax)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-base md:text-lg font-bold border-t border-border pt-2">
+                      <span>Total:</span>
+                      <div className="flex items-center gap-2">
+                        <span className={isEditing ? 'text-blue-600' : ''}>{formatCurrency(totals.total)}</span>
+                        {!isEditing && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -469,34 +897,86 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-start items-center gap-4 pt-6 border-t border-border">
-            {hasXeroData && xeroData.status === 'DRAFT' && (
-              <Button 
-                onClick={handleApprove}
-                disabled={isApproving}
-                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
-              >
-                {isApproving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Approving...
-                  </>
-                ) : (
-                  'Approve Bill'
-                )}
-              </Button>
-            )}
-            
-            {hasXeroData && xeroData.status === 'AUTHORISED' && (
-              <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium">
-                <Check className="h-4 w-4 mr-2" />
-                Approved
+          <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4 pt-6 border-t border-border">
+            <div className="flex flex-wrap items-center gap-2">
+              {!isEditing ? (
+                <>
+                  <Button 
+                    onClick={startEditing}
+                    variant="outline"
+                    className="text-blue-600 hover:text-blue-800 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  
+                  {hasXeroData && xeroData.status === 'DRAFT' && (
+                    <Button 
+                      onClick={handleApprove}
+                      disabled={isApproving}
+                      className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        'Approve Bill'
+                      )}
+                    </Button>
+                  )}
+                  
+                  {hasXeroData && xeroData.status === 'AUTHORISED' && (
+                    <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium">
+                      <Check className="h-4 w-4 mr-2" />
+                      Approved
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Button 
+                    onClick={saveInvoice}
+                    disabled={isSaving}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:bg-green-400 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button 
+                    onClick={cancelEditing}
+                    disabled={isSaving}
+                    variant="outline"
+                    className="disabled:bg-gray-100"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Error Messages */}
+            {approvalError && !isEditing && (
+              <div className="w-full sm:flex-1 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                <p className="text-sm">Error: {approvalError}</p>
               </div>
             )}
-
-            {approvalError && (
-              <div className="flex-1 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
-                <p className="text-sm">Error: {approvalError}</p>
+            
+            {saveError && isEditing && (
+              <div className="w-full sm:flex-1 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                <p className="text-sm">Save Error: {saveError}</p>
               </div>
             )}
           </div>
