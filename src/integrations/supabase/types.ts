@@ -22,6 +22,8 @@ export type Database = {
           due_date: string | null
           email_id: string | null
           entity: string | null
+          google_drive_embed_link: string | null
+          google_drive_id: string | null
           google_drive_link: string | null
           gst: number | null
           id: string
@@ -46,9 +48,11 @@ export type Database = {
           due_date?: string | null
           email_id?: string | null
           entity?: string | null
+          google_drive_embed_link?: string | null
+          google_drive_id?: string | null
           google_drive_link?: string | null
           gst?: number | null
-          id: string
+          id?: string
           invoice_date?: string | null
           invoice_no?: string | null
           link_to_invoice?: string | null
@@ -70,6 +74,8 @@ export type Database = {
           due_date?: string | null
           email_id?: string | null
           entity?: string | null
+          google_drive_embed_link?: string | null
+          google_drive_id?: string | null
           google_drive_link?: string | null
           gst?: number | null
           id?: string

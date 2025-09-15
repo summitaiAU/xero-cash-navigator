@@ -5,7 +5,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
-    .neq('status', 'PAID')
+    .in('status', ['READY', 'NEW SUPPLIER', 'REVIEW'])
     .order('created_at', { ascending: true });
 
   if (error) {
