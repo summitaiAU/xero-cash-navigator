@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
+import { useSafeOffsets } from '@/hooks/useSafeOffsets';
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -33,26 +34,7 @@ export const Dashboard: React.FC = () => {
   const headerRef = React.useRef<HTMLDivElement | null>(null);
   const navRef = React.useRef<HTMLDivElement | null>(null);
   const rightScrollRef = React.useRef<HTMLDivElement | null>(null);
-  const [desktopOffset, setDesktopOffset] = useState({ header: 0, nav: 0, total: 0 });
-
-  useEffect(() => {
-    const compute = () => {
-      const header = headerRef.current?.getBoundingClientRect().height ?? 0;
-      const nav = navRef.current?.getBoundingClientRect().height ?? 0;
-      setDesktopOffset({ header, nav, total: header + nav });
-    };
-    compute();
-
-    const ro = new ResizeObserver(() => compute());
-    if (headerRef.current) ro.observe(headerRef.current);
-    if (navRef.current) ro.observe(navRef.current);
-
-    window.addEventListener('resize', compute);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', compute);
-    };
-  }, []);
+  const desktopOffset = useSafeOffsets(headerRef.current, navRef.current, { headerFallback: 64, navFallback: 56 });
 
   const handleSignOut = async () => {
     try {
