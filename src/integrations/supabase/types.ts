@@ -33,6 +33,7 @@ export type Database = {
           list_items: Json[] | null
           payment_ref: string | null
           project: string | null
+          remittance_email: string | null
           remittance_sent: boolean | null
           status: string | null
           subtotal: number | null
@@ -59,6 +60,7 @@ export type Database = {
           list_items?: Json[] | null
           payment_ref?: string | null
           project?: string | null
+          remittance_email?: string | null
           remittance_sent?: boolean | null
           status?: string | null
           subtotal?: number | null
@@ -85,6 +87,7 @@ export type Database = {
           list_items?: Json[] | null
           payment_ref?: string | null
           project?: string | null
+          remittance_email?: string | null
           remittance_sent?: boolean | null
           status?: string | null
           subtotal?: number | null
