@@ -25,7 +25,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [email, setEmail] = useState(invoice.remittance_email || invoice.supplier_email || '');
+  const [email, setEmail] = useState(invoice.remittance_email || '');
   const [message, setMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>('Bank Transfer');
   const [dragOver, setDragOver] = useState(false);
@@ -295,7 +295,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 className="flex-1"
                 disabled={!!invoice.remittance_email}
               />
-              {!invoice.remittance_email && !invoice.supplier_email && (
+              {!invoice.remittance_email && (
                 <div className="flex items-center">
                   <AlertTriangle className="h-4 w-4 text-warning" />
                 </div>
@@ -303,10 +303,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             </div>
             {invoice.remittance_email ? (
               <p className="text-sm text-muted-foreground">📧 Using remittance email from database</p>
-            ) : !invoice.supplier_email ? (
-              <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
             ) : (
-              <p className="text-sm text-muted-foreground">📧 Using supplier email from database</p>
+              <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
             )}
           </div>
 
