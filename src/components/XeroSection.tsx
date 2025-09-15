@@ -139,10 +139,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const hasXeroData = !!xeroData;
 
   return (
-    <div className="dashboard-card p-6 relative">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h3 className="section-header mb-0">Xero Invoice</h3>
+    <div className="dashboard-card p-4 md:p-6 relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <h3 className="section-header mb-0 truncate">Xero Invoice</h3>
           {hasXeroData && (
             <>
               {xeroData.status === 'DRAFT' && <Badge variant="secondary">Draft</Badge>}
@@ -152,7 +152,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           )}
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Button variant="outline" size="sm" onClick={fetchXeroData} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             {isLoading ? 'Syncing...' : 'Sync'}
@@ -166,7 +166,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
               }}
             >
               <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Xero
+              <span className="hidden sm:inline">Open in Xero</span>
+              <span className="sm:hidden">Xero</span>
             </Button>
           )}
         </div>
@@ -244,49 +245,51 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="space-y-4">
             <Label className="text-base font-medium">Items</Label>
             
-            {/* Desktop Table View */}
-            <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                <div className="col-span-1 p-3 text-center">Item</div>
-                <div className="col-span-4 p-3 border-l border-border">Description</div>
-                <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
-                <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
-                <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
-                <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
-                <div className="col-span-1 p-3 border-l border-border text-center">Amount</div>
-              </div>
-
-              {xeroData.lineItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                  <div className="col-span-1 p-3 flex items-center justify-center">
-                    <div className="text-sm">{item.itemNumber}</div>
-                  </div>
-                  
-                  <div className="col-span-4 p-3 border-l border-border">
-                    <div className="text-sm break-words">{item.description || 'No description'}</div>
-                  </div>
-                  
-                  <div className="col-span-1 p-3 border-l border-border text-center">
-                    <div className="text-sm">{item.quantity}</div>
-                  </div>
-                  
-                  <div className="col-span-2 p-3 border-l border-border text-center">
-                    <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
-                  </div>
-                  
-                  <div className="col-span-2 p-3 border-l border-border text-center">
-                    <div className="text-xs break-words">{item.account}</div>
-                  </div>
-                  
-                  <div className="col-span-1 p-3 border-l border-border text-center">
-                    <div className="text-xs">{item.taxRate}</div>
-                  </div>
-                  
-                  <div className="col-span-1 p-3 border-l border-border text-center">
-                    <div className="text-sm font-medium">{formatCurrency(item.amount)}</div>
-                  </div>
+            {/* Desktop Table View with horizontal scroll */}
+            <div className="hidden lg:block border border-border rounded-lg overflow-x-auto">
+              <div className="min-w-[800px]">
+                <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                  <div className="col-span-1 p-3 text-center">Item</div>
+                  <div className="col-span-3 p-3 border-l border-border">Description</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">Amount</div>
                 </div>
-              ))}
+
+                {xeroData.lineItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
+                    <div className="col-span-1 p-3 flex items-center justify-center">
+                      <div className="text-sm">{item.itemNumber}</div>
+                    </div>
+                    
+                    <div className="col-span-3 p-3 border-l border-border">
+                      <div className="text-sm break-words pr-2">{item.description || 'No description'}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-3 border-l border-border text-center">
+                      <div className="text-sm">{item.quantity}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border text-center">
+                      <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border">
+                      <div className="text-xs break-words leading-tight">{item.account}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-3 border-l border-border text-center">
+                      <div className="text-xs break-words">{item.taxRate}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-3 border-l border-border text-right">
+                      <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Mobile Card View */}
