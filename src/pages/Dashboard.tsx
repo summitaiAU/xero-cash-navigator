@@ -26,6 +26,30 @@ export const Dashboard: React.FC = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
+  // Desktop fixed layout measurements
+  const headerRef = React.useRef<HTMLDivElement | null>(null);
+  const navRef = React.useRef<HTMLDivElement | null>(null);
+  const [desktopOffset, setDesktopOffset] = useState({ header: 0, nav: 0, total: 0 });
+
+  useEffect(() => {
+    const compute = () => {
+      const header = headerRef.current?.getBoundingClientRect().height ?? 0;
+      const nav = navRef.current?.getBoundingClientRect().height ?? 0;
+      setDesktopOffset({ header, nav, total: header + nav });
+    };
+    compute();
+
+    const ro = new ResizeObserver(() => compute());
+    if (headerRef.current) ro.observe(headerRef.current);
+    if (navRef.current) ro.observe(navRef.current);
+
+    window.addEventListener('resize', compute);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', compute);
+    };
+  }, []);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -339,7 +363,7 @@ export const Dashboard: React.FC = () => {
       {/* Desktop Layout */}
       <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
         {/* Fixed Header */}
-        <div className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
+        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
             <div>
               <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
@@ -358,7 +382,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Navigation Bar - Remove green border */}
-        <div className="fixed top-[73px] left-0 right-0 bg-dashboard-bg z-20">
+        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20" style={{ top: desktopOffset.header }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
@@ -372,7 +396,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Layout Container - Increased top spacing */}
-        <div className="fixed top-[160px] left-0 right-0 bottom-0">
+        <div className="fixed left-0 right-0 bottom-0" style={{ top: desktopOffset.total }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
             {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
             <div className="w-1/2 h-full flex-shrink-0">
