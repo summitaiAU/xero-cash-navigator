@@ -50,13 +50,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.error('Error signing out:', error);
         throw error;
       }
-      // If session is already missing, that's fine - user is already signed out
+      // Explicitly clear local state to ensure redirect happens
+      setSession(null);
+      setUser(null);
     } catch (error: any) {
       if (error.message !== 'Auth session missing!') {
         console.error('Error signing out:', error);
         throw error;
       }
-      // Session missing is not an error - user is already signed out
+      // For session missing errors, just clear the local state
+      setSession(null);
+      setUser(null);
     }
   };
 
