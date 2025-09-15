@@ -45,7 +45,7 @@ export const Dashboard: React.FC = () => {
 
   const currentInvoice = invoices[currentIndex];
   const isCompleted = currentInvoice && completedInvoices.has(currentInvoice.id);
-  const allCompleted = completedInvoices.size === invoices.length;
+  const allCompleted = invoices.length > 0 && completedInvoices.size === invoices.length;
 
   // Keyboard navigation
   useEffect(() => {
