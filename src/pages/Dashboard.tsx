@@ -335,64 +335,112 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-dashboard-bg">
-      {/* Header */}
-      <header className="bg-card border-b border-border shadow-soft sticky top-0 z-20">
-        <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-2 lg:gap-4">
-            <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
-              <User className="h-3 w-3 lg:h-4 lg:w-4" />
-              <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
+    <>
+      {/* Desktop Layout */}
+      <div className="hidden lg:block min-h-screen bg-dashboard-bg">
+        {/* Fixed Header */}
+        <header className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
             </div>
-            <Button variant="outline" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </Button>
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
+                <User className="h-3 w-3 lg:h-4 lg:w-4" />
+                <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </Button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-screen-2xl mx-auto p-4 space-y-6">
-        {/* Navigation */}
-        <InvoiceNavigation
-          currentIndex={currentIndex}
-          totalInvoices={invoices.length}
-          onPrevious={handlePrevious}
-          onNext={handleNext}
-          onReset={handleRestart}
-          completedCount={completedInvoices.size}
-        />
-
-        {/* Desktop Layout - Equal height columns */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
-          <div className="flex flex-col max-h-full">
-            <PDFViewer invoice={currentInvoice} />
-          </div>
-          
-          <div className="flex flex-col space-y-6 overflow-y-auto max-h-full">
-            <XeroSection
-              invoice={currentInvoice}
-              onUpdate={handleXeroUpdate}
-              onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
-              loading={isXeroLoading}
-            />
-            
-            <PaymentSection
-              invoice={currentInvoice}
-              onMarkAsPaid={handleMarkAsPaid}
-              onSkip={handleSkip}
-              loading={loading}
+        {/* Fixed Navigation Bar */}
+        <div className="fixed top-[73px] left-0 right-0 bg-dashboard-bg border-b border-border z-20">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
+            <InvoiceNavigation
+              currentIndex={currentIndex}
+              totalInvoices={invoices.length}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+              onReset={handleRestart}
+              completedCount={completedInvoices.size}
             />
           </div>
         </div>
 
-        {/* Tablet/Mobile Layout - Stacked */}
-        <div className="lg:hidden space-y-6">
-          <div className="h-96 md:h-[50vh] sm:h-[48vh]">
+        {/* Main Content Container */}
+        <div className="pt-[145px] h-screen">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full">
+            <div className="grid grid-cols-2 gap-6 h-full">
+              {/* Fixed Left Column - PDF Viewer */}
+              <div className="flex flex-col h-full">
+                <PDFViewer invoice={currentInvoice} />
+              </div>
+              
+              {/* Scrollable Right Column */}
+              <div className="flex flex-col h-full">
+                <div className="overflow-y-auto h-full space-y-6 pr-2">
+                  <XeroSection
+                    invoice={currentInvoice}
+                    onUpdate={handleXeroUpdate}
+                    onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                    loading={isXeroLoading}
+                  />
+                  
+                  <PaymentSection
+                    invoice={currentInvoice}
+                    onMarkAsPaid={handleMarkAsPaid}
+                    onSkip={handleSkip}
+                    loading={loading}
+                  />
+                  
+                  {/* Extra spacing at bottom for better scrolling */}
+                  <div className="h-6"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet Layout */}
+      <div className="lg:hidden min-h-screen bg-dashboard-bg">
+        {/* Scrollable Header for Mobile/Tablet */}
+        <header className="bg-card border-b border-border shadow-soft">
+          <div className="max-w-screen-2xl mx-auto px-3 md:px-4 py-2 md:py-3 flex justify-between items-center">
+            <div>
+              <h1 className="text-lg md:text-xl font-bold text-gradient-primary">Payment Dashboard</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+                <User className="h-3 w-3" />
+                <span className="truncate max-w-[120px]">{user?.email}</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline text-xs">Sign Out</span>
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="p-3 md:p-4 space-y-4 md:space-y-6">
+          {/* Navigation - Will become floating on scroll */}
+          <InvoiceNavigation
+            currentIndex={currentIndex}
+            totalInvoices={invoices.length}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            onReset={handleRestart}
+            completedCount={completedInvoices.size}
+          />
+
+          {/* PDF Viewer with increased height */}
+          <div className="h-[60vh] md:h-[75vh]">
             <PDFViewer invoice={currentInvoice} />
           </div>
           
@@ -409,30 +457,30 @@ export const Dashboard: React.FC = () => {
             onSkip={handleSkip}
             loading={loading}
           />
-        </div>
+        </main>
+      </div>
 
-        {/* Success Overlay */}
-        {isCompleted && (
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-card p-8 rounded-lg shadow-large text-center animate-fade-in">
-              <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Invoice Processed!</h3>
-              <p className="text-muted-foreground">
-                {currentInvoice.invoice_number} has been marked as paid.
-              </p>
+      {/* Global Success Overlay */}
+      {isCompleted && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-card p-8 rounded-lg shadow-large text-center animate-fade-in">
+            <div className="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
+            <h3 className="text-xl font-semibold mb-2">Invoice Processed!</h3>
+            <p className="text-muted-foreground">
+              {currentInvoice.invoice_number} has been marked as paid.
+            </p>
           </div>
-        )}
-
-        {/* Keyboard Shortcuts Help */}
-        <div className="fixed bottom-4 right-4 text-xs text-muted-foreground bg-card px-3 py-2 rounded-lg shadow-soft border border-border">
-          Press ? for keyboard shortcuts
         </div>
-      </main>
-    </div>
+      )}
+
+      {/* Global Keyboard Shortcuts Help */}
+      <div className="fixed bottom-4 right-4 text-xs text-muted-foreground bg-card px-3 py-2 rounded-lg shadow-soft border border-border">
+        Press ? for keyboard shortcuts
+      </div>
+    </>
   );
 };
