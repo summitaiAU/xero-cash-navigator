@@ -25,54 +25,99 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   const hasPrevious = currentIndex > 0;
 
   return (
-    <div className="dashboard-card p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold">
-            Invoice {currentIndex + 1} of {totalInvoices}
-          </h2>
-          <div className="text-sm text-muted-foreground">
-            {completedCount} completed
+    <>
+      {/* Desktop Navigation */}
+      <div className="hidden lg:block dashboard-card p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <h2 className="text-xl font-semibold">
+              Invoice {currentIndex + 1} of {totalInvoices}
+            </h2>
+            <div className="text-sm text-muted-foreground">
+              {completedCount} completed
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {onReset && (
+              <Button variant="ghost" size="sm" onClick={onReset}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrevious}
+              disabled={!hasPrevious}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNext}
+              disabled={!hasNext}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          {onReset && (
-            <Button variant="ghost" size="sm" onClick={onReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Reset
-            </Button>
-          )}
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPrevious}
-            disabled={!hasPrevious}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onNext}
-            disabled={!hasNext}
-          >
-            Next
-            <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>Progress</span>
+            <span>{Math.round(progressPercentage)}% complete</span>
+          </div>
+          <Progress value={progressPercentage} className="h-2" />
         </div>
       </div>
-      
-      <div className="space-y-2">
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Progress</span>
-          <span>{Math.round(progressPercentage)}% complete</span>
+
+      {/* Mobile/Tablet Floating Navigation */}
+      <div className="lg:hidden sticky top-4 z-10 mx-4">
+        <div className="bg-card/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">
+                {currentIndex + 1}/{totalInvoices}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {completedCount} done
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onPrevious}
+                disabled={!hasPrevious}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="w-16 px-2">
+                <Progress value={progressPercentage} className="h-1" />
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onNext}
+                disabled={!hasNext}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
-        <Progress value={progressPercentage} className="h-2" />
       </div>
-    </div>
+    </>
   );
 };

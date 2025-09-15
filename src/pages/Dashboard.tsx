@@ -337,19 +337,19 @@ export const Dashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-dashboard-bg">
       {/* Header */}
-      <header className="bg-card border-b border-border shadow-soft">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="bg-card border-b border-border shadow-soft sticky top-0 z-20">
+        <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+            <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="h-4 w-4" />
-              <span>{user?.email}</span>
+          <div className="flex items-center gap-2 lg:gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
+              <User className="h-3 w-3 lg:h-4 lg:w-4" />
+              <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
             </div>
-            <Button variant="outline" onClick={handleSignOut}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
@@ -369,11 +369,11 @@ export const Dashboard: React.FC = () => {
 
         {/* Desktop Layout - Equal height columns */}
         <div className="hidden lg:grid lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
-          <div className="flex flex-col">
+          <div className="flex flex-col max-h-full">
             <PDFViewer invoice={currentInvoice} />
           </div>
           
-          <div className="flex flex-col space-y-6 overflow-y-auto">
+          <div className="flex flex-col space-y-6 overflow-y-auto max-h-full">
             <XeroSection
               invoice={currentInvoice}
               onUpdate={handleXeroUpdate}
@@ -390,9 +390,9 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Layout - Stacked */}
+        {/* Tablet/Mobile Layout - Stacked */}
         <div className="lg:hidden space-y-6">
-          <div className="h-96">
+          <div className="h-96 md:h-[50vh] sm:h-[48vh]">
             <PDFViewer invoice={currentInvoice} />
           </div>
           

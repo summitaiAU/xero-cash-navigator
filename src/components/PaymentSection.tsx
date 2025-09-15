@@ -377,22 +377,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           )}
         </div>
 
-        {/* Payment Method */}
-        <div className="space-y-2">
-          <Label htmlFor="payment-method">Payment Method</Label>
-          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {paymentMethodOptions.map((method) => (
-                <SelectItem key={method} value={method}>
-                  {method}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
 
         {/* Email Configuration */}
         <div className="space-y-4 pt-4 border-t border-border">
@@ -476,20 +460,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="message">Custom Message (Optional)</Label>
-            <Textarea
-              id="message"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add a custom message to the remittance email..."
-              maxLength={500}
-              rows={3}
-            />
-            <div className="text-xs text-muted-foreground text-right">
-              {message.length}/500 characters
-            </div>
-          </div>
 
           {/* Send Now Button */}
           <Button
