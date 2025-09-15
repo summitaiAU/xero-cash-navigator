@@ -164,6 +164,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       formData.append('xero_invoice_id', invoice.xero_bill_id);
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('row_id', invoice.id);
 
       const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6', {
         method: 'POST',
@@ -231,7 +232,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         },
         body: JSON.stringify({
           xero_invoice_id: invoice.xero_bill_id,
-          new_supplier_email: newSupplierEmail
+          new_supplier_email: newSupplierEmail,
+          row_id: invoice.id
         })
       });
 
