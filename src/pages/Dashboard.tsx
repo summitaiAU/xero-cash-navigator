@@ -367,13 +367,13 @@ export const Dashboard: React.FC = () => {
           completedCount={completedInvoices.size}
         />
 
-        {/* Desktop Layout - Side by Side */}
-        <div className="hidden lg:grid lg:grid-cols-2 gap-6">
-          <div className="space-y-6">
+        {/* Desktop Layout - Side by Side with more space for Xero section */}
+        <div className="hidden lg:grid lg:grid-cols-5 gap-6">
+          <div className="col-span-2 space-y-6">
             <PDFViewer invoice={currentInvoice} />
           </div>
           
-          <div className="space-y-6">
+          <div className="col-span-3 space-y-6">
             <XeroSection
               invoice={currentInvoice}
               onUpdate={handleXeroUpdate}
