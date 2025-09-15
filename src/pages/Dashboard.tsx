@@ -30,6 +30,7 @@ export const Dashboard: React.FC = () => {
   // Desktop fixed layout measurements
   const headerRef = React.useRef<HTMLDivElement | null>(null);
   const navRef = React.useRef<HTMLDivElement | null>(null);
+  const rightScrollRef = React.useRef<HTMLDivElement | null>(null);
   const [desktopOffset, setDesktopOffset] = useState({ header: 0, nav: 0, total: 0 });
 
   useEffect(() => {
@@ -182,6 +183,7 @@ export const Dashboard: React.FC = () => {
     if (currentIndex < invoices.length - 1) {
       setCurrentIndex(currentIndex + 1);
       resetProcessingStatus();
+      scrollToTop();
     }
   };
 
@@ -189,6 +191,7 @@ export const Dashboard: React.FC = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
       resetProcessingStatus();
+      scrollToTop();
     }
   };
 
@@ -198,6 +201,12 @@ export const Dashboard: React.FC = () => {
       paymentUploaded: false,
       remittanceSent: false
     });
+  };
+
+  const scrollToTop = () => {
+    if (rightScrollRef.current) {
+      rightScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const loadXeroData = async (invoiceId: string, xeroInvoiceId: string) => {
@@ -269,6 +278,9 @@ export const Dashboard: React.FC = () => {
           handleNext();
         }
       }, 2000);
+
+      // Reset scroll immediately when marked as paid
+      scrollToTop();
 
     } catch (error) {
       console.error('Failed to process payment:', error);
@@ -396,6 +408,7 @@ export const Dashboard: React.FC = () => {
               onNext={handleNext}
               onReset={handleRestart}
               completedCount={completedInvoices.size}
+              emailLink={currentInvoice?.drive_view_url}
             />
           </div>
         </div>
@@ -409,8 +422,8 @@ export const Dashboard: React.FC = () => {
             </div>
             
             {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
-            <div className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
-              <div className="space-y-6 pr-2 py-4">
+            <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
+              <div className="space-y-6 pr-2 pt-0">
                 <XeroSection
                   invoice={currentInvoice}
                   onUpdate={handleXeroUpdate}
@@ -468,6 +481,7 @@ export const Dashboard: React.FC = () => {
             onNext={handleNext}
             onReset={handleRestart}
             completedCount={completedInvoices.size}
+            emailLink={currentInvoice?.drive_view_url}
           />
 
           {/* PDF Viewer with increased height */}

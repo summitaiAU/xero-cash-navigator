@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, Mail } from 'lucide-react';
 
 interface InvoiceNavigationProps {
   currentIndex: number;
@@ -10,6 +10,7 @@ interface InvoiceNavigationProps {
   onNext: () => void;
   onReset?: () => void;
   completedCount: number;
+  emailLink?: string;
 }
 
 export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
@@ -18,7 +19,8 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   onPrevious,
   onNext,
   onReset,
-  completedCount
+  completedCount,
+  emailLink
 }) => {
   const progressPercentage = totalInvoices > 0 ? (completedCount / totalInvoices) * 100 : 0;
   const hasNext = currentIndex < totalInvoices - 1;
@@ -39,6 +41,18 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
+            {emailLink && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.open(emailLink, '_blank')}
+                title="Open original email"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Open Email
+              </Button>
+            )}
+            
             {onReset && (
               <Button variant="ghost" size="sm" onClick={onReset}>
                 <RotateCcw className="h-4 w-4 mr-2" />
@@ -91,6 +105,18 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
             </div>
             
             <div className="flex items-center gap-1">
+              {emailLink && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => window.open(emailLink, '_blank')}
+                  className="h-8 w-8 p-0"
+                  title="Open email"
+                >
+                  <Mail className="h-4 w-4" />
+                </Button>
+              )}
+              
               <Button
                 variant="ghost"
                 size="sm"
