@@ -45,9 +45,11 @@ export const Dashboard: React.FC = () => {
   // Load invoices from Supabase on mount
   useEffect(() => {
     const loadInvoices = async () => {
+      console.log('Loading invoices...');
       try {
         setLoading(true);
         const fetchedInvoices = await fetchInvoices();
+        console.log('Fetched invoices:', fetchedInvoices.length);
         setInvoices(fetchedInvoices);
         
         // Fetch Xero data for each invoice
