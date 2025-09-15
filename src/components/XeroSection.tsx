@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   RefreshCw, 
   ExternalLink, 
@@ -237,19 +238,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   // Save function with webhook integration
   const saveInvoice = async () => {
-    if (!editableData || !webhookData[0]) return;
+    if (!editableData) return;
     
     setIsSaving(true);
     setSaveError(null);
     
     try {
+      // Prefer webhook raw data; fallback to displayed xeroData
+      const base = webhookData[0] || {
+        Type: 'ACCPAY',
+        Status: 'DRAFT',
+        CurrencyCode: editableData.currency || xeroData?.currency || 'AUD',
+        Contact: { Name: xeroData?.contactName || 'Unknown Contact' },
+      } as any;
+
       const payload = {
         invoice_details: {
           Invoices: [{
-            Type: webhookData[0].Type || 'ACCPAY',
-            Status: webhookData[0].Status || 'DRAFT',
+            Type: base.Type || 'ACCPAY',
+            Status: base.Status || 'DRAFT',
             CurrencyCode: editableData.currency,
-            Contact: { Name: webhookData[0].Contact?.Name || 'Unknown Contact' },
+            Contact: { Name: base.Contact?.Name || 'Unknown Contact' },
             InvoiceNumber: editableData.invoiceNumber,
             Date: editableData.issueDate,
             DueDate: editableData.dueDate,
@@ -266,6 +275,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         }
       };
       
+      console.log('Saving invoice payload:', payload);
+
       const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/346bb7cc-233c-4dce-a721-e09e258fd1c3', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -273,13 +284,15 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       });
       
       const result = await response.json();
+      console.log('Save invoice result:', result);
       
       if (!response.ok) {
         throw new Error(result[0]?.error?.message || `HTTP ${response.status}: Save failed`);
       }
       
-      if (result[0]?.Status === 'OK' && result[0]?.Invoices?.[0]) {
-        const updatedInvoice = result[0].Invoices[0];
+      const payloadResult = Array.isArray(result) ? result[0] : result;
+      if (payloadResult?.Status === 'OK' && payloadResult?.Invoices?.[0]) {
+        const updatedInvoice = payloadResult.Invoices[0];
         // Update webhook data and process it
         setWebhookData([updatedInvoice]);
         setXeroData(processWebhookData([updatedInvoice]));
@@ -335,8 +348,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       const processed = processWebhookData(webhookResponse);
       setXeroData(processed);
       
-      // Store raw webhook data for editing
-      setWebhookData(webhookResponse);
+      // Store raw webhook data for editing (normalize to array)
+      const normalized = Array.isArray(webhookResponse) ? webhookResponse : [webhookResponse];
+      setWebhookData(normalized);
       
     } catch (error: any) {
       console.error('Fetch Xero invoice failed', error);
@@ -567,6 +581,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                   <option value="GBP">GBP</option>
+                  <option value="CNY">CNY</option>
                 </select>
               ) : (
                 <div className="text-sm md:text-base">{xeroData.currency}</div>
@@ -580,7 +595,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             
             {/* Desktop Table View */}
             {isEditing ? (
-              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
+              <div className="hidden lg:block border border-border rounded-lg overflow-visible">
                 <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
                   <div className="col-span-1 p-3 text-center">Item</div>
                   <div className="col-span-3 p-3 border-l border-border">Description</div>
@@ -601,11 +616,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                       </div>
                       
                       <div className="col-span-3 p-3 border-l border-border">
-                        <Input
-                          type="text"
+                        <Textarea
                           value={item.description}
                           onChange={(e) => updateLineItem(index, 'description', e.target.value)}
-                          className="text-sm"
+                          className="text-sm min-h-[60px] resize-none"
                           placeholder="Item description"
                         />
                       </div>
@@ -643,7 +657,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         <select
                           value={item.taxType}
                           onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                          className="w-full px-2 py-1 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring"
+                          className="relative z-10 w-full min-w-[120px] px-2 py-1 text-sm border border-input bg-background rounded focus:ring-2 focus:ring-ring"
                         >
                           <option value="INPUT">INPUT</option>
                           <option value="NONE">NONE</option>
@@ -799,7 +813,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                             <select
                               value={item.taxType}
                               onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                              className="mt-1 relative z-10 flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                               <option value="INPUT">INPUT</option>
                               <option value="NONE">NONE</option>
