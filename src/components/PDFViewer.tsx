@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, ZoomIn, ZoomOut, Maximize, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
@@ -10,6 +10,12 @@ interface PDFViewerProps {
 export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [pdfError, setPdfError] = useState(false);
   const [zoom, setZoom] = useState(100);
+
+  // Reset zoom when invoice changes
+  useEffect(() => {
+    setZoom(100);
+    setPdfError(false);
+  }, [invoice.id]);
 
   const handleDownload = () => {
     const link = document.createElement('a');
@@ -26,7 +32,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   };
 
   return (
-    <div className="dashboard-card p-4 flex flex-col" style={{ height: '600px' }}>
+    <div className="dashboard-card p-4 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-header mb-0">Invoice PDF</h3>
         <div className="flex items-center gap-2">
