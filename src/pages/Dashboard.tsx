@@ -337,9 +337,9 @@ export const Dashboard: React.FC = () => {
   return (
     <>
       {/* Desktop Layout */}
-      <div className="hidden lg:block min-h-screen bg-dashboard-bg">
+      <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
         {/* Fixed Header */}
-        <header className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
+        <div className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
             <div>
               <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
@@ -355,7 +355,7 @@ export const Dashboard: React.FC = () => {
               </Button>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Fixed Navigation Bar */}
         <div className="fixed top-[73px] left-0 right-0 bg-dashboard-bg border-b border-border z-20">
@@ -371,35 +371,33 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Content Container */}
-        <div className="pt-[145px] h-screen">
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full">
-            <div className="grid grid-cols-2 gap-6 h-full">
-              {/* Fixed Left Column - PDF Viewer */}
-              <div className="flex flex-col h-full">
-                <PDFViewer invoice={currentInvoice} />
-              </div>
-              
-              {/* Scrollable Right Column */}
-              <div className="flex flex-col h-full">
-                <div className="overflow-y-auto h-full space-y-6 pr-2">
-                  <XeroSection
-                    invoice={currentInvoice}
-                    onUpdate={handleXeroUpdate}
-                    onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
-                    loading={isXeroLoading}
-                  />
-                  
-                  <PaymentSection
-                    invoice={currentInvoice}
-                    onMarkAsPaid={handleMarkAsPaid}
-                    onSkip={handleSkip}
-                    loading={loading}
-                  />
-                  
-                  {/* Extra spacing at bottom for better scrolling */}
-                  <div className="h-6"></div>
-                </div>
+        {/* Fixed Layout Container */}
+        <div className="fixed top-[145px] left-0 right-0 bottom-0">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
+            {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
+            <div className="w-1/2 h-full flex-shrink-0">
+              <PDFViewer invoice={currentInvoice} />
+            </div>
+            
+            {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
+            <div className="w-1/2 h-full overflow-y-auto">
+              <div className="space-y-6 pr-2">
+                <XeroSection
+                  invoice={currentInvoice}
+                  onUpdate={handleXeroUpdate}
+                  onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                  loading={isXeroLoading}
+                />
+                
+                <PaymentSection
+                  invoice={currentInvoice}
+                  onMarkAsPaid={handleMarkAsPaid}
+                  onSkip={handleSkip}
+                  loading={loading}
+                />
+                
+                {/* Extra spacing at bottom for better scrolling */}
+                <div className="h-6"></div>
               </div>
             </div>
           </div>
