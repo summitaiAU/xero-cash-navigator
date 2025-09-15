@@ -201,10 +201,22 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   };
 
   const saveSupplierEmail = async () => {
-    if (!newSupplierEmail || !newSupplierEmail.includes('@')) {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!newSupplierEmail || !emailRegex.test(newSupplierEmail)) {
       toast({
         title: "Invalid email",
         description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure required fields are present
+    if (!invoice.xero_bill_id) {
+      toast({
+        title: "Missing invoice data",
+        description: "Xero invoice ID is required to update supplier email.",
         variant: "destructive",
       });
       return;
