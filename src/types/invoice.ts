@@ -72,6 +72,7 @@ export interface Invoice {
   drive_view_url: string;
   supplier_email: string;
   remittance_email?: string;
+  remittance_sent?: boolean;
   xero_data: ProcessedXeroData;
 }
 

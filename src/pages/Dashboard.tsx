@@ -6,7 +6,7 @@ import { PaidInvoiceSection } from '@/components/PaidInvoiceSection';
 import { InvoiceNavigation } from '@/components/InvoiceNavigation';
 import { CompletionScreen } from '@/components/CompletionScreen';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
-import { fetchInvoices, updateInvoicePaymentStatus } from '@/services/invoiceService';
+import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -259,15 +259,23 @@ export const Dashboard: React.FC = () => {
 
     setLoading(true);
     try {
-      // Update invoice status in Supabase
-      await updateInvoicePaymentStatus(currentInvoice.id, true);
+      // Update invoice status in Supabase - remittance sent only if email provided
+      const remittanceSent = !!paymentData.email;
+      await updateInvoicePaymentStatus(currentInvoice.id, remittanceSent);
+      
+      // Update the invoice in state
+      setInvoices(prev => prev.map(inv => 
+        inv.id === currentInvoice.id 
+          ? { ...inv, status: 'PAID' as const, remittance_sent: remittanceSent }
+          : inv
+      ));
       
       // Mark as completed
       setCompletedInvoices(prev => new Set([...prev, currentInvoice.id]));
       setProcessingStatus(prev => ({ 
         ...prev, 
         paymentUploaded: true, 
-        remittanceSent: !!paymentData.email 
+        remittanceSent: remittanceSent
       }));
 
       // Show success overlay temporarily
@@ -322,6 +330,32 @@ export const Dashboard: React.FC = () => {
       title: "Invoice reopened",
       description: "You can now reprocess this payment.",
     });
+  };
+
+  const handleRemittanceSent = async (invoiceId: string) => {
+    try {
+      // Update remittance status in Supabase
+      await updateInvoiceRemittanceStatus(invoiceId);
+      
+      // Update the invoice in state
+      setInvoices(prev => prev.map(inv => 
+        inv.id === invoiceId 
+          ? { ...inv, remittance_sent: true }
+          : inv
+      ));
+
+      toast({
+        title: "Remittance status updated",
+        description: "Invoice remittance has been marked as sent.",
+      });
+    } catch (error) {
+      console.error('Failed to update remittance status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update remittance status. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRestart = () => {
@@ -461,6 +495,7 @@ export const Dashboard: React.FC = () => {
                   <PaidInvoiceSection
                     invoice={currentInvoice}
                     onReprocess={handleReprocessPayment}
+                    onRemittanceSent={handleRemittanceSent}
                   />
                 ) : (
                   <PaymentSection
@@ -533,6 +568,7 @@ export const Dashboard: React.FC = () => {
             <PaidInvoiceSection
               invoice={currentInvoice}
               onReprocess={handleReprocessPayment}
+              onRemittanceSent={handleRemittanceSent}
             />
           ) : (
             <PaymentSection

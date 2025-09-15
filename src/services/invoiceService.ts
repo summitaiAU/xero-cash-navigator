@@ -15,7 +15,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
-    .in('status', ['READY', 'NEW SUPPLIER', 'REVIEW'])
+    .in('status', ['READY', 'NEW SUPPLIER', 'REVIEW', 'PAID'])
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -39,6 +39,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
     drive_view_url: invoice.link_to_invoice || '',
     supplier_email: invoice.email_id || '',
     remittance_email: (invoice as any).remittance_email || undefined,
+    remittance_sent: invoice.remittance_sent || false,
     xero_data: {
       invoiceNumber: invoice.invoice_no || '',
       contactName: invoice.supplier_name || '',
@@ -70,17 +71,30 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
   }));
 };
 
-export const updateInvoicePaymentStatus = async (invoiceId: string, isPaid: boolean) => {
+export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSent: boolean) => {
   const { error } = await supabase
     .from('invoices')
     .update({ 
       status: 'PAID',
-      remittance_sent: isPaid,
+      remittance_sent: remittanceSent,
       paid_date: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to update invoice: ${error.message}`);
+  }
+};
+
+export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ 
+      remittance_sent: true
+    })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to update invoice remittance status: ${error.message}`);
   }
 };
