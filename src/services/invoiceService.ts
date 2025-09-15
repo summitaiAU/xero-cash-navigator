@@ -47,6 +47,8 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
       reference: invoice.payment_ref || '',
       currency: 'AUD',
       status: 'DRAFT' as const,
+      bsb: 'N/A',
+      accountNumber: 'N/A',
       lineItems: invoice.list_items ? 
         (Array.isArray(invoice.list_items) ? 
           invoice.list_items.map((item: any, index: number) => {

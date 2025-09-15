@@ -20,6 +20,10 @@ export interface XeroWebhookInvoice {
     Name: string;
     EmailAddress?: string;
     TaxNumber?: string;
+    BankAccountDetails?: string;
+    BatchPayments?: {
+      BankAccountNumber?: string;
+    };
   };
   DateString: string;
   DueDateString: string;
@@ -40,6 +44,8 @@ export interface ProcessedXeroData {
   reference: string;
   currency: string;
   status: string;
+  bsb: string;
+  accountNumber: string;
   lineItems: {
     itemNumber: number;
     description: string;

@@ -20,6 +20,8 @@ export const mockInvoices: Invoice[] = [
       reference: "REF-001",
       currency: "AUD",
       status: "DRAFT",
+      bsb: "062 268",
+      accountNumber: "1051 7708",
       lineItems: [
         {
           itemNumber: 1,
@@ -55,6 +57,8 @@ export const mockInvoices: Invoice[] = [
       reference: "MKT-002",
       currency: "AUD",
       status: "DRAFT",
+      bsb: "062 596",
+      accountNumber: "1030 2535",
       lineItems: [
         {
           itemNumber: 1,
@@ -99,6 +103,8 @@ export const mockInvoices: Invoice[] = [
       reference: "LEGAL-003",
       currency: "AUD",
       status: "DRAFT",
+      bsb: "062 268",
+      accountNumber: "1051 7708",
       lineItems: [
         {
           itemNumber: 1,

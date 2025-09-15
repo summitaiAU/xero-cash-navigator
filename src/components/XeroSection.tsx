@@ -26,6 +26,10 @@ const processWebhookData = (webhookData: XeroWebhookInvoice[] | XeroWebhookInvoi
   // Handle both array and single object responses
   const invoice = Array.isArray(webhookData) ? webhookData[0] : webhookData;
   
+  // Extract and parse bank account details
+  const bankAccountDetails = invoice?.Contact?.BankAccountDetails || invoice?.Contact?.BatchPayments?.BankAccountNumber || '';
+  const { bsb, accountNumber } = parseBankAccountDetails(bankAccountDetails);
+  
   return {
     // Header fields
     invoiceNumber: invoice?.InvoiceNumber || 'No number',
@@ -35,6 +39,10 @@ const processWebhookData = (webhookData: XeroWebhookInvoice[] | XeroWebhookInvoi
     reference: invoice?.Reference || '',
     currency: invoice?.CurrencyCode || 'AUD',
     status: invoice?.Status || 'UNKNOWN',
+    
+    // Payment details
+    bsb,
+    accountNumber,
     
     // Line items with exact field mapping
     lineItems: (invoice?.LineItems || []).map((item, index) => ({
@@ -56,6 +64,22 @@ const processWebhookData = (webhookData: XeroWebhookInvoice[] | XeroWebhookInvoi
 
 const convertTaxType = (taxType?: string) => {
   return taxType === 'INPUT' ? 'GST (10%)' : taxType || 'No Tax';
+};
+
+const parseBankAccountDetails = (bankDetails?: string) => {
+  if (!bankDetails) return { bsb: 'N/A', accountNumber: 'N/A' };
+  
+  // Parse format like "062 596 1030 2535" or "062-268 1051 7708"
+  const cleaned = bankDetails.replace(/[-\s]/g, ' ').trim();
+  const parts = cleaned.split(/\s+/);
+  
+  if (parts.length >= 2) {
+    const bsb = `${parts[0]} ${parts[1]}`;
+    const accountNumber = parts.slice(2).join(' ');
+    return { bsb, accountNumber };
+  }
+  
+  return { bsb: 'N/A', accountNumber: bankDetails };
 };
 
 const formatDate = (dateString?: string) => {
@@ -422,6 +446,21 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <span>{formatCurrency(xeroData.total)}</span>
                   <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Details Section */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <Label className="text-base font-medium">Payment Details</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-muted/20 rounded-lg p-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">BSB</Label>
+                <div className="font-mono text-sm md:text-base font-medium">{xeroData.bsb}</div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
+                <div className="font-mono text-sm md:text-base font-medium">{xeroData.accountNumber}</div>
               </div>
             </div>
           </div>
