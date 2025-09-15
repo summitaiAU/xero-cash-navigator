@@ -13,19 +13,20 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "accounts@techsolutions.com",
     xero_data: {
-      status: "DRAFT",
-      reference: "REF-001",
-      account_code: "200",
-      tax_rate: 10,
-      subtotal: 2205.00,
-      tax: 245.00,
-      total: 2450.00,
-      line_items: [
+      Status: "DRAFT",
+      Reference: "REF-001",
+      SubTotal: 2205.00,
+      TotalTax: 245.00,
+      Total: 2450.00,
+      LineItems: [
         {
-          description: "Office Supplies",
-          amount: 2205.00,
-          tax_amount: 245.00,
-          account_code: "200"
+          Description: "Office Supplies",
+          UnitAmount: 2205.00,
+          TaxAmount: 245.00,
+          AccountCode: "200",
+          Quantity: 1,
+          LineAmount: 2205.00,
+          TaxType: "INPUT"
         }
       ]
     }
@@ -42,25 +43,29 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "billing@marketingpro.com",
     xero_data: {
-      status: "DRAFT",
-      reference: "MKT-002",
-      account_code: "300",
-      tax_rate: 10,
-      subtotal: 2909.09,
-      tax: 290.91,
-      total: 3200.00,
-      line_items: [
+      Status: "DRAFT",
+      Reference: "MKT-002",
+      SubTotal: 2909.09,
+      TotalTax: 290.91,
+      Total: 3200.00,
+      LineItems: [
         {
-          description: "Digital Marketing Campaign",
-          amount: 2000.00,
-          tax_amount: 200.00,
-          account_code: "300"
+          Description: "Digital Marketing Campaign",
+          UnitAmount: 2000.00,
+          TaxAmount: 200.00,
+          AccountCode: "300",
+          Quantity: 1,
+          LineAmount: 2000.00,
+          TaxType: "INPUT"
         },
         {
-          description: "Social Media Management",
-          amount: 909.09,
-          tax_amount: 90.91,
-          account_code: "300"
+          Description: "Social Media Management",
+          UnitAmount: 909.09,
+          TaxAmount: 90.91,
+          AccountCode: "300",
+          Quantity: 1,
+          LineAmount: 909.09,
+          TaxType: "INPUT"
         }
       ]
     }
@@ -77,19 +82,20 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "invoices@legalconsultants.com",
     xero_data: {
-      status: "DRAFT",
-      reference: "LEGAL-003",
-      account_code: "400",
-      tax_rate: 10,
-      subtotal: 1636.36,
-      tax: 163.64,
-      total: 1800.00,
-      line_items: [
+      Status: "DRAFT",
+      Reference: "LEGAL-003",
+      SubTotal: 1636.36,
+      TotalTax: 163.64,
+      Total: 1800.00,
+      LineItems: [
         {
-          description: "Legal Consultation Services",
-          amount: 1636.36,
-          tax_amount: 163.64,
-          account_code: "400"
+          Description: "Legal Consultation Services",
+          UnitAmount: 1636.36,
+          TaxAmount: 163.64,
+          AccountCode: "400",
+          Quantity: 1,
+          LineAmount: 1636.36,
+          TaxType: "INPUT"
         }
       ]
     }

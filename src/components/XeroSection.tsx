@@ -57,48 +57,51 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   const calculateTotals = (lineItems: LineItem[]) => {
-    const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
-    const tax = lineItems.reduce((sum, item) => sum + item.tax_amount, 0);
-    return { subtotal, tax, total: subtotal + tax };
+    const subtotal = lineItems.reduce((sum, item) => sum + item.UnitAmount, 0);
+    const tax = lineItems.reduce((sum, item) => sum + item.TaxAmount, 0);
+    return { SubTotal: subtotal, TotalTax: tax, Total: subtotal + tax };
   };
 
   const handleLineItemChange = (index: number, field: keyof LineItem, value: any) => {
-    const newLineItems = [...editedData.line_items];
+    const newLineItems = [...editedData.LineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
     
     // Recalculate tax if amount changes
-    if (field === 'amount') {
-      newLineItems[index].tax_amount = (value * editedData.tax_rate) / 100;
+    if (field === 'UnitAmount') {
+      newLineItems[index].TaxAmount = (value * 10) / 100; // 10% GST
     }
     
     const totals = calculateTotals(newLineItems);
     setEditedData({
       ...editedData,
-      line_items: newLineItems,
+      LineItems: newLineItems,
       ...totals
     });
   };
 
   const addLineItem = () => {
     const newItem: LineItem = {
-      description: '',
-      amount: 0,
-      tax_amount: 0,
-      account_code: editedData.account_code
+      Description: '',
+      UnitAmount: 0,
+      TaxAmount: 0,
+      AccountCode: '429',
+      Quantity: 1,
+      LineAmount: 0,
+      TaxType: 'INPUT'
     };
     
     setEditedData({
       ...editedData,
-      line_items: [...editedData.line_items, newItem]
+      LineItems: [...editedData.LineItems, newItem]
     });
   };
 
   const removeLineItem = (index: number) => {
-    const newLineItems = editedData.line_items.filter((_, i) => i !== index);
+    const newLineItems = editedData.LineItems.filter((_, i) => i !== index);
     const totals = calculateTotals(newLineItems);
     setEditedData({
       ...editedData,
-      line_items: newLineItems,
+      LineItems: newLineItems,
       ...totals
     });
   };
@@ -127,7 +130,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   const handleApprove = async () => {
     try {
-      await onUpdate({ ...editedData, status: 'AWAITING_PAYMENT' });
+      await onUpdate({ ...editedData, Status: 'AWAITING_PAYMENT' });
       toast({
         title: "Invoice approved",
         description: "Bill status changed to Awaiting Payment in Xero.",
@@ -141,7 +144,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }
   };
 
-  const amountMatches = Math.abs((editedData?.total || 0) - invoice.amount) < 0.01;
+  const amountMatches = Math.abs((editedData?.Total || 0) - invoice.amount) < 0.01;
   const hasXeroData = invoice.xero_data && Object.keys(invoice.xero_data).length > 0;
 
   return (
@@ -149,13 +152,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h3 className="section-header mb-0">Xero Invoice</h3>
-          {hasXeroData && editedData.status === 'DRAFT' && (
+          {hasXeroData && editedData.Status === 'DRAFT' && (
             <Badge variant="secondary">Draft</Badge>
           )}
-          {hasXeroData && editedData.status === 'AWAITING_PAYMENT' && (
+          {hasXeroData && editedData.Status === 'AWAITING_PAYMENT' && (
             <Badge variant="default">Awaiting Payment</Badge>
           )}
-          {hasXeroData && editedData.status === 'AUTHORISED' && (
+          {hasXeroData && editedData.Status === 'AUTHORISED' && (
             <Badge variant="default">Authorised</Badge>
           )}
         </div>
@@ -218,17 +221,17 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="grid grid-cols-3 gap-6 py-4">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">To</Label>
-              <div className="font-medium">{editedData?.contact || invoice.supplier || 'No contact'}</div>
+              <div className="font-medium">{editedData?.Contact?.Name || invoice.supplier || 'No contact'}</div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
-              <div>{formatDate(editedData?.date || '')}</div>
+              <div>{formatDate(editedData?.Date || '')}</div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-              <div>{formatDate(editedData?.due_date || invoice.due_date)}</div>
+              <div>{formatDate(editedData?.DueDate || invoice.due_date)}</div>
             </div>
           </div>
           
@@ -242,14 +245,14 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
               <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
               {isEditing ? (
                 <Input
-                  value={editedData?.reference || ''}
-                  onChange={(e) => setEditedData({ ...editedData, reference: e.target.value })}
+                  value={editedData?.Reference || ''}
+                  onChange={(e) => setEditedData({ ...editedData, Reference: e.target.value })}
                   placeholder="Enter reference"
                   className="h-8"
                 />
               ) : (
-                <div className={`py-1 px-2 rounded text-sm ${!editedData?.reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
-                  {editedData?.reference || 'No reference'}
+                <div className={`py-1 px-2 rounded text-sm ${!editedData?.Reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
+                  {editedData?.Reference || 'No reference'}
                 </div>
               )}
             </div>
@@ -283,7 +286,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 <div className="col-span-1 p-2 border-l border-border text-center">Amount</div>
               </div>
 
-              {(editedData?.line_items || []).map((item, index) => (
+              {(editedData?.LineItems || []).map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
                   <div className="col-span-1 p-2 flex items-center justify-center">
                     <div className="text-sm">{index + 1}</div>
@@ -292,37 +295,37 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <div className="col-span-4 p-2 border-l border-border">
                     {isEditing ? (
                       <Input
-                        value={item.description}
-                        onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                        value={item.Description}
+                        onChange={(e) => handleLineItemChange(index, 'Description', e.target.value)}
                         placeholder="Enter description"
                         className="h-8"
                       />
                     ) : (
-                      <div className="text-sm">{item.description || 'No description'}</div>
+                      <div className="text-sm">{item.Description || 'No description'}</div>
                     )}
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border text-center">
-                    <div className="text-sm">1</div>
+                    <div className="text-sm">{item.Quantity || 1}</div>
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border text-center">
                     {isEditing ? (
                       <Input
                         type="number"
-                        value={item.amount}
-                        onChange={(e) => handleLineItemChange(index, 'amount', parseFloat(e.target.value) || 0)}
+                        value={item.UnitAmount}
+                        onChange={(e) => handleLineItemChange(index, 'UnitAmount', parseFloat(e.target.value) || 0)}
                         placeholder="0.00"
                         step="0.01"
                         className="h-8 text-center"
                       />
                     ) : (
-                      <div className="text-sm">${item.amount.toFixed(2)}</div>
+                      <div className="text-sm">${item.UnitAmount.toFixed(2)}</div>
                     )}
                   </div>
                   
                   <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.account_code} - Expenses</div>
+                    <div className="text-sm">{item.AccountCode} - Expenses</div>
                   </div>
                   
                   <div className="col-span-2 p-2 border-l border-border text-center">
@@ -330,8 +333,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border flex items-center justify-center">
-                    <div className="text-sm font-medium">${(item.amount + item.tax_amount).toFixed(2)}</div>
-                    {isEditing && (editedData?.line_items || []).length > 1 && (
+                    <div className="text-sm font-medium">${(item.UnitAmount + item.TaxAmount).toFixed(2)}</div>
+                    {isEditing && (editedData?.LineItems || []).length > 1 && (
                       <Button
                         variant="ghost"
                         size="sm"
@@ -352,16 +355,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="w-64 space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>{formatCurrency(editedData?.subtotal || 0)}</span>
+                <span>{formatCurrency(editedData?.SubTotal || 0)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total tax:</span>
-                <span>{formatCurrency(editedData?.tax || 0)}</span>
+                <span>{formatCurrency(editedData?.TotalTax || 0)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                 <span>Total:</span>
                 <div className="flex items-center gap-2">
-                  <span>AUD {formatCurrency(editedData?.total || 0)}</span>
+                  <span>AUD {formatCurrency(editedData?.Total || 0)}</span>
                   {amountMatches ? (
                     <CheckCircle className="h-4 w-4 text-green-600" />
                   ) : (
@@ -371,7 +374,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
               </div>
               {!amountMatches && (
                 <div className="text-sm text-amber-600">
-                  Difference: {formatCurrency((editedData?.total || 0) - invoice.amount)}
+                  Difference: {formatCurrency((editedData?.Total || 0) - invoice.amount)}
                 </div>
               )}
             </div>
@@ -385,7 +388,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <Edit3 className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                {editedData?.status === 'DRAFT' && amountMatches && (
+                {editedData?.Status === 'DRAFT' && amountMatches && (
                   <Button onClick={handleApprove}>
                     Approve Bill
                   </Button>

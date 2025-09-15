@@ -1,22 +1,26 @@
 export interface LineItem {
-  description: string;
-  amount: number;
-  tax_amount: number;
-  account_code: string;
+  Description: string;
+  UnitAmount: number;
+  TaxAmount: number;
+  AccountCode: string;
+  Quantity: number;
+  LineAmount: number;
+  TaxType: string;
 }
 
 export interface XeroData {
-  status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
-  reference: string;
-  contact?: string;
-  date?: string;
-  due_date?: string;
-  account_code: string;
-  tax_rate: number;
-  subtotal: number;
-  tax: number;
-  total: number;
-  line_items: LineItem[];
+  Status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
+  Reference: string;
+  Contact?: {
+    Name: string;
+  };
+  Date?: string;
+  DueDate?: string;
+  SubTotal: number;
+  TotalTax: number;
+  Total: number;
+  LineItems: LineItem[];
+  InvoiceNumber?: string;
 }
 
 export interface Invoice {
