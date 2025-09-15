@@ -70,11 +70,12 @@ const parseBankAccountDetails = (bankDetails?: string) => {
   if (!bankDetails) return { bsb: 'N/A', accountNumber: 'N/A' };
   
   // Parse format like "062 596 1030 2535" or "062-268 1051 7708"
-  const cleaned = bankDetails.replace(/[-\s]/g, ' ').trim();
+  const cleaned = bankDetails.replace(/[-]/g, ' ').trim();
   const parts = cleaned.split(/\s+/);
   
-  if (parts.length >= 2) {
-    const bsb = `${parts[0]} ${parts[1]}`;
+  if (parts.length >= 4) {
+    // Format: "062 268 1051 7708" -> BSB: "062-268", Account: "1051 7708"
+    const bsb = `${parts[0]}-${parts[1]}`;
     const accountNumber = parts.slice(2).join(' ');
     return { bsb, accountNumber };
   }
