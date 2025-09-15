@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Camera, X, Send, Check, AlertTriangle } from 'lucide-react';
+import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +32,9 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   const [ccJonathon, setCcJonathon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
+  const [showAddEmail, setShowAddEmail] = useState(false);
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -190,6 +193,61 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     }
   };
 
+  const saveSupplierEmail = async () => {
+    if (!newSupplierEmail || !newSupplierEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/d497731a-7362-4f0d-a199-bc6f217c5916', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          xero_invoice_id: invoice.xero_bill_id,
+          new_supplier_email: newSupplierEmail
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result[0]?.ok) {
+        // Update the email in state
+        setEmail(newSupplierEmail);
+        setShowAddEmail(false);
+        setNewSupplierEmail('');
+        
+        toast({
+          title: "Email updated!",
+          description: `Supplier email updated to ${newSupplierEmail}`,
+        });
+      } else {
+        const errorMsg = result[0]?.error || 'Failed to update supplier email';
+        toast({
+          title: "Failed to update email",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      toast({
+        title: "Failed to update email",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
@@ -285,20 +343,73 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           
           <div className="space-y-2">
             <Label htmlFor="email">Supplier Email</Label>
-            <div className="flex gap-2">
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="supplier@company.com"
-                className="flex-1"
-              />
-            </div>
-            {invoice.remittance_email ? (
-              <p className="text-sm text-muted-foreground">📧 Default email from database: {invoice.remittance_email}</p>
+            {!showAddEmail ? (
+              <Select 
+                value={email || 'add_email'} 
+                onValueChange={(value) => {
+                  if (value === 'add_email') {
+                    setShowAddEmail(true);
+                  } else {
+                    setEmail(value);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue>
+                    {email ? email : (
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Plus className="h-4 w-4" />
+                        Add Email +
+                      </span>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-background">
+                  {email && (
+                    <SelectItem value={email}>{email}</SelectItem>
+                  )}
+                  <SelectItem value="add_email">
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Email +
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
-              <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={newSupplierEmail}
+                    onChange={(e) => setNewSupplierEmail(e.target.value)}
+                    placeholder="Enter supplier email..."
+                    className="flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveSupplierEmail}
+                    disabled={savingEmail || !newSupplierEmail}
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    {savingEmail ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowAddEmail(false);
+                      setNewSupplierEmail('');
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            {invoice.remittance_email && !showAddEmail && (
+              <p className="text-sm text-muted-foreground">📧 Default email from database: {invoice.remittance_email}</p>
             )}
           </div>
 
