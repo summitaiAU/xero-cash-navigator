@@ -367,13 +367,13 @@ export const Dashboard: React.FC = () => {
           completedCount={completedInvoices.size}
         />
 
-        {/* Desktop Layout - More balanced split for better PDF readability */}
-        <div className="hidden lg:grid lg:grid-cols-5 gap-6">
-          <div className="col-span-2 space-y-6">
+        {/* Desktop Layout - Equal 50/50 split */}
+        <div className="hidden lg:grid lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
             <PDFViewer invoice={currentInvoice} />
           </div>
           
-          <div className="col-span-3 space-y-6">
+          <div className="space-y-6">
             <XeroSection
               invoice={currentInvoice}
               onUpdate={handleXeroUpdate}
