@@ -27,6 +27,7 @@ export interface Invoice {
   drive_embed_url: string;
   drive_view_url: string;
   supplier_email: string;
+  remittance_email?: string;
   xero_data: XeroData;
 }
 

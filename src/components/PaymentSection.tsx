@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Camera, X, Send, Check, AlertTriangle } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
@@ -24,10 +25,13 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [email, setEmail] = useState(invoice.supplier_email || '');
+  const [email, setEmail] = useState(invoice.remittance_email || invoice.supplier_email || '');
   const [message, setMessage] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string>('Bank Transfer');
   const [dragOver, setDragOver] = useState(false);
+  const [ccJonathon, setCcJonathon] = useState(false);
+  const [sendingRemittance, setSendingRemittance] = useState(false);
+  const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -113,6 +117,77 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     };
 
     await onMarkAsPaid(paymentData);
+  };
+
+  const sendRemittanceNow = async () => {
+    if (!email) {
+      toast({
+        title: "Email required",
+        description: "Please enter a supplier email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!imageData) {
+      toast({
+        title: "Payment proof required",
+        description: "Please upload a payment screenshot before sending remittance.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingRemittance(true);
+    setRemittanceResponse(null);
+
+    try {
+      // Convert base64 to blob
+      const base64Response = await fetch(imageData);
+      const blob = await base64Response.blob();
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('data', blob, `${invoice.invoice_number}-remittance.jpg`);
+      formData.append('to_email', email);
+      formData.append('file_name', `${invoice.invoice_number}-remittance.jpg`);
+      formData.append('xero_invoice_id', invoice.xero_bill_id);
+      formData.append('invoice_number', invoice.invoice_number);
+      formData.append('send_to_jonathon', ccJonathon.toString());
+
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result[0]?.ok) {
+        setRemittanceResponse(`✅ Remittance sent successfully to ${result[0].emailed_to}. File uploaded to Drive: ${result[0].file_name}`);
+        toast({
+          title: "Remittance sent!",
+          description: `Successfully sent to ${result[0].emailed_to}`,
+        });
+      } else {
+        const errorMsg = result[0]?.error || 'Unknown error occurred';
+        setRemittanceResponse(`❌ Error: ${errorMsg}`);
+        toast({
+          title: "Failed to send remittance",
+          description: errorMsg,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      setRemittanceResponse(`❌ Error: ${errorMsg}`);
+      toast({
+        title: "Failed to send remittance",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingRemittance(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -218,16 +293,34 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="supplier@company.com"
                 className="flex-1"
+                disabled={!!invoice.remittance_email}
               />
-              {!invoice.supplier_email && (
+              {!invoice.remittance_email && !invoice.supplier_email && (
                 <div className="flex items-center">
                   <AlertTriangle className="h-4 w-4 text-warning" />
                 </div>
               )}
             </div>
-            {!invoice.supplier_email && (
+            {invoice.remittance_email ? (
+              <p className="text-sm text-muted-foreground">📧 Using remittance email from database</p>
+            ) : !invoice.supplier_email ? (
               <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">📧 Using supplier email from database</p>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="cc-jonathon"
+                checked={ccJonathon}
+                onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
+              />
+              <Label htmlFor="cc-jonathon" className="text-sm">
+                CC Jonathon
+              </Label>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -244,6 +337,24 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               {message.length}/500 characters
             </div>
           </div>
+
+          {/* Send Now Button */}
+          <Button
+            variant="outline"
+            onClick={sendRemittanceNow}
+            disabled={sendingRemittance || !email || !imageData}
+            className="w-full"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {sendingRemittance ? 'Sending...' : 'Send Remittance Now'}
+          </Button>
+
+          {/* Response Message */}
+          {remittanceResponse && (
+            <div className="p-3 bg-muted rounded-lg text-sm">
+              <p>{remittanceResponse}</p>
+            </div>
+          )}
         </div>
 
         {/* Invoice Summary */}
