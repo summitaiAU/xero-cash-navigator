@@ -129,7 +129,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const amountMatches = Math.abs(editedData.total - invoice.amount) < 0.01;
 
   return (
-    <div className="dashboard-card p-6">
+    <div className="dashboard-card p-6 relative">
+      {loading && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full"></div>
+            <p className="text-sm text-muted-foreground">Loading Xero data...</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h3 className="section-header mb-0">Xero Invoice</h3>

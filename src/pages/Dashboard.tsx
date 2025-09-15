@@ -14,6 +14,7 @@ export const Dashboard: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [completedInvoices, setCompletedInvoices] = useState<Set<string>>(new Set());
+  const [xeroLoadingStates, setXeroLoadingStates] = useState<Map<string, boolean>>(new Map());
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({
     xeroSynced: false,
     paymentUploaded: false,
@@ -28,6 +29,13 @@ export const Dashboard: React.FC = () => {
         setLoading(true);
         const fetchedInvoices = await fetchInvoices();
         setInvoices(fetchedInvoices);
+        
+        // Fetch Xero data for each invoice
+        await Promise.all(fetchedInvoices.map(async (invoice) => {
+          if (invoice.xero_bill_id) {
+            await loadXeroData(invoice.id, invoice.xero_bill_id);
+          }
+        }));
       } catch (error) {
         console.error('Failed to load invoices:', error);
         toast({
@@ -46,6 +54,7 @@ export const Dashboard: React.FC = () => {
   const currentInvoice = invoices[currentIndex];
   const isCompleted = currentInvoice && completedInvoices.has(currentInvoice.id);
   const allCompleted = invoices.length > 0 && completedInvoices.size === invoices.length;
+  const isXeroLoading = currentInvoice ? xeroLoadingStates.get(currentInvoice.id) || false : false;
 
   // Keyboard navigation
   useEffect(() => {
@@ -144,6 +153,30 @@ export const Dashboard: React.FC = () => {
     });
   };
 
+  const loadXeroData = async (invoiceId: string, xeroInvoiceId: string) => {
+    setXeroLoadingStates(prev => new Map(prev.set(invoiceId, true)));
+    
+    try {
+      const xeroData = await invoiceService.getXeroData(xeroInvoiceId);
+      
+      // Update the invoice in state with fetched Xero data
+      setInvoices(prev => prev.map(inv => 
+        inv.id === invoiceId 
+          ? { ...inv, xero_data: { ...inv.xero_data, ...xeroData } }
+          : inv
+      ));
+    } catch (error) {
+      console.error(`Failed to fetch Xero data for invoice ${invoiceId}:`, error);
+      toast({
+        title: "Xero Data Error",
+        description: `Failed to load Xero data for this invoice.`,
+        variant: "destructive",
+      });
+    } finally {
+      setXeroLoadingStates(prev => new Map(prev.set(invoiceId, false)));
+    }
+  };
+
   const handleXeroUpdate = async (updates: any) => {
     if (!currentInvoice) return;
 
@@ -151,25 +184,11 @@ export const Dashboard: React.FC = () => {
     try {
       // Fetch updated Xero data
       if (currentInvoice.xero_bill_id) {
-        const xeroData = await invoiceService.getXeroData(currentInvoice.xero_bill_id);
-        
-        // Update the invoice in state
-        const updatedInvoices = invoices.map(inv => 
-          inv.id === currentInvoice.id 
-            ? { ...inv, xero_data: { ...inv.xero_data, ...xeroData, ...updates } }
-            : inv
-        );
-        setInvoices(updatedInvoices);
-        
+        await loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id);
         setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
       }
     } catch (error) {
       console.error('Failed to update Xero:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch Xero data. Please try again.",
-        variant: "destructive",
-      });
       throw error;
     } finally {
       setLoading(false);
@@ -324,7 +343,7 @@ export const Dashboard: React.FC = () => {
             <XeroSection
               invoice={currentInvoice}
               onUpdate={handleXeroUpdate}
-              loading={loading}
+              loading={isXeroLoading}
             />
             
             <PaymentSection
@@ -345,7 +364,7 @@ export const Dashboard: React.FC = () => {
           <XeroSection
             invoice={currentInvoice}
             onUpdate={handleXeroUpdate}
-            loading={loading}
+            loading={isXeroLoading}
           />
           
           <PaymentSection
