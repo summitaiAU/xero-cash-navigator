@@ -26,7 +26,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   };
 
   return (
-    <div className="dashboard-card p-4 h-full flex flex-col">
+    <div className="dashboard-card p-4 flex flex-col" style={{ height: '600px' }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-header mb-0">Invoice PDF</h3>
         <div className="flex items-center gap-2">
