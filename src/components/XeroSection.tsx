@@ -169,25 +169,23 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       
       const result = await response.json();
       
-      // Handle error status
+      // Handle OK/non-OK HTTP statuses
+      const raw = result;
+      const payload = Array.isArray(raw) ? raw[0] : raw;
+
       if (!response.ok) {
-        throw new Error(result[0]?.error?.message || 'Approval failed');
+        throw new Error(payload?.error?.message || 'Approval failed');
       }
-      
-      // CORRECTED: Check for success response structure
-      if (result[0]?.Status === 'OK' && result[0]?.Invoices?.[0]) {
-        // Extract the updated invoice from the response
-        const updatedInvoice = result[0].Invoices[0];
-        
-        // Create new webhook data array with updated invoice
-        const updatedWebhookData = [updatedInvoice];
-        
-        // Update the local state with processed data
-        setXeroData(processWebhookData(updatedWebhookData));
-        
+
+      // Accept either array-wrapped or plain object responses
+      if (payload?.Status === 'OK' && payload?.Invoices?.[0]) {
+        const updatedInvoice = payload.Invoices[0];
+        // Update local state with processed data (function handles object or array)
+        setXeroData(processWebhookData(updatedInvoice));
         console.log('Approval successful, status:', updatedInvoice.Status);
         toast({ title: 'Invoice Approved', description: 'Invoice is now authorised.' });
       } else {
+        console.warn('Unexpected approval payload:', payload);
         throw new Error('Unexpected response format from approval service');
       }
       
