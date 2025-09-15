@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,6 @@ import {
   AlertTriangle 
 } from 'lucide-react';
 import { Invoice, XeroLineItem } from '@/types/invoice';
-import { accountOptions, taxRateOptions } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 
 interface XeroSectionProps {
@@ -35,7 +34,76 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState(invoice.xero_data);
+  const [xeroLoading, setXeroLoading] = useState(true);
   const { toast } = useToast();
+
+  // Fetch Xero invoice from webhook and map to local shape
+  const fetchXeroData = async () => {
+    const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/f31b75ff-6eda-4a72-93ea-91c541daaa4e';
+    const xeroId = (invoice as any).xero_invoice_id || (invoice as any).xero_bill_id || (invoice as any).xero_invoiceId;
+    if (!xeroId) {
+      setXeroLoading(false);
+      toast({ title: 'Missing Xero ID', description: 'No Xero invoice ID found for this record.', variant: 'destructive' });
+      return;
+    }
+    try {
+      setXeroLoading(true);
+      const res = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ xero_invoice_id: xeroId }),
+      });
+      const json = await res.json();
+      const payload = Array.isArray(json) ? json[0] : json;
+      if (payload?.error) {
+        throw new Error(payload.error);
+      }
+      // Accept both lowercase webhook and native Xero shapes
+      const lineItems = (payload.LineItems ?? payload.line_items ?? []).map((li: any) => ({
+        Description: li.Description ?? li.description ?? '',
+        UnitAmount: li.UnitAmount ?? li.amount ?? 0,
+        TaxAmount: li.TaxAmount ?? li.tax_amount ?? 0,
+        AccountCode: li.AccountCode ?? li.account_code ?? (payload.account_code ?? ''),
+        Quantity: li.Quantity ?? li.quantity ?? 1,
+        LineAmount: li.LineAmount ?? (li.amount ?? 0) * (li.quantity ?? 1),
+        TaxType: li.TaxType ?? 'INPUT',
+        LineItemID: li.LineItemID,
+        AccountID: li.AccountID,
+      }));
+
+      const mapped = {
+        Type: payload.Type,
+        InvoiceID: payload.InvoiceID,
+        InvoiceNumber: payload.InvoiceNumber ?? payload.invoice_number,
+        Reference: payload.Reference ?? payload.reference ?? '',
+        Contact: typeof payload.Contact === 'object' && payload.Contact?.Name
+          ? { Name: payload.Contact.Name }
+          : { Name: payload.contact ?? '' },
+        Date: payload.Date ?? payload.date,
+        DueDate: payload.DueDate ?? payload.due_date,
+        Status: (payload.Status ?? payload.status ?? 'DRAFT') as any,
+        LineItems: lineItems,
+        SubTotal: payload.SubTotal ?? payload.subtotal ?? 0,
+        TotalTax: payload.TotalTax ?? payload.tax ?? 0,
+        Total: payload.Total ?? payload.total ?? 0,
+        CurrencyCode: payload.CurrencyCode ?? 'AUD',
+        AmountDue: payload.AmountDue,
+        AmountPaid: payload.AmountPaid,
+      } as any;
+
+      setEditedData(mapped);
+    } catch (e: any) {
+      console.error('Fetch Xero invoice failed', e);
+      toast({ title: 'Failed to load Xero invoice', description: e.message || 'Unknown error', variant: 'destructive' });
+    } finally {
+      setXeroLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchXeroData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice?.id]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-AU', {
@@ -127,7 +195,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   const handleCancel = () => {
-    setEditedData(invoice.xero_data);
+    fetchXeroData();
     setIsEditing(false);
   };
 
@@ -147,8 +215,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }
   };
 
+  const isLoading = xeroLoading || loading;
   const amountMatches = Math.abs((editedData?.Total || 0) - (editedData?.Total || 0)) < 0.01;
-  const hasXeroData = invoice.xero_data && Object.keys(invoice.xero_data).length > 0;
+  const hasXeroData = !!editedData && Object.keys(editedData || {}).length > 0;
 
   return (
     <div className="dashboard-card p-6 relative">
@@ -166,25 +235,28 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           )}
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onSync} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            {loading ? 'Syncing...' : 'Sync'}
-          </Button>
-          {invoice.xero_bill_id && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => window.open(`https://go.xero.com/AccountsPayable/View.aspx?InvoiceID=${invoice.xero_bill_id}`, '_blank')}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open in Xero
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={fetchXeroData} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Syncing...' : 'Sync'}
             </Button>
-          )}
-        </div>
+            {(invoice as any).xero_invoice_id || (invoice as any).xero_bill_id ? (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  const xid = (invoice as any).xero_invoice_id || (invoice as any).xero_bill_id;
+                  window.open(`https://go.xero.com/AccountsPayable/View.aspx?InvoiceID=${xid}`,'_blank');
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open in Xero
+              </Button>
+            ) : null}
+          </div>
       </div>
 
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -213,7 +285,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       ) : !hasXeroData ? (
         <div className="text-center py-8">
           <p className="text-muted-foreground mb-4">No Xero data available</p>
-          <Button onClick={onSync} variant="outline">
+          <Button onClick={fetchXeroData} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Load Xero Data
           </Button>
