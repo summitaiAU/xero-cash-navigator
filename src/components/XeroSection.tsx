@@ -7,7 +7,9 @@ import {
   RefreshCw, 
   ExternalLink, 
   CheckCircle, 
-  AlertTriangle 
+  AlertTriangle,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -83,6 +85,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 }) => {
   const [xeroData, setXeroData] = useState<ProcessedXeroData | null>(null);
   const [xeroLoading, setXeroLoading] = useState(true);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Fetch Xero invoice from webhook
@@ -131,6 +135,79 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }
   };
 
+  // Approval function
+  const handleApprove = async () => {
+    // Validation checks
+    if (!xeroData) {
+      setApprovalError('No invoice data available');
+      return;
+    }
+    
+    if (!invoice.xero_bill_id) {
+      setApprovalError('Invoice ID not found');
+      return;
+    }
+    
+    if (xeroData.status !== 'DRAFT') {
+      setApprovalError('Only DRAFT invoices can be approved');
+      return;
+    }
+    
+    setIsApproving(true);
+    setApprovalError(null);
+    
+    try {
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/1aacb7d6-846c-4c25-b6c7-a01de21157f1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          xero_invoice_id: invoice.xero_bill_id
+        })
+      });
+      
+      const result = await response.json();
+      
+      // Handle different error scenarios
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error('Authentication failed - check Xero credentials');
+        } else if (response.status === 400) {
+          throw new Error('Invalid request - invoice may not exist');
+        } else {
+          throw new Error(result[0]?.error?.message || `HTTP ${response.status}: Approval failed`);
+        }
+      }
+      
+      // Validate response structure
+      if (!result[0]?.Invoices?.[0]) {
+        throw new Error('Invalid response from approval service');
+      }
+      
+      // Update local state with approved invoice
+      const approvedInvoice = result[0].Invoices[0];
+      const updatedData = processWebhookData([approvedInvoice]);
+      setXeroData(updatedData);
+      
+      toast({
+        title: 'Invoice Approved',
+        description: 'The invoice has been successfully approved in Xero.',
+      });
+      
+    } catch (error: any) {
+      console.error('Approval error:', error);
+      setApprovalError(error.message || 'Failed to approve invoice');
+      toast({
+        title: 'Approval Failed',
+        description: error.message || 'Failed to approve invoice',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   useEffect(() => {
     fetchXeroData();
   }, [invoice?.id]);
@@ -147,7 +224,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <>
               {xeroData.status === 'DRAFT' && <Badge variant="secondary">Draft</Badge>}
               {xeroData.status === 'AWAITING_PAYMENT' && <Badge variant="default">Awaiting Payment</Badge>}
-              {xeroData.status === 'AUTHORISED' && <Badge variant="default">Authorised</Badge>}
+              {xeroData.status === 'AUTHORISED' && <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Authorised</Badge>}
+              {xeroData.status === 'PAID' && <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Paid</Badge>}
+              {xeroData.status === 'VOIDED' && <Badge variant="destructive">Voided</Badge>}
             </>
           )}
         </div>
@@ -351,6 +430,39 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-start items-center gap-4 pt-6 border-t border-border">
+            {hasXeroData && xeroData.status === 'DRAFT' && (
+              <Button 
+                onClick={handleApprove}
+                disabled={isApproving}
+                className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
+              >
+                {isApproving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  'Approve Bill'
+                )}
+              </Button>
+            )}
+            
+            {hasXeroData && xeroData.status === 'AUTHORISED' && (
+              <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium">
+                <Check className="h-4 w-4 mr-2" />
+                Approved
+              </div>
+            )}
+
+            {approvalError && (
+              <div className="flex-1 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+                <p className="text-sm">Error: {approvalError}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
