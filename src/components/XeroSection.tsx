@@ -451,20 +451,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             </div>
           </div>
 
-          {/* Payment Details Section */}
-          <div className="space-y-4 pt-4 border-t border-border">
-            <Label className="text-base font-medium">Payment Details</Label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-muted/20 rounded-lg p-4">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">BSB</Label>
-                <div className="font-mono text-sm md:text-base font-medium">{xeroData.bsb}</div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
-                <div className="font-mono text-sm md:text-base font-medium">{xeroData.accountNumber}</div>
+          {/* Payment Details Section - Only show if bank details are available */}
+          {xeroData.bsb !== 'N/A' && xeroData.accountNumber !== 'N/A' && (
+            <div className="space-y-4 pt-4 border-t border-border">
+              <Label className="text-base font-medium">Payment Details</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 bg-muted/20 rounded-lg p-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">BSB</Label>
+                  <div className="font-mono text-sm md:text-base font-medium">{xeroData.bsb}</div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-muted-foreground">Account Number</Label>
+                  <div className="font-mono text-sm md:text-base font-medium">{xeroData.accountNumber}</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-start items-center gap-4 pt-6 border-t border-border">
