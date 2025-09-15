@@ -1,4 +1,4 @@
-export interface LineItem {
+export interface XeroLineItem {
   Description: string;
   UnitAmount: number;
   TaxAmount: number;
@@ -6,21 +6,30 @@ export interface LineItem {
   Quantity: number;
   LineAmount: number;
   TaxType: string;
+  LineItemID?: string;
+  AccountID?: string;
 }
 
 export interface XeroData {
-  Status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
-  Reference: string;
+  Type?: string;
+  InvoiceID?: string;
+  InvoiceNumber?: string;
+  Reference?: string;
   Contact?: {
     Name: string;
+    ContactID?: string;
+    EmailAddress?: string;
   };
   Date?: string;
   DueDate?: string;
+  Status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
+  LineItems: XeroLineItem[];
   SubTotal: number;
   TotalTax: number;
   Total: number;
-  LineItems: LineItem[];
-  InvoiceNumber?: string;
+  CurrencyCode?: string;
+  AmountDue?: number;
+  AmountPaid?: number;
 }
 
 export interface Invoice {

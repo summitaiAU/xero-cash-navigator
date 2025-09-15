@@ -16,7 +16,7 @@ import {
   CheckCircle, 
   AlertTriangle 
 } from 'lucide-react';
-import { Invoice, LineItem } from '@/types/invoice';
+import { Invoice, XeroLineItem } from '@/types/invoice';
 import { accountOptions, taxRateOptions } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
 
@@ -56,19 +56,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     return new Date(dateString).toLocaleDateString('en-AU');
   };
 
-  const calculateTotals = (lineItems: LineItem[]) => {
-    const subtotal = lineItems.reduce((sum, item) => sum + item.UnitAmount, 0);
-    const tax = lineItems.reduce((sum, item) => sum + item.TaxAmount, 0);
+  const calculateTotals = (lineItems: XeroLineItem[]) => {
+    const subtotal = lineItems.reduce((sum, item) => sum + (item.LineAmount || 0), 0);
+    const tax = lineItems.reduce((sum, item) => sum + (item.TaxAmount || 0), 0);
     return { SubTotal: subtotal, TotalTax: tax, Total: subtotal + tax };
   };
 
-  const handleLineItemChange = (index: number, field: keyof LineItem, value: any) => {
+  const handleLineItemChange = (index: number, field: keyof XeroLineItem, value: any) => {
     const newLineItems = [...editedData.LineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
     
-    // Recalculate tax if amount changes
+    // Recalculate tax and line amount if unit amount changes
     if (field === 'UnitAmount') {
-      newLineItems[index].TaxAmount = (value * 10) / 100; // 10% GST
+      const quantity = newLineItems[index].Quantity || 1;
+      const lineAmount = value * quantity;
+      newLineItems[index].LineAmount = lineAmount;
+      newLineItems[index].TaxAmount = (lineAmount * 10) / 100; // 10% GST
     }
     
     const totals = calculateTotals(newLineItems);
@@ -80,7 +83,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   const addLineItem = () => {
-    const newItem: LineItem = {
+    const newItem: XeroLineItem = {
       Description: '',
       UnitAmount: 0,
       TaxAmount: 0,
@@ -144,7 +147,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }
   };
 
-  const amountMatches = Math.abs((editedData?.Total || 0) - invoice.amount) < 0.01;
+  const amountMatches = Math.abs((editedData?.Total || 0) - (editedData?.Total || 0)) < 0.01;
   const hasXeroData = invoice.xero_data && Object.keys(invoice.xero_data).length > 0;
 
   return (
@@ -221,7 +224,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="grid grid-cols-3 gap-6 py-4">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">To</Label>
-              <div className="font-medium">{editedData?.Contact?.Name || invoice.supplier || 'No contact'}</div>
+              <div className="font-medium">{editedData?.Contact?.Name || 'No contact'}</div>
             </div>
             
             <div className="space-y-1">
@@ -231,14 +234,14 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-              <div>{formatDate(editedData?.DueDate || invoice.due_date)}</div>
+              <div>{formatDate(editedData?.DueDate || '')}</div>
             </div>
           </div>
           
           <div className="grid grid-cols-3 gap-6 py-2">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
-              <div className="font-medium">{invoice.invoice_number || 'No number'}</div>
+              <div className="font-medium">{editedData?.InvoiceNumber || 'No number'}</div>
             </div>
             
             <div className="space-y-1">
@@ -259,7 +262,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
-              <div>Australian Dollar</div>
+              <div>{editedData?.CurrencyCode || 'AUD'}</div>
             </div>
           </div>
 
@@ -280,7 +283,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 <div className="col-span-1 p-2 text-center">Item</div>
                 <div className="col-span-4 p-2 border-l border-border">Description</div>
                 <div className="col-span-1 p-2 border-l border-border text-center">Qty.</div>
-                <div className="col-span-1 p-2 border-l border-border text-center">Price</div>
+                <div className="col-span-1 p-2 border-l border-border text-center">Unit Price</div>
                 <div className="col-span-2 p-2 border-l border-border text-center">Account</div>
                 <div className="col-span-2 p-2 border-l border-border text-center">Tax rate</div>
                 <div className="col-span-1 p-2 border-l border-border text-center">Amount</div>
@@ -320,7 +323,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         className="h-8 text-center"
                       />
                     ) : (
-                      <div className="text-sm">${item.UnitAmount.toFixed(2)}</div>
+                      <div className="text-sm">${item.UnitAmount?.toFixed(2) || '0.00'}</div>
                     )}
                   </div>
                   
@@ -329,11 +332,11 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   </div>
                   
                   <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">GST (10%)</div>
+                    <div className="text-sm">{item.TaxType === 'INPUT' ? 'GST (10%)' : item.TaxType}</div>
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border flex items-center justify-center">
-                    <div className="text-sm font-medium">${(item.UnitAmount + item.TaxAmount).toFixed(2)}</div>
+                    <div className="text-sm font-medium">${item.LineAmount?.toFixed(2) || '0.00'}</div>
                     {isEditing && (editedData?.LineItems || []).length > 1 && (
                       <Button
                         variant="ghost"
