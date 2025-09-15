@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { Mail, Chrome } from 'lucide-react';
+import SodhiLogo from '@/assets/sodhi-logo.svg';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -118,6 +119,9 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src={SodhiLogo} alt="Sodhi Logo" className="h-12 w-auto" />
+          </div>
           <CardTitle className="text-2xl font-bold">Welcome</CardTitle>
           <CardDescription>
             Sign in to your account or create a new one
