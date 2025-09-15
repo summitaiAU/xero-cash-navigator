@@ -338,7 +338,7 @@ export const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-dashboard-bg">
       {/* Header */}
       <header className="bg-card border-b border-border shadow-soft">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
           </div>
@@ -356,7 +356,7 @@ export const Dashboard: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-4 space-y-6">
+      <main className="max-w-screen-2xl mx-auto p-4 space-y-6">
         {/* Navigation */}
         <InvoiceNavigation
           currentIndex={currentIndex}
