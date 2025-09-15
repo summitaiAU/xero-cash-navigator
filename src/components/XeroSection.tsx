@@ -1,22 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Label } from '@/components/ui/label';
 import { 
   RefreshCw, 
   ExternalLink, 
-  Edit3, 
-  Save, 
-  X, 
-  Plus, 
-  Trash2, 
   CheckCircle, 
   AlertTriangle 
 } from 'lucide-react';
-import { Invoice, XeroLineItem } from '@/types/invoice';
+import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
 
 interface XeroSectionProps {
@@ -26,75 +19,113 @@ interface XeroSectionProps {
   loading?: boolean;
 }
 
+// Exact mapping functions as specified
+const processWebhookData = (webhookArray: XeroWebhookInvoice[]): ProcessedXeroData => {
+  // Webhook is always an array, get first invoice
+  const invoice = webhookArray[0];
+  
+  return {
+    // Header fields
+    invoiceNumber: invoice?.InvoiceNumber || 'No number',
+    contactName: invoice?.Contact?.Name || 'Unknown Contact',
+    issueDate: formatDate(invoice?.DateString),
+    dueDate: formatDate(invoice?.DueDateString),
+    reference: invoice?.Reference || '',
+    currency: invoice?.CurrencyCode || 'AUD',
+    status: invoice?.Status || 'UNKNOWN',
+    
+    // Line items with exact field mapping
+    lineItems: (invoice?.LineItems || []).map((item, index) => ({
+      itemNumber: index + 1,
+      description: item?.Description || '',
+      quantity: item?.Quantity || 0,
+      unitAmount: item?.UnitAmount || 0,
+      account: `${item?.AccountCode || ''} - Expenses`,
+      taxRate: convertTaxType(item?.TaxType),
+      amount: item?.LineAmount || 0
+    })),
+    
+    // Financial totals
+    subtotal: invoice?.SubTotal || 0,
+    totalTax: invoice?.TotalTax || 0,
+    total: invoice?.Total || 0
+  };
+};
+
+const convertTaxType = (taxType?: string) => {
+  return taxType === 'INPUT' ? 'GST (10%)' : taxType || 'No Tax';
+};
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  });
+};
+
+const formatCurrency = (amount: number) => {
+  if (amount === null || amount === undefined) return '$0.00';
+  return new Intl.NumberFormat('en-AU', {
+    style: 'currency',
+    currency: 'AUD',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
 export const XeroSection: React.FC<XeroSectionProps> = ({ 
   invoice, 
   onUpdate, 
   onSync,
   loading = false 
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState(invoice.xero_data);
+  const [xeroData, setXeroData] = useState<ProcessedXeroData | null>(null);
   const [xeroLoading, setXeroLoading] = useState(true);
   const { toast } = useToast();
 
-  // Fetch Xero invoice from webhook and map to local shape
+  // Fetch Xero invoice from webhook
   const fetchXeroData = async () => {
     const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/f31b75ff-6eda-4a72-93ea-91c541daaa4e';
-    const xeroId = (invoice as any).xero_invoice_id || (invoice as any).xero_bill_id || (invoice as any).xero_invoiceId;
+    const xeroId = invoice.xero_bill_id;
+    
     if (!xeroId) {
       setXeroLoading(false);
-      toast({ title: 'Missing Xero ID', description: 'No Xero invoice ID found for this record.', variant: 'destructive' });
+      toast({ 
+        title: 'Missing Xero ID', 
+        description: 'No Xero invoice ID found for this record.', 
+        variant: 'destructive' 
+      });
       return;
     }
+
     try {
       setXeroLoading(true);
-      const res = await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ xero_invoice_id: xeroId }),
       });
-      const json = await res.json();
-      const payload = Array.isArray(json) ? json[0] : json;
-      if (payload?.error) {
-        throw new Error(payload.error);
+      
+      const webhookResponse = await response.json();
+      
+      // Check for error in response
+      if (webhookResponse[0]?.error) {
+        throw new Error(webhookResponse[0].error);
       }
-      // Accept both lowercase webhook and native Xero shapes
-      const lineItems = (payload.LineItems ?? payload.line_items ?? []).map((li: any) => ({
-        Description: li.Description ?? li.description ?? '',
-        UnitAmount: li.UnitAmount ?? li.amount ?? 0,
-        TaxAmount: li.TaxAmount ?? li.tax_amount ?? 0,
-        AccountCode: li.AccountCode ?? li.account_code ?? (payload.account_code ?? ''),
-        Quantity: li.Quantity ?? li.quantity ?? 1,
-        LineAmount: li.LineAmount ?? (li.amount ?? 0) * (li.quantity ?? 1),
-        TaxType: li.TaxType ?? 'INPUT',
-        LineItemID: li.LineItemID,
-        AccountID: li.AccountID,
-      }));
 
-      const mapped = {
-        Type: payload.Type,
-        InvoiceID: payload.InvoiceID,
-        InvoiceNumber: payload.InvoiceNumber ?? payload.invoice_number,
-        Reference: payload.Reference ?? payload.reference ?? '',
-        Contact: typeof payload.Contact === 'object' && payload.Contact?.Name
-          ? { Name: payload.Contact.Name }
-          : { Name: payload.contact ?? '' },
-        Date: payload.Date ?? payload.date,
-        DueDate: payload.DueDate ?? payload.due_date,
-        Status: (payload.Status ?? payload.status ?? 'DRAFT') as any,
-        LineItems: lineItems,
-        SubTotal: payload.SubTotal ?? payload.subtotal ?? 0,
-        TotalTax: payload.TotalTax ?? payload.tax ?? 0,
-        Total: payload.Total ?? payload.total ?? 0,
-        CurrencyCode: payload.CurrencyCode ?? 'AUD',
-        AmountDue: payload.AmountDue,
-        AmountPaid: payload.AmountPaid,
-      } as any;
-
-      setEditedData(mapped);
-    } catch (e: any) {
-      console.error('Fetch Xero invoice failed', e);
-      toast({ title: 'Failed to load Xero invoice', description: e.message || 'Unknown error', variant: 'destructive' });
+      // Process the webhook data
+      const processed = processWebhookData(webhookResponse);
+      setXeroData(processed);
+      
+    } catch (error: any) {
+      console.error('Fetch Xero invoice failed', error);
+      toast({ 
+        title: 'Failed to load Xero invoice', 
+        description: error.message || 'Unknown error', 
+        variant: 'destructive' 
+      });
     } finally {
       setXeroLoading(false);
     }
@@ -102,158 +133,43 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   useEffect(() => {
     fetchXeroData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [invoice?.id]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AU', {
-      style: 'currency',
-      currency: 'AUD'
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Not set';
-    
-    // Handle Xero date format /Date(timestamp)/
-    if (dateString.startsWith('/Date(')) {
-      const timestamp = parseInt(dateString.match(/\d+/)?.[0] || '0');
-      return new Date(timestamp).toLocaleDateString('en-AU');
-    }
-    
-    return new Date(dateString).toLocaleDateString('en-AU');
-  };
-
-  const calculateTotals = (lineItems: XeroLineItem[]) => {
-    const subtotal = lineItems.reduce((sum, item) => sum + (item.LineAmount || 0), 0);
-    const tax = lineItems.reduce((sum, item) => sum + (item.TaxAmount || 0), 0);
-    return { SubTotal: subtotal, TotalTax: tax, Total: subtotal + tax };
-  };
-
-  const handleLineItemChange = (index: number, field: keyof XeroLineItem, value: any) => {
-    const newLineItems = [...editedData.LineItems];
-    newLineItems[index] = { ...newLineItems[index], [field]: value };
-    
-    // Recalculate tax and line amount if unit amount changes
-    if (field === 'UnitAmount') {
-      const quantity = newLineItems[index].Quantity || 1;
-      const lineAmount = value * quantity;
-      newLineItems[index].LineAmount = lineAmount;
-      newLineItems[index].TaxAmount = (lineAmount * 10) / 100; // 10% GST
-    }
-    
-    const totals = calculateTotals(newLineItems);
-    setEditedData({
-      ...editedData,
-      LineItems: newLineItems,
-      ...totals
-    });
-  };
-
-  const addLineItem = () => {
-    const newItem: XeroLineItem = {
-      Description: '',
-      UnitAmount: 0,
-      TaxAmount: 0,
-      AccountCode: '429',
-      Quantity: 1,
-      LineAmount: 0,
-      TaxType: 'INPUT'
-    };
-    
-    setEditedData({
-      ...editedData,
-      LineItems: [...editedData.LineItems, newItem]
-    });
-  };
-
-  const removeLineItem = (index: number) => {
-    const newLineItems = editedData.LineItems.filter((_, i) => i !== index);
-    const totals = calculateTotals(newLineItems);
-    setEditedData({
-      ...editedData,
-      LineItems: newLineItems,
-      ...totals
-    });
-  };
-
-  const handleSave = async () => {
-    try {
-      await onUpdate(editedData);
-      setIsEditing(false);
-      toast({
-        title: "Changes saved",
-        description: "Xero invoice has been updated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save changes. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCancel = () => {
-    fetchXeroData();
-    setIsEditing(false);
-  };
-
-  const handleApprove = async () => {
-    try {
-      await onUpdate({ ...editedData, Status: 'AWAITING_PAYMENT' });
-      toast({
-        title: "Invoice approved",
-        description: "Bill status changed to Awaiting Payment in Xero.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to approve invoice. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
   const isLoading = xeroLoading || loading;
-  const amountMatches = Math.abs((editedData?.Total || 0) - (editedData?.Total || 0)) < 0.01;
-  const hasXeroData = !!editedData && Object.keys(editedData || {}).length > 0;
+  const hasXeroData = !!xeroData;
 
   return (
     <div className="dashboard-card p-6 relative">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <h3 className="section-header mb-0">Xero Invoice</h3>
-          {hasXeroData && editedData.Status === 'DRAFT' && (
-            <Badge variant="secondary">Draft</Badge>
-          )}
-          {hasXeroData && editedData.Status === 'AWAITING_PAYMENT' && (
-            <Badge variant="default">Awaiting Payment</Badge>
-          )}
-          {hasXeroData && editedData.Status === 'AUTHORISED' && (
-            <Badge variant="default">Authorised</Badge>
+          {hasXeroData && (
+            <>
+              {xeroData.status === 'DRAFT' && <Badge variant="secondary">Draft</Badge>}
+              {xeroData.status === 'AWAITING_PAYMENT' && <Badge variant="default">Awaiting Payment</Badge>}
+              {xeroData.status === 'AUTHORISED' && <Badge variant="default">Authorised</Badge>}
+            </>
           )}
         </div>
         
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchXeroData} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              {isLoading ? 'Syncing...' : 'Sync'}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={fetchXeroData} disabled={isLoading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            {isLoading ? 'Syncing...' : 'Sync'}
+          </Button>
+          {invoice.xero_bill_id && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                window.open(`https://go.xero.com/AccountsPayable/View.aspx?InvoiceID=${invoice.xero_bill_id}`, '_blank');
+              }}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in Xero
             </Button>
-            {(invoice as any).xero_invoice_id || (invoice as any).xero_bill_id ? (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  const xid = (invoice as any).xero_invoice_id || (invoice as any).xero_bill_id;
-                  window.open(`https://go.xero.com/AccountsPayable/View.aspx?InvoiceID=${xid}`,'_blank');
-                }}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open in Xero
-              </Button>
-            ) : null}
-          </div>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
@@ -276,11 +192,6 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-32 w-full" />
           </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-6 w-20" />
-          </div>
         </div>
       ) : !hasXeroData ? (
         <div className="text-center py-8">
@@ -296,45 +207,36 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="grid grid-cols-3 gap-6 py-4">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">To</Label>
-              <div className="font-medium">{editedData?.Contact?.Name || 'No contact'}</div>
+              <div className="font-medium">{xeroData.contactName}</div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
-              <div>{formatDate(editedData?.Date || '')}</div>
+              <div>{xeroData.issueDate}</div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-              <div>{formatDate(editedData?.DueDate || '')}</div>
+              <div>{xeroData.dueDate}</div>
             </div>
           </div>
           
           <div className="grid grid-cols-3 gap-6 py-2">
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
-              <div className="font-medium">{editedData?.InvoiceNumber || 'No number'}</div>
+              <div className="font-medium">{xeroData.invoiceNumber}</div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
-              {isEditing ? (
-                <Input
-                  value={editedData?.Reference || ''}
-                  onChange={(e) => setEditedData({ ...editedData, Reference: e.target.value })}
-                  placeholder="Enter reference"
-                  className="h-8"
-                />
-              ) : (
-                <div className={`py-1 px-2 rounded text-sm ${!editedData?.Reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
-                  {editedData?.Reference || 'No reference'}
-                </div>
-              )}
+              <div className={`py-1 px-2 rounded text-sm ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
+                {xeroData.reference || 'No reference'}
+              </div>
             </div>
             
             <div className="space-y-1">
               <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
-              <div>{editedData?.CurrencyCode || 'AUD'}</div>
+              <div>{xeroData.currency}</div>
             </div>
           </div>
 
@@ -342,12 +244,6 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-base font-medium">Items</Label>
-              {isEditing && (
-                <Button variant="outline" size="sm" onClick={addLineItem}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              )}
             </div>
 
             <div className="border border-border rounded-lg overflow-hidden">
@@ -357,68 +253,38 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 <div className="col-span-1 p-2 border-l border-border text-center">Qty.</div>
                 <div className="col-span-1 p-2 border-l border-border text-center">Unit Price</div>
                 <div className="col-span-2 p-2 border-l border-border text-center">Account</div>
-                <div className="col-span-2 p-2 border-l border-border text-center">Tax rate</div>
+                <div className="col-span-2 p-2 border-l border-border text-center">Tax Rate</div>
                 <div className="col-span-1 p-2 border-l border-border text-center">Amount</div>
               </div>
 
-              {(editedData?.LineItems || []).map((item, index) => (
+              {xeroData.lineItems.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
                   <div className="col-span-1 p-2 flex items-center justify-center">
-                    <div className="text-sm">{index + 1}</div>
+                    <div className="text-sm">{item.itemNumber}</div>
                   </div>
                   
                   <div className="col-span-4 p-2 border-l border-border">
-                    {isEditing ? (
-                      <Input
-                        value={item.Description}
-                        onChange={(e) => handleLineItemChange(index, 'Description', e.target.value)}
-                        placeholder="Enter description"
-                        className="h-8"
-                      />
-                    ) : (
-                      <div className="text-sm">{item.Description || 'No description'}</div>
-                    )}
+                    <div className="text-sm">{item.description || 'No description'}</div>
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.Quantity || 1}</div>
+                    <div className="text-sm">{item.quantity}</div>
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border text-center">
-                    {isEditing ? (
-                      <Input
-                        type="number"
-                        value={item.UnitAmount}
-                        onChange={(e) => handleLineItemChange(index, 'UnitAmount', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                        step="0.01"
-                        className="h-8 text-center"
-                      />
-                    ) : (
-                      <div className="text-sm">${item.UnitAmount?.toFixed(2) || '0.00'}</div>
-                    )}
+                    <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
                   </div>
                   
                   <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.AccountCode} - Expenses</div>
+                    <div className="text-sm">{item.account}</div>
                   </div>
                   
                   <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.TaxType === 'INPUT' ? 'GST (10%)' : item.TaxType}</div>
+                    <div className="text-sm">{item.taxRate}</div>
                   </div>
                   
                   <div className="col-span-1 p-2 border-l border-border flex items-center justify-center">
-                    <div className="text-sm font-medium">${item.LineAmount?.toFixed(2) || '0.00'}</div>
-                    {isEditing && (editedData?.LineItems || []).length > 1 && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeLineItem(index)}
-                        className="h-6 w-6 p-0 ml-2 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <div className="text-sm font-medium">{formatCurrency(item.amount)}</div>
                   </div>
                 </div>
               ))}
@@ -430,57 +296,20 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="w-64 space-y-1">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>{formatCurrency(editedData?.SubTotal || 0)}</span>
+                <span>{formatCurrency(xeroData.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total tax:</span>
-                <span>{formatCurrency(editedData?.TotalTax || 0)}</span>
+                <span>{formatCurrency(xeroData.totalTax)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
                 <span>Total:</span>
                 <div className="flex items-center gap-2">
-                  <span>AUD {formatCurrency(editedData?.Total || 0)}</span>
-                  {amountMatches ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  )}
+                  <span>{formatCurrency(xeroData.total)}</span>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                 </div>
               </div>
-              {!amountMatches && (
-                <div className="text-sm text-amber-600">
-                  Difference: {formatCurrency((editedData?.Total || 0) - invoice.amount)}
-                </div>
-              )}
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-            {!isEditing ? (
-              <>
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
-                {editedData?.Status === 'DRAFT' && amountMatches && (
-                  <Button onClick={handleApprove}>
-                    Approve Bill
-                  </Button>
-                )}
-              </>
-            ) : (
-              <>
-                <Button onClick={handleSave} disabled={!amountMatches}>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save Changes
-                </Button>
-                <Button variant="outline" onClick={handleCancel}>
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel
-                </Button>
-              </>
-            )}
           </div>
         </div>
       )}

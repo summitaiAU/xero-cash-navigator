@@ -1,35 +1,57 @@
-export interface XeroLineItem {
+// Exact webhook response structure
+export interface XeroWebhookLineItem {
   Description: string;
   UnitAmount: number;
+  TaxType: string;
   TaxAmount: number;
+  LineAmount: number;
   AccountCode: string;
   Quantity: number;
-  LineAmount: number;
-  TaxType: string;
-  LineItemID?: string;
-  AccountID?: string;
 }
 
-export interface XeroData {
-  Type?: string;
-  InvoiceID?: string;
-  InvoiceNumber?: string;
-  Reference?: string;
-  Contact?: {
+export interface XeroWebhookInvoice {
+  Type: string;
+  InvoiceID: string;
+  InvoiceNumber: string;
+  Reference: string;
+  AmountDue: number;
+  AmountPaid: number;
+  Contact: {
     Name: string;
-    ContactID?: string;
     EmailAddress?: string;
+    TaxNumber?: string;
   };
-  Date?: string;
-  DueDate?: string;
+  DateString: string;
+  DueDateString: string;
   Status: 'DRAFT' | 'AWAITING_PAYMENT' | 'PAID' | 'AUTHORISED';
-  LineItems: XeroLineItem[];
+  LineItems: XeroWebhookLineItem[];
   SubTotal: number;
   TotalTax: number;
   Total: number;
-  CurrencyCode?: string;
-  AmountDue?: number;
-  AmountPaid?: number;
+  CurrencyCode: string;
+}
+
+// Processed data structure for display
+export interface ProcessedXeroData {
+  invoiceNumber: string;
+  contactName: string;
+  issueDate: string;
+  dueDate: string;
+  reference: string;
+  currency: string;
+  status: string;
+  lineItems: {
+    itemNumber: number;
+    description: string;
+    quantity: number;
+    unitAmount: number;
+    account: string;
+    taxRate: string;
+    amount: number;
+  }[];
+  subtotal: number;
+  totalTax: number;
+  total: number;
 }
 
 export interface Invoice {
@@ -44,7 +66,7 @@ export interface Invoice {
   drive_view_url: string;
   supplier_email: string;
   remittance_email?: string;
-  xero_data: XeroData;
+  xero_data: ProcessedXeroData;
 }
 
 export interface ProcessingStatus {

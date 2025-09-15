@@ -13,22 +13,27 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "accounts@techsolutions.com",
     xero_data: {
-      Status: "DRAFT",
-      Reference: "REF-001",
-      SubTotal: 2205.00,
-      TotalTax: 245.00,
-      Total: 2450.00,
-      LineItems: [
+      invoiceNumber: "INV-2024-001",
+      contactName: "Tech Solutions Ltd",
+      issueDate: "15/12/2023",
+      dueDate: "15/01/2024",
+      reference: "REF-001",
+      currency: "AUD",
+      status: "DRAFT",
+      lineItems: [
         {
-          Description: "Office Supplies",
-          UnitAmount: 2205.00,
-          TaxAmount: 245.00,
-          AccountCode: "200",
-          Quantity: 1,
-          LineAmount: 2205.00,
-          TaxType: "INPUT"
+          itemNumber: 1,
+          description: "Office Supplies",
+          quantity: 1,
+          unitAmount: 2205.00,
+          account: "200 - Expenses",
+          taxRate: "GST (10%)",
+          amount: 2205.00
         }
-      ]
+      ],
+      subtotal: 2205.00,
+      totalTax: 245.00,
+      total: 2450.00
     }
   },
   {
@@ -43,31 +48,36 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "billing@marketingpro.com",
     xero_data: {
-      Status: "DRAFT",
-      Reference: "MKT-002",
-      SubTotal: 2909.09,
-      TotalTax: 290.91,
-      Total: 3200.00,
-      LineItems: [
+      invoiceNumber: "INV-2024-002",
+      contactName: "Marketing Agency Pro",
+      issueDate: "20/12/2023",
+      dueDate: "20/01/2024",
+      reference: "MKT-002",
+      currency: "AUD",
+      status: "DRAFT",
+      lineItems: [
         {
-          Description: "Digital Marketing Campaign",
-          UnitAmount: 2000.00,
-          TaxAmount: 200.00,
-          AccountCode: "300",
-          Quantity: 1,
-          LineAmount: 2000.00,
-          TaxType: "INPUT"
+          itemNumber: 1,
+          description: "Digital Marketing Campaign",
+          quantity: 1,
+          unitAmount: 2000.00,
+          account: "300 - Expenses",
+          taxRate: "GST (10%)",
+          amount: 2000.00
         },
         {
-          Description: "Social Media Management",
-          UnitAmount: 909.09,
-          TaxAmount: 90.91,
-          AccountCode: "300",
-          Quantity: 1,
-          LineAmount: 909.09,
-          TaxType: "INPUT"
+          itemNumber: 2,
+          description: "Social Media Management",
+          quantity: 1,
+          unitAmount: 909.09,
+          account: "300 - Expenses",
+          taxRate: "GST (10%)",
+          amount: 909.09
         }
-      ]
+      ],
+      subtotal: 2909.09,
+      totalTax: 290.91,
+      total: 3200.00
     }
   },
   {
@@ -82,22 +92,27 @@ export const mockInvoices: Invoice[] = [
     drive_view_url: "https://drive.google.com/file/d/1CqfgOa-cpTA8WNvUUToKfpKEuOigNsym/view",
     supplier_email: "invoices@legalconsultants.com",
     xero_data: {
-      Status: "DRAFT",
-      Reference: "LEGAL-003",
-      SubTotal: 1636.36,
-      TotalTax: 163.64,
-      Total: 1800.00,
-      LineItems: [
+      invoiceNumber: "INV-2024-003",
+      contactName: "Legal Consultants Inc",
+      issueDate: "25/12/2023",
+      dueDate: "25/01/2024",
+      reference: "LEGAL-003",
+      currency: "AUD",
+      status: "DRAFT",
+      lineItems: [
         {
-          Description: "Legal Consultation Services",
-          UnitAmount: 1636.36,
-          TaxAmount: 163.64,
-          AccountCode: "400",
-          Quantity: 1,
-          LineAmount: 1636.36,
-          TaxType: "INPUT"
+          itemNumber: 1,
+          description: "Legal Consultation Services",
+          quantity: 1,
+          unitAmount: 1636.36,
+          account: "400 - Expenses",
+          taxRate: "GST (10%)",
+          amount: 1636.36
         }
-      ]
+      ],
+      subtotal: 1636.36,
+      totalTax: 163.64,
+      total: 1800.00
     }
   }
 ];

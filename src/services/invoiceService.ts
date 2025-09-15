@@ -1,6 +1,16 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
 
+const formatDate = (dateString?: string) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-AU', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  });
+};
+
 export const fetchInvoices = async (): Promise<Invoice[]> => {
   const { data, error } = await supabase
     .from('invoices')
@@ -30,25 +40,30 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
     supplier_email: invoice.email_id || '',
     remittance_email: (invoice as any).remittance_email || undefined,
     xero_data: {
-      Status: 'DRAFT' as const,
-      Reference: invoice.payment_ref || '',
-      SubTotal: Number(invoice.subtotal) || 0,
-      TotalTax: Number(invoice.gst) || 0,
-      Total: Number(invoice.total_amount) || 0,
-      LineItems: invoice.list_items ? 
+      invoiceNumber: invoice.invoice_no || '',
+      contactName: invoice.supplier_name || '',
+      issueDate: formatDate(invoice.created_at || ''),
+      dueDate: formatDate(invoice.due_date || ''),
+      reference: invoice.payment_ref || '',
+      currency: 'AUD',
+      status: 'DRAFT' as const,
+      lineItems: invoice.list_items ? 
         (Array.isArray(invoice.list_items) ? 
-          invoice.list_items.map((item: any) => {
+          invoice.list_items.map((item: any, index: number) => {
             const itemData = typeof item === 'string' ? JSON.parse(item) : item;
             return {
-              Description: itemData.description || '',
-              UnitAmount: Number(itemData.unit_price || itemData.total) || 0,
-              TaxAmount: Number(itemData.tax_amount || (itemData.total * 0.1)) || 0,
-              AccountCode: itemData.account_code || '429',
-              Quantity: Number(itemData.quantity) || 1,
-              LineAmount: Number(itemData.total || itemData.unit_price) || 0,
-              TaxType: 'INPUT'
+              itemNumber: index + 1,
+              description: itemData.description || '',
+              quantity: Number(itemData.quantity) || 1,
+              unitAmount: Number(itemData.unit_price || itemData.total) || 0,
+              account: `${itemData.account_code || '429'} - Expenses`,
+              taxRate: 'GST (10%)',
+              amount: Number(itemData.total || itemData.unit_price) || 0
             };
-          }) : []) : []
+          }) : []) : [],
+      subtotal: Number(invoice.subtotal) || 0,
+      totalTax: Number(invoice.gst) || 0,
+      total: Number(invoice.total_amount) || 0
     }
   }));
 };
