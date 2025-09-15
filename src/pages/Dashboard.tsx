@@ -357,8 +357,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Navigation Bar */}
-        <div className="fixed top-[73px] left-0 right-0 bg-dashboard-bg border-b border-border z-20">
+        {/* Fixed Navigation Bar - Remove green border */}
+        <div className="fixed top-[73px] left-0 right-0 bg-dashboard-bg z-20">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
@@ -371,8 +371,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Fixed Layout Container */}
-        <div className="fixed top-[145px] left-0 right-0 bottom-0">
+        {/* Fixed Layout Container - Increased top spacing */}
+        <div className="fixed top-[160px] left-0 right-0 bottom-0">
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
             {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
             <div className="w-1/2 h-full flex-shrink-0">
@@ -380,8 +380,8 @@ export const Dashboard: React.FC = () => {
             </div>
             
             {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
-            <div className="w-1/2 h-full overflow-y-auto">
-              <div className="space-y-6 pr-2">
+            <div className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
+              <div className="space-y-6 pr-2 py-4">
                 <XeroSection
                   invoice={currentInvoice}
                   onUpdate={handleXeroUpdate}
