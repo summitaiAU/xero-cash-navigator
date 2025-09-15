@@ -202,111 +202,151 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {/* Header Information */}
-          <div className="grid grid-cols-3 gap-6 py-4">
-            <div className="space-y-1">
+        <div className="space-y-6">
+          {/* Header Information - Responsive Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">To</Label>
-              <div className="font-medium">{xeroData.contactName}</div>
+              <div className="font-medium text-sm md:text-base break-words">{xeroData.contactName}</div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Issue Date</Label>
-              <div>{xeroData.issueDate}</div>
+              <div className="text-sm md:text-base">{xeroData.issueDate}</div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Due Date</Label>
-              <div>{xeroData.dueDate}</div>
+              <div className="text-sm md:text-base">{xeroData.dueDate}</div>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-6 py-2">
-            <div className="space-y-1">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Invoice Number</Label>
-              <div className="font-medium">{xeroData.invoiceNumber}</div>
+              <div className="font-medium text-sm md:text-base break-words">{xeroData.invoiceNumber}</div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
-              <div className={`py-1 px-2 rounded text-sm ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : ''}`}>
+              <div className={`py-2 px-3 rounded text-sm break-words ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : 'bg-muted'}`}>
                 {xeroData.reference || 'No reference'}
               </div>
             </div>
             
-            <div className="space-y-1">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
-              <div>{xeroData.currency}</div>
+              <div className="text-sm md:text-base">{xeroData.currency}</div>
             </div>
           </div>
 
-          {/* Line Items Table */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-medium">Items</Label>
-            </div>
-
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-sm font-medium text-muted-foreground">
-                <div className="col-span-1 p-2 text-center">Item</div>
-                <div className="col-span-4 p-2 border-l border-border">Description</div>
-                <div className="col-span-1 p-2 border-l border-border text-center">Qty.</div>
-                <div className="col-span-1 p-2 border-l border-border text-center">Unit Price</div>
-                <div className="col-span-2 p-2 border-l border-border text-center">Account</div>
-                <div className="col-span-2 p-2 border-l border-border text-center">Tax Rate</div>
-                <div className="col-span-1 p-2 border-l border-border text-center">Amount</div>
+          {/* Line Items - Mobile Responsive */}
+          <div className="space-y-4">
+            <Label className="text-base font-medium">Items</Label>
+            
+            {/* Desktop Table View */}
+            <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                <div className="col-span-1 p-3 text-center">Item</div>
+                <div className="col-span-4 p-3 border-l border-border">Description</div>
+                <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
+                <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
+                <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
+                <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
+                <div className="col-span-1 p-3 border-l border-border text-center">Amount</div>
               </div>
 
               {xeroData.lineItems.map((item, index) => (
                 <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                  <div className="col-span-1 p-2 flex items-center justify-center">
+                  <div className="col-span-1 p-3 flex items-center justify-center">
                     <div className="text-sm">{item.itemNumber}</div>
                   </div>
                   
-                  <div className="col-span-4 p-2 border-l border-border">
-                    <div className="text-sm">{item.description || 'No description'}</div>
+                  <div className="col-span-4 p-3 border-l border-border">
+                    <div className="text-sm break-words">{item.description || 'No description'}</div>
                   </div>
                   
-                  <div className="col-span-1 p-2 border-l border-border text-center">
+                  <div className="col-span-1 p-3 border-l border-border text-center">
                     <div className="text-sm">{item.quantity}</div>
                   </div>
                   
-                  <div className="col-span-1 p-2 border-l border-border text-center">
+                  <div className="col-span-2 p-3 border-l border-border text-center">
                     <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
                   </div>
                   
-                  <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.account}</div>
+                  <div className="col-span-2 p-3 border-l border-border text-center">
+                    <div className="text-xs break-words">{item.account}</div>
                   </div>
                   
-                  <div className="col-span-2 p-2 border-l border-border text-center">
-                    <div className="text-sm">{item.taxRate}</div>
+                  <div className="col-span-1 p-3 border-l border-border text-center">
+                    <div className="text-xs">{item.taxRate}</div>
                   </div>
                   
-                  <div className="col-span-1 p-2 border-l border-border flex items-center justify-center">
+                  <div className="col-span-1 p-3 border-l border-border text-center">
                     <div className="text-sm font-medium">{formatCurrency(item.amount)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-3">
+              {xeroData.lineItems.map((item, index) => (
+                <div key={index} className="border border-border rounded-lg p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-sm">Item #{item.itemNumber}</div>
+                    <div className="font-bold text-right">{formatCurrency(item.amount)}</div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Description</Label>
+                      <div className="text-sm break-words">{item.description || 'No description'}</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Quantity</Label>
+                        <div className="text-sm">{item.quantity}</div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Unit Price</Label>
+                        <div className="text-sm">{formatCurrency(item.unitAmount)}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Account</Label>
+                        <div className="text-xs break-words">{item.account}</div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Tax Rate</Label>
+                        <div className="text-xs">{item.taxRate}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Totals */}
+          {/* Totals - Responsive */}
           <div className="flex justify-end">
-            <div className="w-64 space-y-1">
+            <div className="w-full max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>{formatCurrency(xeroData.subtotal)}</span>
+                <span className="font-medium">{formatCurrency(xeroData.subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Total tax:</span>
-                <span>{formatCurrency(xeroData.totalTax)}</span>
+                <span className="font-medium">{formatCurrency(xeroData.totalTax)}</span>
               </div>
-              <div className="flex justify-between text-lg font-bold border-t border-border pt-2">
+              <div className="flex justify-between text-base md:text-lg font-bold border-t border-border pt-2">
                 <span>Total:</span>
                 <div className="flex items-center gap-2">
                   <span>{formatCurrency(xeroData.total)}</span>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
                 </div>
               </div>
             </div>
