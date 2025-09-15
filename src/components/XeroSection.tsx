@@ -169,43 +169,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       
       const result = await response.json();
       
-      // Handle different error scenarios
+      // Handle error status
       if (!response.ok) {
-        if (response.status === 403) {
-          throw new Error('Authentication failed - check Xero credentials');
-        } else if (response.status === 400) {
-          throw new Error('Invalid request - invoice may not exist');
-        } else {
-          throw new Error(result[0]?.error?.message || `HTTP ${response.status}: Approval failed`);
-        }
+        throw new Error(result[0]?.error?.message || 'Approval failed');
       }
       
-      // Validate response structure - expecting array with status and Invoices
-      if (!Array.isArray(result) || !result[0]) {
-        throw new Error('Invalid response format from approval service');
+      // CORRECTED: Check for success response structure
+      if (result[0]?.Status === 'OK' && result[0]?.Invoices?.[0]) {
+        // Extract the updated invoice from the response
+        const updatedInvoice = result[0].Invoices[0];
+        
+        // Create new webhook data array with updated invoice
+        const updatedWebhookData = [updatedInvoice];
+        
+        // Update the local state with processed data
+        setXeroData(processWebhookData(updatedWebhookData));
+        
+        console.log('Approval successful, status:', updatedInvoice.Status);
+        toast({ title: 'Invoice Approved', description: 'Invoice is now authorised.' });
+      } else {
+        throw new Error('Unexpected response format from approval service');
       }
-      
-      const responseData = result[0];
-      
-      // Check if the approval was successful
-      if (responseData.Status !== 'OK') {
-        throw new Error(`Approval failed with status: ${responseData.Status}`);
-      }
-      
-      // Validate we have the updated invoice data
-      if (!responseData.Invoices?.[0]) {
-        throw new Error('No invoice data returned from approval service');
-      }
-      
-      // Update local state with approved invoice
-      const approvedInvoice = responseData.Invoices[0];
-      const updatedData = processWebhookData(approvedInvoice);
-      setXeroData(updatedData);
-      
-      toast({
-        title: 'Invoice Approved',
-        description: 'The invoice has been successfully approved in Xero.',
-      });
       
     } catch (error: any) {
       console.error('Approval error:', error);
