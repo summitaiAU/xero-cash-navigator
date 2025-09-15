@@ -293,16 +293,10 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="supplier@company.com"
                 className="flex-1"
-                disabled={!!invoice.remittance_email}
               />
-              {!invoice.remittance_email && (
-                <div className="flex items-center">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                </div>
-              )}
             </div>
             {invoice.remittance_email ? (
-              <p className="text-sm text-muted-foreground">📧 Using remittance email from database</p>
+              <p className="text-sm text-muted-foreground">📧 Default email from database: {invoice.remittance_email}</p>
             ) : (
               <p className="text-sm text-warning">⚠️ No email on file for this supplier</p>
             )}
