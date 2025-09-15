@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, RotateCcw, Mail } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Mail } from 'lucide-react';
 
 interface InvoiceNavigationProps {
   currentIndex: number;
@@ -53,12 +53,10 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
               </Button>
             )}
             
-            {onReset && (
-              <Button variant="ghost" size="sm" onClick={onReset}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset
-              </Button>
-            )}
+            <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
             
             <Button
               variant="outline"
