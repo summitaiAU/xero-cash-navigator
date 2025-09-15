@@ -235,23 +235,37 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         })
       });
 
-      const result = await response.json();
-      
-      if (response.ok && result[0]?.ok) {
+      // Parse response robustly (can be array or object)
+      const rawText = await response.text();
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        parsed = rawText;
+      }
+      const payload = Array.isArray(parsed) ? parsed[0] : parsed;
+      const isSuccess = !!payload && (payload?.ok === true || payload?.Status === 'OK' || payload?.status === 'OK' || (!!payload?.Contacts && !payload?.error));
+
+      if (response.ok && isSuccess) {
         // Update the email in state
         setEmail(newSupplierEmail);
         setShowAddEmail(false);
         setNewSupplierEmail('');
-        
+
         toast({
           title: "Email updated!",
           description: `Supplier email updated to ${newSupplierEmail}`,
         });
       } else {
-        const errorMsg = result[0]?.error || 'Failed to update supplier email';
+        const errorMsg = (
+          (Array.isArray(parsed) && parsed[0]?.error?.message) ||
+          payload?.error?.message ||
+          (Array.isArray(parsed) && parsed[0]?.error) ||
+          'Failed to update supplier email'
+        );
         toast({
           title: "Failed to update email",
-          description: errorMsg,
+          description: String(errorMsg),
           variant: "destructive",
         });
       }
@@ -363,47 +377,40 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           <div className="space-y-2">
             <Label htmlFor="email">Supplier Email</Label>
             {!showAddEmail ? (
-              <Select 
-                value={email || 'add_email'} 
+              <Select
+                value={(email ?? '') as any}
                 onValueChange={(value) => {
                   if (value === 'add_email') {
                     setShowAddEmail(true);
+                    // Focus input when it appears
+                    setTimeout(() => {
+                      const el = document.getElementById('new-supplier-email') as HTMLInputElement | null;
+                      el?.focus();
+                    }, 0);
                   } else {
                     setEmail(value);
                   }
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue>
-                    {email ? email : (
-                      <span className="flex items-center gap-2 text-muted-foreground">
-                        <Plus className="h-4 w-4" />
-                        Add Email
-                      </span>
-                    )}
-                  </SelectValue>
+                  <SelectValue placeholder="Add Email" />
                 </SelectTrigger>
                 <SelectContent className="z-50 bg-background">
-                  {email && (
-                    <SelectItem value={email}>{email}</SelectItem>
-                  )}
-                  <SelectItem value="add_email">
-                    <span className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Email
-                    </span>
-                  </SelectItem>
+                  {email && <SelectItem value={email}>{email}</SelectItem>}
+                  <SelectItem value="add_email">Add Email</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Input
+                    id="new-supplier-email"
                     type="email"
                     value={newSupplierEmail}
                     onChange={(e) => setNewSupplierEmail(e.target.value)}
                     placeholder="Enter supplier email..."
                     className="flex-1"
+                    autoFocus
                   />
                   <Button
                     variant="outline"
@@ -412,7 +419,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                     disabled={savingEmail || !newSupplierEmail}
                   >
                     <Save className="h-4 w-4 mr-1" />
-                    {savingEmail ? 'Saving...' : 'Save'}
+                    {savingEmail ? 'Saving...' : 'Save email'}
                   </Button>
                   <Button
                     variant="ghost"
