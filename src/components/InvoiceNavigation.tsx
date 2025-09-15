@@ -8,7 +8,6 @@ interface InvoiceNavigationProps {
   totalInvoices: number;
   onPrevious: () => void;
   onNext: () => void;
-  onReset?: () => void;
   completedCount: number;
   emailLink?: string;
 }
@@ -18,7 +17,6 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   totalInvoices,
   onPrevious,
   onNext,
-  onReset,
   completedCount,
   emailLink
 }) => {

@@ -466,7 +466,6 @@ export const Dashboard: React.FC = () => {
               totalInvoices={invoices.length}
               onPrevious={handlePrevious}
               onNext={handleNext}
-              onReset={handleRestart}
               completedCount={completedInvoices.size}
               emailLink={currentInvoice?.drive_view_url}
             />
@@ -547,7 +546,6 @@ export const Dashboard: React.FC = () => {
             totalInvoices={invoices.length}
             onPrevious={handlePrevious}
             onNext={handleNext}
-            onReset={handleRestart}
             completedCount={completedInvoices.size}
             emailLink={currentInvoice?.drive_view_url}
           />
