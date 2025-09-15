@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CheckCircle, Calendar, DollarSign, Building, Send, Upload, X, Check } from 'lucide-react';
+import { CheckCircle, Calendar, DollarSign, Building, Send, Upload, X, Check, Save, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,10 +40,13 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
 }) => {
   const [showRemittanceSection, setShowRemittanceSection] = useState(false);
   const [imageData, setImageData] = useState<string | null>(null);
-  const [email, setEmail] = useState(invoice.remittance_email || invoice.supplier_email || '');
+  const [email, setEmail] = useState(invoice.remittance_email || '');
   const [ccJonathon, setCcJonathon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [showAddEmail, setShowAddEmail] = useState(false);
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
   const { toast } = useToast();
 
   const handleDrop = (e: React.DragEvent) => {
@@ -160,6 +164,88 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
       });
     } finally {
       setSendingRemittance(false);
+    }
+  };
+
+  const saveSupplierEmail = async () => {
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!newSupplierEmail || !emailRegex.test(newSupplierEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Ensure required fields are present
+    if (!invoice.xero_bill_id) {
+      toast({
+        title: "Missing invoice data",
+        description: "Xero invoice ID is required to update supplier email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingEmail(true);
+    try {
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/d497731a-7362-4f0d-a199-bc6f217c5916', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          xero_invoice_id: invoice.xero_bill_id,
+          new_supplier_email: newSupplierEmail,
+          row_id: invoice.id
+        })
+      });
+
+      // Parse response robustly (can be array or object)
+      const rawText = await response.text();
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch {
+        parsed = rawText;
+      }
+      const payload = Array.isArray(parsed) ? parsed[0] : parsed;
+      const isSuccess = !!payload && (payload?.ok === true || payload?.Status === 'OK' || payload?.status === 'OK' || (!!payload?.Contacts && !payload?.error));
+
+      if (response.ok && isSuccess) {
+        // Update the email in state
+        setEmail(newSupplierEmail);
+        setShowAddEmail(false);
+        setNewSupplierEmail('');
+
+        toast({
+          title: "Email updated!",
+          description: `Supplier email updated to ${newSupplierEmail}`,
+        });
+      } else {
+        const errorMsg = (
+          (Array.isArray(parsed) && parsed[0]?.error?.message) ||
+          payload?.error?.message ||
+          (Array.isArray(parsed) && parsed[0]?.error) ||
+          'Failed to update supplier email'
+        );
+        toast({
+          title: "Failed to update email",
+          description: String(errorMsg),
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      toast({
+        title: "Failed to update email",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -314,13 +400,67 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
             {/* Email Input */}
             <div className="space-y-2">
               <Label htmlFor="remittance-email">Supplier Email</Label>
-              <Input
-                id="remittance-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter supplier email..."
-              />
+              {!showAddEmail ? (
+                <Select
+                  value={(email ?? '') as any}
+                  onValueChange={(value) => {
+                    if (value === 'add_email') {
+                      setShowAddEmail(true);
+                      // Focus input when it appears
+                      setTimeout(() => {
+                        const el = document.getElementById('new-supplier-email-paid') as HTMLInputElement | null;
+                        el?.focus();
+                      }, 0);
+                    } else {
+                      setEmail(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Add Email" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-background">
+                    {email && <SelectItem value={email}>{email}</SelectItem>}
+                    <SelectItem value="add_email">Add Email</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      id="new-supplier-email-paid"
+                      type="email"
+                      value={newSupplierEmail}
+                      onChange={(e) => setNewSupplierEmail(e.target.value)}
+                      placeholder="Enter supplier email..."
+                      className="flex-1"
+                      autoFocus
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={saveSupplierEmail}
+                      disabled={savingEmail || !newSupplierEmail}
+                    >
+                      <Save className="h-4 w-4 mr-1" />
+                      {savingEmail ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowAddEmail(false);
+                        setNewSupplierEmail('');
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {invoice.remittance_email && !showAddEmail && (
+                <p className="text-sm text-muted-foreground">📧 From database: {invoice.remittance_email}</p>
+              )}
             </div>
 
             {/* CC Jonathon */}
