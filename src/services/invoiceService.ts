@@ -28,6 +28,7 @@ export const fetchInvoices = async (): Promise<Invoice[]> => {
     drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
     supplier_email: invoice.email_id || '',
+    remittance_email: (invoice as any).remittance_email || undefined,
     xero_data: {
       status: 'DRAFT' as const,
       reference: invoice.payment_ref || '',
