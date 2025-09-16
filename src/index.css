@@ -151,11 +151,6 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  html, body {
-    margin: 0;
-    padding: 0;
-  }
-
   body {
     @apply bg-background text-foreground;
   }
@@ -235,27 +230,5 @@ All colors MUST be HSL.
   
   .transition-bounce {
     transition: var(--transition-bounce);
-  }
-
-  /* Performance and compatibility utilities */
-  .will-change-transform {
-    will-change: transform, opacity;
-  }
-
-  /* If any decorative background shapes exist, apply this class to them */
-  .bg-shapes {
-    pointer-events: none;
-    z-index: -1;
-  }
-
-  /* WebKit vendor prefixes for backdrop blur */
-  .backdrop-blur-sm { -webkit-backdrop-filter: blur(4px); }
-  .backdrop-blur { -webkit-backdrop-filter: blur(8px); }
-  .backdrop-blur-md { -webkit-backdrop-filter: blur(12px); }
-  .backdrop-blur-lg { -webkit-backdrop-filter: blur(16px); }
-
-  /* Hint the browser for animated elements */
-  [class*="animate-"] {
-    will-change: transform, opacity;
   }
 }

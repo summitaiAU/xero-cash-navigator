@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
-
+import { useSafeOffsets } from '@/hooks/useSafeOffsets';
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -30,14 +30,16 @@ export const Dashboard: React.FC = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
-  // Fixed layout constants to avoid JS-driven reflows
-  const HEADER_HEIGHT = 72; // px
-  const NAV_HEIGHT = 64;    // px
-  const SAFETY = 12;        // px
-  const navTop = HEADER_HEIGHT;
-  const contentTop = HEADER_HEIGHT + NAV_HEIGHT + SAFETY;
-
+  // Desktop fixed layout measurements
+  const headerRef = React.useRef<HTMLDivElement | null>(null);
+  const navRef = React.useRef<HTMLDivElement | null>(null);
   const rightScrollRef = React.useRef<HTMLDivElement | null>(null);
+  const desktopOffset = useSafeOffsets(headerRef.current, navRef.current, { headerFallback: 64, navFallback: 56 });
+  const SAFE_MIN_HEADER = 72; // px fallback for header
+  const SAFE_MIN_NAV = 64;    // px fallback for nav
+  const SAFETY = 12;          // extra buffer to prevent overlap
+  const navTop = Math.max(desktopOffset.header, SAFE_MIN_HEADER);
+  const contentTop = Math.max(desktopOffset.total, SAFE_MIN_HEADER + SAFE_MIN_NAV) + SAFETY;
 
   const handleSignOut = async () => {
     try {
@@ -421,8 +423,8 @@ export const Dashboard: React.FC = () => {
       {/* Desktop Layout */}
       <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
         {/* Fixed Header */}
-        <div className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-40 will-change-transform" style={{ height: HEADER_HEIGHT }}>
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex justify-between items-center">
+        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30 min-h-16">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
               <div>
@@ -444,8 +446,8 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Navigation Bar */}
-        <div className="fixed left-0 right-0 bg-dashboard-bg z-30 will-change-transform" style={{ top: navTop, height: NAV_HEIGHT }}>
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex items-center">
+        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20 min-h-14" style={{ top: navTop }}>
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
               totalInvoices={invoices.length}
@@ -457,7 +459,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="fixed left-0 right-0 bottom-0 will-change-transform" style={{ top: contentTop }}>
+        {/* Fixed Layout Container - Rugged safe top offset */}
+        <div className="fixed left-0 right-0 bottom-0" style={{ top: contentTop }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
             {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
             <div className="w-1/2 h-full flex-shrink-0">
