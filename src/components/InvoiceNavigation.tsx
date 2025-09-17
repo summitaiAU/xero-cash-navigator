@@ -34,7 +34,9 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   const progressPercentage = totalInvoices > 0 ? (completedCount / totalInvoices) * 100 : 0;
   const hasNext = currentIndex < totalInvoices - 1;
   const hasPrevious = currentIndex > 0;
-  const currentInvoice = invoices[currentIndex];
+  const safeInvoices = invoices ?? [];
+  const safeIndex = safeInvoices.length ? Math.min(currentIndex, safeInvoices.length - 1) : 0;
+  const currentInvoice = safeInvoices.length ? safeInvoices[safeIndex] : undefined;
   const isPaidStatus = currentInvoice?.status === 'PAID';
 
   return (
@@ -67,7 +69,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           <div className="flex items-center gap-4">
             {/* Invoice Dropdown */}
             <div className="flex flex-col gap-2">
-              <Select value={currentIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
+              <Select value={safeIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
                 <SelectTrigger className="w-80">
                   <SelectValue>
                     {currentInvoice && (
@@ -80,7 +82,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
-                  {invoices.map((invoice, index) => (
+                  {safeInvoices.map((invoice, index) => (
                     <SelectItem key={invoice.id} value={index.toString()}>
                       <div className="flex items-center justify-between w-full min-w-0">
                         <span className="font-medium truncate">{invoice.invoice_number}</span>
