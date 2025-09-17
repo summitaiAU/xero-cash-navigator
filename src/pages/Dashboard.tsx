@@ -415,16 +415,8 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  if (!currentInvoice) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">No Invoices Found</h1>
-          <p className="text-muted-foreground">No invoices available for processing.</p>
-        </div>
-      </div>
-    );
-  }
+  // Check if we have no invoices but still need to show the UI structure
+  const hasNoInvoices = invoices.length === 0;
 
   return (
     <>
@@ -474,40 +466,62 @@ export const Dashboard: React.FC = () => {
         {/* Fixed Layout Container - Increased top spacing */}
         <div className="fixed left-0 right-0 bottom-0" style={{ top: desktopOffset.total }}>
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
-            {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
-            <div className="w-1/2 h-full flex-shrink-0">
-              <PDFViewer invoice={currentInvoice} />
-            </div>
-            
-            {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
-            <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
-              <div className="space-y-6 pr-2 pt-0">
-                <XeroSection
-                  invoice={currentInvoice}
-                  onUpdate={handleXeroUpdate}
-                  onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
-                  loading={isXeroLoading}
-                />
-                
-                {isCompleted ? (
-                  <PaidInvoiceSection
-                    invoice={currentInvoice}
-                    onReprocess={handleReprocessPayment}
-                    onRemittanceSent={handleRemittanceSent}
-                  />
-                ) : (
-                  <PaymentSection
-                    invoice={currentInvoice}
-                    onMarkAsPaid={handleMarkAsPaid}
-                    onSkip={handleSkip}
-                    loading={loading}
-                  />
-                )}
-                
-                {/* Extra spacing at bottom for better scrolling */}
-                <div className="h-6"></div>
+            {hasNoInvoices ? (
+              /* No Invoices State */
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold mb-4">No {showPaidInvoices ? 'Paid' : 'Payable'} Invoices Found</h2>
+                  <p className="text-muted-foreground mb-4">
+                    {showPaidInvoices 
+                      ? 'No paid invoices are available to view.'
+                      : 'No invoices are available for processing.'
+                    }
+                  </p>
+                  {showPaidInvoices && (
+                    <p className="text-sm text-muted-foreground">
+                      Try switching to "Payable" to see unpaid invoices.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
+                <div className="w-1/2 h-full flex-shrink-0">
+                  <PDFViewer invoice={currentInvoice} />
+                </div>
+                
+                {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
+                <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
+                  <div className="space-y-6 pr-2 pt-0">
+                    <XeroSection
+                      invoice={currentInvoice}
+                      onUpdate={handleXeroUpdate}
+                      onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                      loading={isXeroLoading}
+                    />
+                    
+                    {isCompleted ? (
+                      <PaidInvoiceSection
+                        invoice={currentInvoice}
+                        onReprocess={handleReprocessPayment}
+                        onRemittanceSent={handleRemittanceSent}
+                      />
+                    ) : (
+                      <PaymentSection
+                        invoice={currentInvoice}
+                        onMarkAsPaid={handleMarkAsPaid}
+                        onSkip={handleSkip}
+                        loading={loading}
+                      />
+                    )}
+                    
+                    {/* Extra spacing at bottom for better scrolling */}
+                    <div className="h-6"></div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -553,31 +567,53 @@ export const Dashboard: React.FC = () => {
             onJumpToInvoice={handleJumpToInvoice}
           />
 
-          {/* PDF Viewer with increased height */}
-          <div className="h-[60vh] md:h-[75vh]">
-            <PDFViewer invoice={currentInvoice} />
-          </div>
-          
-          <XeroSection
-            invoice={currentInvoice}
-            onUpdate={handleXeroUpdate}
-            onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
-            loading={isXeroLoading}
-          />
-          
-          {isCompleted ? (
-            <PaidInvoiceSection
-              invoice={currentInvoice}
-              onReprocess={handleReprocessPayment}
-              onRemittanceSent={handleRemittanceSent}
-            />
+          {hasNoInvoices ? (
+            /* Mobile No Invoices State */
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <h2 className="text-xl font-bold mb-4">No {showPaidInvoices ? 'Paid' : 'Payable'} Invoices Found</h2>
+                <p className="text-muted-foreground mb-4">
+                  {showPaidInvoices 
+                    ? 'No paid invoices are available to view.'
+                    : 'No invoices are available for processing.'
+                  }
+                </p>
+                {showPaidInvoices && (
+                  <p className="text-sm text-muted-foreground">
+                    Try switching to "Payable" to see unpaid invoices.
+                  </p>
+                )}
+              </div>
+            </div>
           ) : (
-            <PaymentSection
-              invoice={currentInvoice}
-              onMarkAsPaid={handleMarkAsPaid}
-              onSkip={handleSkip}
-              loading={loading}
-            />
+            <>
+              {/* PDF Viewer with increased height */}
+              <div className="h-[60vh] md:h-[75vh]">
+                <PDFViewer invoice={currentInvoice} />
+              </div>
+              
+              <XeroSection
+                invoice={currentInvoice}
+                onUpdate={handleXeroUpdate}
+                onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                loading={isXeroLoading}
+              />
+              
+              {isCompleted ? (
+                <PaidInvoiceSection
+                  invoice={currentInvoice}
+                  onReprocess={handleReprocessPayment}
+                  onRemittanceSent={handleRemittanceSent}
+                />
+              ) : (
+                <PaymentSection
+                  invoice={currentInvoice}
+                  onMarkAsPaid={handleMarkAsPaid}
+                  onSkip={handleSkip}
+                  loading={loading}
+                />
+              )}
+            </>
           )}
         </main>
       </div>
