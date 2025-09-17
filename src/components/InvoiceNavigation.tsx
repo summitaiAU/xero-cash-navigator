@@ -172,6 +172,34 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
             )}
           </div>
           
+          {/* Mobile Invoice Dropdown */}
+          <div className="mb-3">
+            <Select value={safeIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
+              <SelectTrigger className="w-full text-xs">
+                <SelectValue>
+                  {currentInvoice && (
+                    <div className="flex items-center justify-between w-full">
+                      <span className="font-medium truncate flex-1">{currentInvoice.invoice_number}</span>
+                      <span className="text-xs text-muted-foreground mx-1 truncate">{currentInvoice.supplier}</span>
+                      <span className="text-xs font-medium whitespace-nowrap">${currentInvoice.amount.toLocaleString()}</span>
+                    </div>
+                  )}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="max-h-60 z-50">
+                {safeInvoices.map((invoice, index) => (
+                  <SelectItem key={invoice.id} value={index.toString()}>
+                    <div className="flex items-center justify-between w-full min-w-0">
+                      <span className="font-medium truncate text-xs">{invoice.invoice_number}</span>
+                      <span className="text-xs text-muted-foreground mx-2 truncate">{invoice.supplier}</span>
+                      <span className="text-xs font-medium whitespace-nowrap">${invoice.amount.toLocaleString()}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <div className="flex items-center justify-between">
             <div className="flex flex-col">
               <span className="text-sm font-medium">
