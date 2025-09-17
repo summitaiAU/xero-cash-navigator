@@ -27,6 +27,7 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
+  const [showPaidInvoices, setShowPaidInvoices] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -52,15 +53,17 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Load invoices from Supabase on mount
+  // Load invoices from Supabase on mount and when filter changes
   useEffect(() => {
     const loadInvoices = async () => {
-      console.log('Loading invoices...');
+      console.log('Loading invoices...', showPaidInvoices ? 'paid' : 'payable');
       try {
         setLoading(true);
-        const fetchedInvoices = await fetchInvoices();
+        const fetchedInvoices = await fetchInvoices(showPaidInvoices);
         console.log('Fetched invoices:', fetchedInvoices.length);
         setInvoices(fetchedInvoices);
+        setCurrentIndex(0); // Reset to first invoice when switching views
+        setCompletedInvoices(new Set()); // Reset completed tracking
       } catch (error) {
         console.error('Failed to load invoices:', error);
         toast({
@@ -74,7 +77,7 @@ export const Dashboard: React.FC = () => {
     };
 
     loadInvoices();
-  }, [toast]);
+  }, [toast, showPaidInvoices]);
 
   const currentInvoice = invoices[currentIndex];
 
@@ -346,6 +349,16 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
+  const handleToggleView = (showPaid: boolean) => {
+    setShowPaidInvoices(showPaid);
+  };
+
+  const handleJumpToInvoice = (index: number) => {
+    setCurrentIndex(index);
+    resetProcessingStatus();
+    scrollToTop();
+  };
+
   const handleExportReport = () => {
     const reportData = invoices.map(invoice => ({
       invoice_number: invoice.invoice_number,
@@ -450,6 +463,10 @@ export const Dashboard: React.FC = () => {
               onNext={handleNext}
               completedCount={completedInvoices.size}
               emailLink={currentInvoice?.drive_view_url}
+              invoices={invoices}
+              showPaidInvoices={showPaidInvoices}
+              onToggleView={handleToggleView}
+              onJumpToInvoice={handleJumpToInvoice}
             />
           </div>
         </div>
@@ -530,6 +547,10 @@ export const Dashboard: React.FC = () => {
             onNext={handleNext}
             completedCount={completedInvoices.size}
             emailLink={currentInvoice?.drive_view_url}
+            invoices={invoices}
+            showPaidInvoices={showPaidInvoices}
+            onToggleView={handleToggleView}
+            onJumpToInvoice={handleJumpToInvoice}
           />
 
           {/* PDF Viewer with increased height */}

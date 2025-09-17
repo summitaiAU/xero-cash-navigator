@@ -11,11 +11,15 @@ const formatDate = (dateString?: string) => {
   });
 };
 
-export const fetchInvoices = async (): Promise<Invoice[]> => {
+export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invoice[]> => {
+  const statusFilter = showPaidOnly 
+    ? ['PAID'] 
+    : ['READY', 'NEW SUPPLIER', 'REVIEW'];
+    
   const { data, error } = await supabase
     .from('invoices')
     .select('*')
-    .in('status', ['READY', 'NEW SUPPLIER', 'REVIEW', 'PAID'])
+    .in('status', statusFilter)
     .order('created_at', { ascending: true });
 
   if (error) {
