@@ -537,38 +537,41 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           </div>
         )}
 
-        <div className="flex flex-col gap-3 pt-4">
-          <Button
-            variant="default"
-            size="lg"
-            onClick={handleMarkAsPaidWithRemittance}
-            disabled={loading || !email}
-            className="w-full"
-          >
-            <Send className="h-4 w-4 mr-2" />
-            {loading ? 'Processing...' : 'Mark as Paid & Send Remittance'}
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleMarkAsPaidOnly}
-            disabled={loading}
-            className="w-full"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Mark as Paid Only
-          </Button>
-          
-          <Button
-            variant="ghost"
-            onClick={onSkip}
-            disabled={loading}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            Skip to Next Invoice
-          </Button>
-        </div>
+        {/* Only show Mark as Paid buttons if status is not PAID */}
+        {invoice.status !== 'PAID' && (
+          <div className="flex flex-col gap-3 pt-4">
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handleMarkAsPaidWithRemittance}
+              disabled={loading || !email}
+              className="w-full"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {loading ? 'Processing...' : 'Mark as Paid & Send Remittance'}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleMarkAsPaidOnly}
+              disabled={loading}
+              className="w-full"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Mark as Paid Only
+            </Button>
+            
+            <Button
+              variant="ghost"
+              onClick={onSkip}
+              disabled={loading}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Skip to Next Invoice
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
