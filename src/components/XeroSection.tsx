@@ -43,7 +43,7 @@ const processWebhookData = (webhookData: XeroWebhookInvoice[] | XeroWebhookInvoi
     contactName: invoice?.Contact?.Name || 'Unknown Contact',
     issueDate: formatDate(invoice?.DateString),
     dueDate: formatDate(invoice?.DueDateString),
-    reference: invoice?.Reference || '',
+        reference: invoice?.Reference || '',
     currency: invoice?.CurrencyCode || 'AUD',
     status: invoice?.Status || 'UNKNOWN',
     
@@ -555,7 +555,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground">Reference</Label>
+              <Label className="text-sm font-medium text-muted-foreground">Project</Label>
               {isEditing ? (
                 <Input
                   type="text"
@@ -563,8 +563,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   onChange={(e) => setEditableData({...editableData, reference: e.target.value})}
                 />
               ) : (
-                <div className={`py-2 px-3 rounded text-sm break-words ${!xeroData.reference ? 'bg-yellow-100 text-yellow-800' : 'bg-muted'}`}>
-                  {xeroData.reference || 'No reference'}
+                <div className={`py-2 px-3 rounded text-sm break-words ${!invoice.project ? 'bg-yellow-100 text-yellow-800' : 'bg-muted'}`}>
+                  {invoice.project || 'No project'}
                 </div>
               )}
             </div>

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save } from 'lucide-react';
+import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
 import { useToast } from '@/hooks/use-toast';
@@ -497,6 +497,46 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         </div>
 
         {/* Action Buttons */}
+        {/* Show Unmark as Paid button if status is PAID */}
+        {invoice.status === 'PAID' && (
+          <div className="p-4 bg-success/5 border border-success/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-success" />
+                <span className="font-medium text-success">Payment Confirmed</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  // Import the unmark function
+                  const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
+                  try {
+                    await unmarkInvoiceAsPaid(invoice.id);
+                    toast({
+                      title: "Invoice unmarked",
+                      description: "Invoice has been unmarked as paid and moved back to payable.",
+                    });
+                    // Refresh the page to update the view
+                    window.location.reload();
+                  } catch (error: any) {
+                    toast({
+                      title: "Error",
+                      description: error.message || "Failed to unmark invoice as paid",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Unmark as Paid
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              This invoice has been marked as paid. You can unmark it if needed.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3 pt-4">
           <Button
             variant="default"

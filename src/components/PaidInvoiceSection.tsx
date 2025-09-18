@@ -501,17 +501,43 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
         )}
 
         {/* Actions */}
-        {onReprocess && (
-          <div className="flex justify-center pt-4">
+        <div className="flex flex-col gap-3 pt-4">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              // Import the unmark function
+              const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
+              try {
+                await unmarkInvoiceAsPaid(invoice.id);
+                toast({
+                  title: "Invoice unmarked",
+                  description: "Invoice has been unmarked as paid and moved back to payable.",
+                });
+                // Refresh the page to update the view
+                window.location.reload();
+              } catch (error: any) {
+                toast({
+                  title: "Error",
+                  description: error.message || "Failed to unmark invoice as paid",
+                  variant: "destructive",
+                });
+              }
+            }}
+            className="w-full"
+          >
+            Unmark as Paid
+          </Button>
+          
+          {onReprocess && (
             <Button
               variant="outline"
               onClick={onReprocess}
-              className="text-muted-foreground hover:text-foreground"
+              className="w-full text-muted-foreground hover:text-foreground"
             >
               Reprocess Payment
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );

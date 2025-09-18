@@ -44,6 +44,7 @@ export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invo
     supplier_email: invoice.email_id || '',
     remittance_email: (invoice as any).remittance_email || undefined,
     remittance_sent: invoice.remittance_sent || false,
+    project: invoice.project || '',
     xero_data: {
       invoiceNumber: invoice.invoice_no || '',
       contactName: invoice.supplier_name || '',
@@ -87,6 +88,21 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
 
   if (error) {
     throw new Error(`Failed to update invoice: ${error.message}`);
+  }
+};
+
+export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ 
+      status: 'READY',
+      remittance_sent: false,
+      paid_date: null
+    })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to unmark invoice as paid: ${error.message}`);
   }
 };
 

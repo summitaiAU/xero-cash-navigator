@@ -5,6 +5,8 @@ import { PaymentSection } from '@/components/PaymentSection';
 import { PaidInvoiceSection } from '@/components/PaidInvoiceSection';
 import { InvoiceNavigation } from '@/components/InvoiceNavigation';
 import { CompletionScreen } from '@/components/CompletionScreen';
+import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton';
+import { AddInvoiceButton } from '@/components/AddInvoiceButton';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
 import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
@@ -433,6 +435,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
+              <AddInvoiceButton />
               <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
                 <User className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
@@ -491,7 +494,7 @@ export const Dashboard: React.FC = () => {
                   <PDFViewer invoice={currentInvoice} />
                 </div>
                 
-                {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
+                 {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
                 <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
                   <div className="space-y-6 pr-2 pt-0">
                     <XeroSection
@@ -513,6 +516,25 @@ export const Dashboard: React.FC = () => {
                         onMarkAsPaid={handleMarkAsPaid}
                         onSkip={handleSkip}
                         loading={loading}
+                      />
+                    )}
+                    
+                    {/* Delete Invoice Button - Only for payable invoices */}
+                    {!showPaidInvoices && currentInvoice && (
+                      <DeleteInvoiceButton
+                        invoice={currentInvoice}
+                        onDeleted={() => {
+                          // Reload invoices after deletion
+                          setInvoices(prev => prev.filter(inv => inv.id !== currentInvoice.id));
+                          // If this was the last invoice or we're at the end, go to previous
+                          if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
+                            setCurrentIndex(currentIndex - 1);
+                          }
+                          toast({
+                            title: "Invoice deleted",
+                            description: "Invoice has been removed successfully.",
+                          });
+                        }}
                       />
                     )}
                     

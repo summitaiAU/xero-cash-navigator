@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, RefreshCw, Mail, CheckCircle } from 'lucide-react';
+import { AddInvoiceButton } from './AddInvoiceButton';
 import { Invoice } from '@/types/invoice';
 
 interface InvoiceNavigationProps {
@@ -211,6 +212,8 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
             </div>
             
             <div className="flex items-center gap-1">
+              <AddInvoiceButton isMobile={true} />
+              
               {emailLink && (
                 <Button
                   variant="ghost"

@@ -73,6 +73,7 @@ export interface Invoice {
   supplier_email: string;
   remittance_email?: string;
   remittance_sent?: boolean;
+  project?: string;
   xero_data: ProcessedXeroData;
 }
 
