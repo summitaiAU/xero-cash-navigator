@@ -304,9 +304,19 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
                 <X className="h-3 w-3" />
               </Button>
             </div>
-            <div className="space-y-2">
-              <Progress value={66} className="h-2" />
-              <p className="text-xs text-muted-foreground">Analyzing document and extracting data...</p>
+            <div className="space-y-3">
+              {/* Infinite loading animation */}
+              <div className="relative h-2 bg-muted rounded-full overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-primary to-primary/50 w-1/3 rounded-full animate-[slide-right_1.5s_ease-in-out_infinite]"></div>
+              </div>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-muted-foreground">Analyzing document and extracting data</p>
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                  <div className="w-1 h-1 bg-muted-foreground rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                </div>
+              </div>
             </div>
           </div>
         )}
