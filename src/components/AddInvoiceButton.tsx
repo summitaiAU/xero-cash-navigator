@@ -89,13 +89,14 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         body: formData
       });
 
-      if (response.ok) {
+      // Handle specific response codes
+      if (response.status === 200) {
         toast({
-          title: "Invoice submitted!",
-          description: "Your invoice has been submitted for processing successfully.",
+          title: "Invoice processed successfully!",
+          description: "Your invoice has been processed and added to the system.",
         });
         
-        // Simulate processing time then close the dialog entirely
+        // Close the dialog after successful processing
         setTimeout(() => {
           setIsProcessing(false);
           setProcessingFileName('');
@@ -103,14 +104,32 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           setOpen(false);
           setFileData(null);
           setFileName('');
-          toast({
-            title: "Processing complete!",
-            description: "Your invoice has been processed and added to the system.",
-          });
-        }, 3000);
+        }, 2000);
+        
+      } else if (response.status === 429) {
+        setIsProcessing(false);
+        setProcessingFileName('');
+        setIsMinimized(false);
+        
+        toast({
+          title: "Duplicate Invoice",
+          description: "This invoice has already been processed in the system.",
+          variant: "destructive",
+        });
+        
+      } else if (response.status === 415) {
+        setIsProcessing(false);
+        setProcessingFileName('');
+        setIsMinimized(false);
+        
+        toast({
+          title: "Check Invoice",
+          description: "There was an issue with the invoice format. Please check and try again.",
+          variant: "destructive",
+        });
         
       } else {
-        // Get detailed error message from response
+        // Handle other error responses
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         try {
           const errorData = await response.json();
