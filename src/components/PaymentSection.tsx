@@ -5,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle } from 'lucide-react';
+import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle, DollarSign, Undo } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
 import { FlagInvoiceButton } from './FlagInvoiceButton';
+import { PartialPaymentModal } from './PartialPaymentModal';
 import { useToast } from '@/hooks/use-toast';
 
 interface PaymentSectionProps {
@@ -38,6 +39,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   const [showAddEmail, setShowAddEmail] = useState(false);
   const [newSupplierEmail, setNewSupplierEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
+  const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false);
   const { toast } = useToast();
 
   // Update email when invoice changes
@@ -308,6 +310,48 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     }
   };
 
+  const handlePartialPayment = async (amountPaid: number) => {
+    try {
+      const { markAsPartiallyPaid } = await import('@/services/invoiceService');
+      await markAsPartiallyPaid(invoice.id, amountPaid);
+      
+      toast({
+        title: "Partial payment recorded",
+        description: `Payment of ${formatCurrency(amountPaid)} has been recorded.`,
+      });
+      
+      // Refresh the page to update the view
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Failed to record partial payment",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUnmarkPartialPayment = async () => {
+    try {
+      const { unmarkPartialPayment } = await import('@/services/invoiceService');
+      await unmarkPartialPayment(invoice.id);
+      
+      toast({
+        title: "Partial payment removed",
+        description: "Invoice has been unmarked as partially paid.",
+      });
+      
+      // Refresh the page to update the view
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Failed to unmark partial payment",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-AU', {
       style: 'currency',
@@ -514,19 +558,18 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         </div>
 
         {/* Action Buttons */}
-        {/* Show Unmark as Paid button if status is PAID */}
+        {/* Show payment status */}
         {invoice.status === 'PAID' && (
           <div className="p-4 bg-success/5 border border-success/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-success" />
-                <span className="font-medium text-success">Payment Confirmed</span>
+                <span className="font-medium text-success">Fully Paid</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={async () => {
-                  // Import the unmark function
                   const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
                   try {
                     await unmarkInvoiceAsPaid(invoice.id);
@@ -534,7 +577,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                       title: "Invoice unmarked",
                       description: "Invoice has been unmarked as paid and moved back to payable.",
                     });
-                    // Refresh the page to update the view
                     window.location.reload();
                   } catch (error: any) {
                     toast({
@@ -549,12 +591,42 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               </Button>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              This invoice has been marked as paid. You can unmark it if needed.
+              This invoice has been fully paid. You can unmark it if needed.
             </p>
           </div>
         )}
 
-        {/* Only show Mark as Paid buttons if status is not PAID */}
+        {invoice.status === 'PARTIALLY PAID' && (
+          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-orange-600" />
+                <span className="font-medium text-orange-800">Partially Paid</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUnmarkPartialPayment}
+                className="text-orange-700 hover:text-orange-800"
+              >
+                <Undo className="h-4 w-4 mr-1" />
+                Unmark Partial
+              </Button>
+            </div>
+            <div className="mt-2 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount Paid:</span>
+                <span className="font-medium">{formatCurrency(Number(invoice.amount_paid) || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Amount Due:</span>
+                <span className="font-medium">{formatCurrency(Number(invoice.amount_due) || 0)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Only show payment buttons if status is not PAID */}
         {invoice.status !== 'PAID' && (
           <div className="flex flex-col gap-3 pt-4">
             <Button
@@ -565,7 +637,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               className="w-full"
             >
               <Send className="h-4 w-4 mr-2" />
-              {loading ? 'Processing...' : 'Mark as Paid & Send Remittance'}
+              {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
             </Button>
             
             <Button
@@ -576,7 +648,18 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               className="w-full"
             >
               <Check className="h-4 w-4 mr-2" />
-              Mark as Paid Only
+              Mark as Fully Paid
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setShowPartialPaymentModal(true)}
+              disabled={loading}
+              className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Mark as Partially Paid
             </Button>
             
             <Button
@@ -597,6 +680,15 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             )}
           </div>
         )}
+
+        {/* Partial Payment Modal */}
+        <PartialPaymentModal
+          isOpen={showPartialPaymentModal}
+          onClose={() => setShowPartialPaymentModal(false)}
+          onConfirm={handlePartialPayment}
+          invoiceAmount={Number(invoice.total_amount) || invoice.amount}
+          currentPaid={Number(invoice.amount_paid) || 0}
+        />
       </div>
     </div>
   );

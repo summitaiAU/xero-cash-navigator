@@ -177,7 +177,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       const { approveInvoice } = await import('@/services/invoiceService');
       await approveInvoice(invoice.id);
       
-      const updatedInvoice = { ...invoice, status: 'APPROVED' };
+      const updatedInvoice = { ...invoice, approved: true };
       onUpdate(updatedInvoice);
       toast({ title: 'Invoice Approved', description: 'Invoice has been approved successfully.' });
     } catch (error: any) {
@@ -197,7 +197,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       const { undoApproveInvoice } = await import('@/services/invoiceService');
       await undoApproveInvoice(invoice.id);
       
-      const updatedInvoice = { ...invoice, status: 'READY' };
+      const updatedInvoice = { ...invoice, approved: false };
       onUpdate(updatedInvoice);
       toast({ title: 'Approval Undone', description: 'Invoice approval has been reverted to Ready status.' });
     } catch (error: any) {
@@ -368,8 +368,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <h3 className="section-header mb-0 truncate">Invoice Details</h3>
-          <Badge variant={invoice.status === 'APPROVED' ? 'default' : 'secondary'}>
-            {invoice.status === 'APPROVED' ? 'Approved' : (invoice.status || 'Ready')}
+          <Badge variant={invoice.approved ? 'default' : 'secondary'}>
+            {invoice.approved ? 'Approved' : (invoice.status || 'Ready')}
           </Badge>
         </div>
         
@@ -611,42 +611,42 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             ) : (
               <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
                 <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                  <div className="col-span-1 p-3 text-center">Item</div>
-                  <div className="col-span-3 p-3 border-l border-border">Description</div>
-                  <div className="col-span-1 p-3 border-l border-border text-center">Qty.</div>
-                  <div className="col-span-2 p-3 border-l border-border text-center">Unit Price</div>
-                  <div className="col-span-2 p-3 border-l border-border text-center">Account</div>
-                  <div className="col-span-1 p-3 border-l border-border text-center">Tax</div>
-                  <div className="col-span-2 p-3 border-l border-border text-center">Amount</div>
+                  <div className="col-span-1 p-4 text-center">Item</div>
+                  <div className="col-span-3 p-4 border-l border-border">Description</div>
+                  <div className="col-span-1 p-4 border-l border-border text-center">Qty.</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Unit Price</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Account</div>
+                  <div className="col-span-1 p-4 border-l border-border text-center">Tax</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Amount</div>
                 </div>
 
                 {invoiceData.lineItems.map((item, index) => (
                   <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                    <div className="col-span-1 p-3 flex items-center justify-center">
+                    <div className="col-span-1 p-4 flex items-center justify-center">
                       <div className="text-sm">{item.itemNumber}</div>
                     </div>
                     
-                    <div className="col-span-3 p-3 border-l border-border">
-                      <div className="text-sm break-words pr-2">{item.description || 'No description'}</div>
+                   <div className="col-span-3 p-4 border-l border-border">
+                      <div className="text-sm break-words pr-2 leading-relaxed">{item.description || 'No description'}</div>
                     </div>
                     
-                    <div className="col-span-1 p-3 border-l border-border text-center">
+                    <div className="col-span-1 p-4 border-l border-border text-center">
                       <div className="text-sm">{item.quantity}</div>
                     </div>
                     
-                    <div className="col-span-2 p-3 border-l border-border text-center">
+                    <div className="col-span-2 p-4 border-l border-border text-center">
                       <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
                     </div>
                     
-                    <div className="col-span-2 p-3 border-l border-border">
-                      <div className="text-xs break-words leading-tight">{item.account}</div>
+                    <div className="col-span-2 p-4 border-l border-border">
+                      <div className="text-xs break-words leading-relaxed">{item.account}</div>
                     </div>
                     
-                    <div className="col-span-1 p-3 border-l border-border text-center">
+                    <div className="col-span-1 p-4 border-l border-border text-center">
                       <div className="text-xs break-words">{item.taxRate}</div>
                     </div>
                     
-                    <div className="col-span-2 p-3 border-l border-border text-right">
+                    <div className="col-span-2 p-4 border-l border-border text-right">
                       <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
                     </div>
                   </div>
@@ -844,7 +844,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                     Edit
                   </Button>
                   
-                  {invoice.status === 'APPROVED' ? (
+                  {invoice.approved ? (
                     <Button 
                       onClick={handleUndoApproval}
                       disabled={isApproving}

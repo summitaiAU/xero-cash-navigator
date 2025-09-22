@@ -66,7 +66,7 @@ export interface Invoice {
   supplier: string;
   amount: number;
   due_date: string;
-  status: 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED';
+  status: 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY PAID';
   xero_bill_id: string;
   drive_embed_url: string;
   drive_view_url: string;
@@ -76,6 +76,8 @@ export interface Invoice {
   sender_email?: string;
   remittance_sent?: boolean;
   project?: string;
+  approved?: boolean;
+  partially_paid?: boolean;
   xero_data: ProcessedXeroData;
   
   // Additional Supabase fields for editing

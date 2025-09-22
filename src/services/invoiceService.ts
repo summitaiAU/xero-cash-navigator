@@ -42,7 +42,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     supplier: invoice.supplier_name || '',
     amount: Number(invoice.total_amount) || 0,
     due_date: invoice.due_date || '',
-    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID') || 'READY',
+    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY PAID') || 'READY',
     xero_bill_id: invoice.xero_invoice_id || '',
     drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
@@ -52,6 +52,8 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     sender_email: (invoice as any).sender_email || undefined,
     remittance_sent: invoice.remittance_sent || false,
     project: invoice.project || '',
+    approved: (invoice as any).approved || false,
+    partially_paid: (invoice as any).partially_paid || false,
     
     // Additional Supabase fields for editing
     entity: invoice.entity || '',
@@ -255,7 +257,8 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   list_items?: any[],
   subtotal?: number,
   gst?: number,
-  total_amount?: number
+  total_amount?: number,
+  approved?: boolean
 }) => {
   const { error } = await supabase
     .from('invoices')
@@ -270,7 +273,7 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
 export const approveInvoice = async (invoiceId: string) => {
   const { error } = await supabase
     .from('invoices')
-    .update({ status: 'APPROVED' })
+    .update({ approved: true } as any)
     .eq('id', invoiceId);
 
   if (error) {
@@ -281,10 +284,58 @@ export const approveInvoice = async (invoiceId: string) => {
 export const undoApproveInvoice = async (invoiceId: string) => {
   const { error } = await supabase
     .from('invoices')
-    .update({ status: 'READY' })
+    .update({ approved: false } as any)
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to undo invoice approval: ${error.message}`);
+  }
+};
+
+export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number) => {
+  // First get current invoice data to calculate new amounts
+  const { data: invoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('amount_paid, total_amount')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError || !invoice) {
+    throw new Error(`Failed to fetch invoice: ${fetchError?.message}`);
+  }
+
+  const currentAmountPaid = Number(invoice.amount_paid) || 0;
+  const totalAmount = Number(invoice.total_amount) || 0;
+  const newAmountPaid = currentAmountPaid + amountPaid;
+  const newAmountDue = totalAmount - newAmountPaid;
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ 
+      status: 'PARTIALLY PAID',
+      partially_paid: true,
+      amount_paid: newAmountPaid,
+      amount_due: newAmountDue
+    })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to mark invoice as partially paid: ${error.message}`);
+  }
+};
+
+export const unmarkPartialPayment = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ 
+      status: 'READY',
+      partially_paid: false,
+      amount_paid: 0,
+      amount_due: null
+    })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to unmark partial payment: ${error.message}`);
   }
 };
