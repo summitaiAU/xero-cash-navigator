@@ -102,10 +102,10 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                 <SelectContent className="max-h-60">
                   {safeInvoices.map((invoice, index) => (
                     <SelectItem key={invoice.id} value={index.toString()}>
-                      <div className="flex items-center justify-between w-full min-w-0">
-                        <span className="font-medium truncate">{invoice.invoice_number}</span>
-                        <span className="text-sm text-muted-foreground mx-2 truncate">{invoice.supplier}</span>
-                        <span className="text-sm font-medium whitespace-nowrap">${invoice.amount.toLocaleString()}</span>
+                      <div className="flex items-center gap-4 w-full min-w-0">
+                        <span className="font-medium truncate flex-shrink-0 min-w-[80px]">{invoice.invoice_number}</span>
+                        <span className="text-sm text-muted-foreground truncate flex-1">{invoice.supplier}</span>
+                        <span className="text-sm font-medium whitespace-nowrap flex-shrink-0">${invoice.amount.toLocaleString()}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -207,10 +207,10 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
               <SelectContent className="max-h-60 z-50">
                 {safeInvoices.map((invoice, index) => (
                   <SelectItem key={invoice.id} value={index.toString()}>
-                    <div className="flex items-center justify-between w-full min-w-0">
-                      <span className="font-medium truncate text-xs">{invoice.invoice_number}</span>
-                      <span className="text-xs text-muted-foreground mx-2 truncate">{invoice.supplier}</span>
-                      <span className="text-xs font-medium whitespace-nowrap">${invoice.amount.toLocaleString()}</span>
+                    <div className="flex items-center gap-3 w-full min-w-0">
+                      <span className="font-medium truncate text-xs flex-shrink-0 min-w-[60px]">{invoice.invoice_number}</span>
+                      <span className="text-xs text-muted-foreground truncate flex-1">{invoice.supplier}</span>
+                      <span className="text-xs font-medium whitespace-nowrap flex-shrink-0">${invoice.amount.toLocaleString()}</span>
                     </div>
                   </SelectItem>
                 ))}
