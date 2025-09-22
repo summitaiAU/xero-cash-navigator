@@ -224,22 +224,17 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleXeroUpdate = async (updates: any) => {
+  const handleXeroUpdate = async (updatedInvoice: any) => {
     if (!currentInvoice) return;
 
-    setLoading(true);
-    try {
-      // Fetch updated Xero data
-      if (currentInvoice.xero_bill_id) {
-        await loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id);
-        setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
-      }
-    } catch (error) {
-      console.error('Failed to update Xero:', error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    // Update the local invoice state with the updated data
+    setInvoices(prevInvoices => 
+      prevInvoices.map(invoice => 
+        invoice.id === updatedInvoice.id ? updatedInvoice : invoice
+      )
+    );
+    
+    setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
   };
 
   const handleMarkAsPaid = async (paymentData: PaymentData) => {
