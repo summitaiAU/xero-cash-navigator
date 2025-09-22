@@ -371,11 +371,19 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Entity</Label>
               {isEditing ? (
-                <Input
-                  type="text"
+                <select
                   value={editableData?.entity || ''}
                   onChange={(e) => setEditableData({...editableData, entity: e.target.value})}
-                />
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 z-10"
+                >
+                  <option value="Sodhi Property Developers Pty Ltd">Sodhi Property Developers Pty Ltd</option>
+                  <option value="NALA Properties Pty Ltd">NALA Properties Pty Ltd</option>
+                  {invoice.entity && 
+                   invoice.entity !== 'Sodhi Property Developers Pty Ltd' && 
+                   invoice.entity !== 'NALA Properties Pty Ltd' && (
+                    <option value={invoice.entity}>{invoice.entity}</option>
+                  )}
+                </select>
               ) : (
                 <div className="font-medium text-sm md:text-base break-words">{invoice.entity || 'Not specified'}</div>
               )}
