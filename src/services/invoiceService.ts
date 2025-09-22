@@ -20,7 +20,7 @@ export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invo
     .from('invoices')
     .select('*')
     .in('status', statusFilter)
-    .order('created_at', { ascending: true });
+    .order('due_date', { ascending: true, nullsFirst: false });
 
   if (error) {
     throw new Error(`Failed to fetch invoices: ${error.message}`);
@@ -31,7 +31,7 @@ export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invo
   }
 
   // Map Supabase schema to our Invoice interface
-  return data.map((invoice) => ({
+  const mappedInvoices = data.map((invoice) => ({
     id: invoice.id,
     invoice_number: invoice.invoice_no || '',
     supplier: invoice.supplier_name || '',
@@ -43,6 +43,8 @@ export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invo
     drive_view_url: invoice.link_to_invoice || '',
     supplier_email: invoice.email_id || '',
     remittance_email: (invoice as any).remittance_email || undefined,
+    supplier_email_on_invoice: (invoice as any).supplier_email_on_invoice || undefined,
+    sender_email: (invoice as any).sender_email || undefined,
     remittance_sent: invoice.remittance_sent || false,
     project: invoice.project || '',
     xero_data: {
@@ -74,6 +76,30 @@ export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invo
       total: Number(invoice.total_amount) || 0
     }
   }));
+
+  // Sort by due date with overdue invoices first, then by closest due date
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+  
+  return mappedInvoices.sort((a, b) => {
+    const dateA = a.due_date ? new Date(a.due_date) : null;
+    const dateB = b.due_date ? new Date(b.due_date) : null;
+    
+    // Handle null dates (put them last)
+    if (!dateA && !dateB) return 0;
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    
+    const isOverdueA = dateA < today;
+    const isOverdueB = dateB < today;
+    
+    // If one is overdue and one isn't, prioritize overdue
+    if (isOverdueA && !isOverdueB) return -1;
+    if (!isOverdueA && isOverdueB) return 1;
+    
+    // Both overdue or both not overdue - sort by date (ascending)
+    return dateA.getTime() - dateB.getTime();
+  });
 };
 
 export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSent: boolean) => {

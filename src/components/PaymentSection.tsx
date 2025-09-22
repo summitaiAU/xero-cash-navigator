@@ -401,11 +401,25 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Add Email" />
+                  <SelectValue placeholder="Select Email Source" />
                 </SelectTrigger>
                 <SelectContent className="z-50 bg-background">
-                  {email && <SelectItem value={email}>{email}</SelectItem>}
-                  <SelectItem value="add_email">Add Email</SelectItem>
+                  {invoice.remittance_email && (
+                    <SelectItem value={invoice.remittance_email}>
+                      {invoice.remittance_email} <span className="text-muted-foreground text-xs ml-2">(Database)</span>
+                    </SelectItem>
+                  )}
+                  {invoice.supplier_email_on_invoice && (
+                    <SelectItem value={invoice.supplier_email_on_invoice}>
+                      {invoice.supplier_email_on_invoice} <span className="text-muted-foreground text-xs ml-2">(On Invoice)</span>
+                    </SelectItem>
+                  )}
+                  {invoice.sender_email && (
+                    <SelectItem value={invoice.sender_email}>
+                      {invoice.sender_email} <span className="text-muted-foreground text-xs ml-2">(Sender Email)</span>
+                    </SelectItem>
+                  )}
+                  <SelectItem value="add_email">Add New Email</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
