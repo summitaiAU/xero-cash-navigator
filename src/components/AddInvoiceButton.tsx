@@ -56,7 +56,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!fileData) {
       toast({
         title: "No file selected",
@@ -66,15 +66,41 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       return;
     }
 
-    // For now, just show a placeholder message since backend isn't implemented
-    toast({
-      title: "Invoice submitted!",
-      description: "Your invoice has been submitted for processing. This feature is coming soon!",
-    });
-    
-    setOpen(false);
-    setFileData(null);
-    setFileName('');
+    try {
+      // Convert base64 to blob
+      const base64Response = await fetch(fileData);
+      const blob = await base64Response.blob();
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append('data', blob, fileName);
+      formData.append('file_name', fileName);
+
+      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/b3e9dcc8-0c43-4614-a2eb-94c50264090c', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Invoice submitted!",
+          description: "Your invoice has been submitted for processing successfully.",
+        });
+        
+        setOpen(false);
+        setFileData(null);
+        setFileName('');
+      } else {
+        throw new Error('Failed to submit invoice');
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      toast({
+        title: "Failed to submit invoice",
+        description: errorMsg,
+        variant: "destructive",
+      });
+    }
   };
 
   return (
