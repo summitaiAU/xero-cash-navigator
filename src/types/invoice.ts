@@ -77,6 +77,19 @@ export interface Invoice {
   remittance_sent?: boolean;
   project?: string;
   xero_data: ProcessedXeroData;
+  
+  // Additional Supabase fields for editing
+  entity?: string;
+  supplier_name?: string;
+  invoice_no?: string;
+  list_items?: any[];
+  subtotal?: number;
+  gst?: number;
+  total_amount?: number;
+  amount_due?: number;
+  amount_paid?: number;
+  invoice_date?: string;
+  currency?: string;
 }
 
 export interface ProcessingStatus {

@@ -52,6 +52,20 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     sender_email: (invoice as any).sender_email || undefined,
     remittance_sent: invoice.remittance_sent || false,
     project: invoice.project || '',
+    
+    // Additional Supabase fields for editing
+    entity: invoice.entity || '',
+    supplier_name: invoice.supplier_name || '',
+    invoice_no: invoice.invoice_no || '',
+    list_items: invoice.list_items || [],
+    subtotal: Number(invoice.subtotal) || 0,
+    gst: Number(invoice.gst) || 0,
+    total_amount: Number(invoice.total_amount) || 0,
+    amount_due: Number(invoice.amount_due) || 0,
+    amount_paid: Number(invoice.amount_paid) || 0,
+    invoice_date: invoice.invoice_date || '',
+    currency: (invoice as any).currency || 'AUD',
+    
     xero_data: {
       invoiceNumber: invoice.invoice_no || '',
       contactName: invoice.supplier_name || '',
@@ -227,5 +241,28 @@ export const resolveFlag = async (invoiceId: string) => {
 
   if (error) {
     throw new Error(`Failed to resolve flag: ${error.message}`);
+  }
+};
+
+export const updateInvoiceData = async (invoiceId: string, updateData: {
+  entity?: string,
+  project?: string,
+  supplier_name?: string,
+  invoice_no?: string,
+  invoice_date?: string,
+  due_date?: string,
+  currency?: string,
+  list_items?: any[],
+  subtotal?: number,
+  gst?: number,
+  total_amount?: number
+}) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update(updateData)
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to update invoice: ${error.message}`);
   }
 };
