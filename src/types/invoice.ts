@@ -66,7 +66,7 @@ export interface Invoice {
   supplier: string;
   amount: number;
   due_date: string;
-  status: 'READY' | 'NEW SUPPLIER' | 'REVIEW' | 'PAID';
+  status: 'READY' | 'FLAGGED' | 'PAID';
   xero_bill_id: string;
   drive_embed_url: string;
   drive_view_url: string;

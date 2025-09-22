@@ -17,7 +17,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
   if (viewState === 'paid') {
     statusFilter = ['PAID'];
   } else if (viewState === 'flagged') {
-    statusFilter = ['REVIEW', 'NEW SUPPLIER']; // Flagged statuses
+    statusFilter = ['FLAGGED']; // Flagged statuses
   } else {
     statusFilter = ['READY']; // Payable statuses
   }
@@ -43,11 +43,11 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     supplier: invoice.supplier_name || '',
     amount: Number(invoice.total_amount) || 0,
     due_date: invoice.due_date || '',
-    status: (invoice.status as 'READY' | 'NEW SUPPLIER' | 'REVIEW' | 'PAID') || 'READY',
+    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID') || 'READY',
     xero_bill_id: invoice.xero_invoice_id || '',
     drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
-    supplier_email: invoice.email_id || '',
+    supplier_email: '', // email_id field contains unusable data
     remittance_email: (invoice as any).remittance_email || undefined,
     supplier_email_on_invoice: (invoice as any).supplier_email_on_invoice || undefined,
     sender_email: (invoice as any).sender_email || undefined,
@@ -172,7 +172,7 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
 
   // Update invoice with flag information
   const updateData: any = {
-    status: flagData.flagType === 'wrong-entity' ? 'NEW SUPPLIER' : 'REVIEW',
+    status: 'FLAGGED',
     flag_type: flagData.flagType
   };
 

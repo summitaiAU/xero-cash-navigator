@@ -68,7 +68,6 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
   const availableEmails = [
     { label: 'Sender Email', value: invoice.sender_email || '' },
     { label: 'Supplier Email (from invoice)', value: invoice.supplier_email_on_invoice || '' },
-    { label: 'Supplier Email (system)', value: invoice.supplier_email || '' },
     { label: 'Add New Email', value: 'custom' }
   ].filter(email => email.value);
 
@@ -88,8 +87,15 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
       // Set default email to supplier email
       if (invoice.supplier_email_on_invoice) {
         setEmailAddress(invoice.supplier_email_on_invoice);
-      } else if (invoice.supplier_email) {
-        setEmailAddress(invoice.supplier_email);
+      }
+    } else if (type === 'other') {
+      // For "other" type, set basic template
+      setSubject(`Invoice Query - ${invoice.invoice_number}`);
+      setEmailBody(`Dear ${invoice.supplier},\n\nWe have a query regarding your invoice ${invoice.invoice_number}.\n\nPlease contact us to discuss.\n\nBest regards,\nAccounts Payable Team`);
+      
+      // Set default email to supplier email
+      if (invoice.supplier_email_on_invoice) {
+        setEmailAddress(invoice.supplier_email_on_invoice);
       }
     } else {
       setSubject('');
@@ -120,7 +126,7 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
 
     const selectedEmail = getSelectedEmail();
     
-    if ((flagType === 'wrong-entity' || flagType === 'incorrect-details') && !selectedEmail) {
+    if (flagType && !selectedEmail) {
       toast({
         title: "Error", 
         description: "Please select or enter an email address",
@@ -177,8 +183,8 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
             </RadioGroup>
           </div>
 
-          {/* Email Section - Only show for wrong-entity and incorrect-details */}
-          {(flagType === 'wrong-entity' || flagType === 'incorrect-details') && (
+          {/* Email Section - Show for all flag types */}
+          {flagType && (
             <>
               <Separator />
               

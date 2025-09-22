@@ -39,7 +39,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   const safeIndex = safeInvoices.length ? Math.min(currentIndex, safeInvoices.length - 1) : 0;
   const currentInvoice = safeInvoices.length ? safeInvoices[safeIndex] : undefined;
   const isPaidStatus = currentInvoice?.status === 'PAID';
-  const isFlaggedStatus = currentInvoice?.status === 'REVIEW' || currentInvoice?.status === 'NEW SUPPLIER';
+  const isFlaggedStatus = currentInvoice?.status === 'FLAGGED';
 
   const getStatusIcon = () => {
     if (isPaidStatus) return <CheckCircle className="h-4 w-4" />;

@@ -50,8 +50,7 @@ export const FlaggedInvoiceSection: React.FC<FlaggedInvoiceSectionProps> = ({
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'NEW SUPPLIER': return 'bg-blue-100 text-blue-800';
-      case 'REVIEW': return 'bg-amber-100 text-amber-800';
+      case 'FLAGGED': return 'bg-amber-100 text-amber-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
