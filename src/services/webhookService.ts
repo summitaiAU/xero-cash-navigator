@@ -17,7 +17,10 @@ export const sendN8NWebhook = async (payload: N8NWebhookPayload): Promise<void> 
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        ...payload,
+        flag_email_body: payload.flag_email_body.replace(/\n/g, '\\n')
+      })
     });
 
     if (!response.ok) {

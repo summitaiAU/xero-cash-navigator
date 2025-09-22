@@ -12,21 +12,20 @@ const formatDate = (dateString?: string) => {
 };
 
 export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 'payable'): Promise<Invoice[]> => {
-  let statusFilter: string[];
-  
-  if (viewState === 'paid') {
-    statusFilter = ['PAID'];
-  } else if (viewState === 'flagged') {
-    statusFilter = ['FLAGGED']; // Flagged statuses
-  } else {
-    statusFilter = ['READY']; // Payable statuses
-  }
-    
-  const { data, error } = await supabase
+  let query = supabase
     .from('invoices')
     .select('*')
-    .in('status', statusFilter)
     .order('due_date', { ascending: true, nullsFirst: false });
+
+  if (viewState === 'paid') {
+    query = query.eq('status', 'PAID');
+  } else if (viewState === 'flagged') {
+    query = query.eq('status', 'FLAGGED');
+  } else {
+    // Payable: all statuses that aren't FLAGGED or PAID
+    query = query.not('status', 'in', '(FLAGGED,PAID)');
+  }
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to fetch invoices: ${error.message}`);
