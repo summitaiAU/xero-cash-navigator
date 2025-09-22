@@ -106,6 +106,17 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           setFileName('');
         }, 2000);
         
+      } else if (response.status === 409) {
+        setIsProcessing(false);
+        setProcessingFileName('');
+        setIsMinimized(false);
+        
+        toast({
+          title: "Duplicate Invoice Detected",
+          description: "Please check existing records.",
+          variant: "destructive",
+        });
+        
       } else if (response.status === 429) {
         setIsProcessing(false);
         setProcessingFileName('');
