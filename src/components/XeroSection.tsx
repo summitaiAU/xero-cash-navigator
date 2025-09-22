@@ -496,6 +496,34 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <Skeleton className="h-32 w-full" />
           </div>
         </div>
+      ) : !invoice.xero_bill_id ? (
+        <div className="text-center py-12 space-y-4">
+          <div className="flex flex-col items-center gap-3">
+            <div className="p-3 bg-amber-100 text-amber-600 rounded-full">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div className="space-y-2">
+              <h4 className="text-lg font-semibold text-foreground">No Xero Invoice ID Found</h4>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                This invoice doesn't have a Xero invoice ID associated with it. Please check the invoice processing or manually link it in Xero.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={fetchXeroData} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Loading
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => window.open('https://go.xero.com', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Xero
+            </Button>
+          </div>
+        </div>
       ) : !hasXeroData ? (
         <div className="text-center py-8">
           <p className="text-muted-foreground mb-4">No Xero data available</p>

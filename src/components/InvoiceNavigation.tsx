@@ -1,9 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Switch } from '@/components/ui/switch';
+import { TriStateSwitch } from '@/components/ui/tri-state-switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, RefreshCw, Mail, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw, Mail, CheckCircle, Flag, AlertTriangle } from 'lucide-react';
 import { AddInvoiceButton } from './AddInvoiceButton';
 import { Invoice } from '@/types/invoice';
 
@@ -15,8 +15,8 @@ interface InvoiceNavigationProps {
   completedCount: number;
   emailLink?: string;
   invoices: Invoice[];
-  showPaidInvoices: boolean;
-  onToggleView: (showPaid: boolean) => void;
+  viewState: 'payable' | 'paid' | 'flagged';
+  onViewStateChange: (state: 'payable' | 'paid' | 'flagged') => void;
   onJumpToInvoice: (index: number) => void;
 }
 
@@ -28,8 +28,8 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   completedCount,
   emailLink,
   invoices,
-  showPaidInvoices,
-  onToggleView,
+  viewState,
+  onViewStateChange,
   onJumpToInvoice
 }) => {
   const progressPercentage = totalInvoices > 0 ? (completedCount / totalInvoices) * 100 : 0;
@@ -39,27 +39,46 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   const safeIndex = safeInvoices.length ? Math.min(currentIndex, safeInvoices.length - 1) : 0;
   const currentInvoice = safeInvoices.length ? safeInvoices[safeIndex] : undefined;
   const isPaidStatus = currentInvoice?.status === 'PAID';
+  const isFlaggedStatus = currentInvoice?.status === 'REVIEW' || currentInvoice?.status === 'NEW SUPPLIER';
+
+  const getStatusIcon = () => {
+    if (isPaidStatus) return <CheckCircle className="h-4 w-4" />;
+    if (isFlaggedStatus) return <Flag className="h-4 w-4" />;
+    return null;
+  };
+
+  const getStatusText = () => {
+    if (isPaidStatus) return 'PAID';
+    if (isFlaggedStatus) return 'FLAGGED';
+    return null;
+  };
+
+  const getStatusColor = () => {
+    if (isPaidStatus) return 'text-green-600 bg-green-100';
+    if (isFlaggedStatus) return 'text-amber-600 bg-amber-100';
+    return '';
+  };
 
   return (
     <>
       {/* Desktop Navigation */}
-      <div className={`hidden lg:block dashboard-card p-4 ${isPaidStatus ? 'ring-2 ring-green-500 ring-opacity-50' : ''}`}>
+      <div className={`hidden lg:block dashboard-card p-4 ${isPaidStatus ? 'ring-2 ring-green-500 ring-opacity-50' : isFlaggedStatus ? 'ring-2 ring-amber-500 ring-opacity-50' : ''}`}>
         {/* Filter Toggle */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className={showPaidInvoices ? 'text-muted-foreground' : 'font-medium'}>Payable</span>
-              <Switch 
-                checked={showPaidInvoices} 
-                onCheckedChange={onToggleView}
-                className="data-[state=checked]:bg-green-600"
+            <div className="flex items-center gap-3 text-sm">
+              <span className={viewState === 'payable' ? 'font-medium' : 'text-muted-foreground'}>Payable</span>
+              <TriStateSwitch 
+                value={viewState}
+                onValueChange={onViewStateChange}
               />
-              <span className={showPaidInvoices ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
+              <span className={viewState === 'paid' ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
+              <span className={viewState === 'flagged' ? 'font-medium text-amber-600' : 'text-muted-foreground'}>Flagged</span>
             </div>
-            {isPaidStatus && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                <CheckCircle className="h-4 w-4" />
-                PAID
+            {(isPaidStatus || isFlaggedStatus) && (
+              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
+                {getStatusIcon()}
+                {getStatusText()}
               </div>
             )}
           </div>
@@ -95,7 +114,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                 </SelectContent>
               </Select>
               <div className="text-xs text-muted-foreground">
-                Invoice {currentIndex + 1} of {totalInvoices} • {showPaidInvoices ? 'Paid' : completedCount + ' completed'}
+                Invoice {currentIndex + 1} of {totalInvoices} • {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : completedCount + ' completed'}
               </div>
             </div>
           </div>
@@ -147,28 +166,29 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
           <Progress 
             value={progressPercentage} 
-            variant={showPaidInvoices ? 'success' : 'default'}
-            className={`h-2 ${isPaidStatus ? 'border border-green-500' : ''}`} 
+            variant={viewState === 'paid' ? 'success' : 'default'}
+            className={`h-2 ${isPaidStatus ? 'border border-green-500' : isFlaggedStatus ? 'border border-amber-500' : ''}`} 
           />
         </div>
       </div>
 
       {/* Mobile/Tablet Floating Navigation */}
       <div className="lg:hidden sticky top-4 z-10 mx-4">
-        <div className={`bg-card/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-lg ${isPaidStatus ? 'ring-1 ring-green-500' : ''}`}>
+        <div className={`bg-card/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-lg ${isPaidStatus ? 'ring-1 ring-green-500' : isFlaggedStatus ? 'ring-1 ring-amber-500' : ''}`}>
           {/* Mobile Filter Toggle */}
           <div className="flex items-center justify-center gap-2 mb-3 text-xs">
-            <span className={showPaidInvoices ? 'text-muted-foreground' : 'font-medium'}>Payable</span>
-            <Switch 
-              checked={showPaidInvoices} 
-              onCheckedChange={onToggleView}
-              className="scale-75 data-[state=checked]:bg-green-600"
+            <span className={viewState === 'payable' ? 'font-medium' : 'text-muted-foreground'}>Payable</span>
+            <TriStateSwitch 
+              value={viewState}
+              onValueChange={onViewStateChange}
+              className="scale-75"
             />
-            <span className={showPaidInvoices ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
-            {isPaidStatus && (
-              <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
-                <CheckCircle className="h-3 w-3" />
-                PAID
+            <span className={viewState === 'paid' ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
+            <span className={viewState === 'flagged' ? 'font-medium text-amber-600' : 'text-muted-foreground'}>Flagged</span>
+            {(isPaidStatus || isFlaggedStatus) && (
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor()}`}>
+                {getStatusIcon()}
+                {getStatusText()}
               </div>
             )}
           </div>
@@ -207,7 +227,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                 {currentIndex + 1}/{totalInvoices}
               </span>
               <span className="text-xs text-muted-foreground">
-                {showPaidInvoices ? 'Paid' : completedCount + ' done'}
+                {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : completedCount + ' done'}
               </span>
             </div>
             
@@ -239,8 +259,8 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
               <div className="w-16 px-2">
                 <Progress 
                   value={progressPercentage} 
-                  variant={showPaidInvoices ? 'success' : 'default'}
-                  className={`h-1 ${isPaidStatus ? 'border border-green-500' : ''}`} 
+                  variant={viewState === 'paid' ? 'success' : 'default'}
+                  className={`h-1 ${isPaidStatus ? 'border border-green-500' : isFlaggedStatus ? 'border border-amber-500' : ''}`} 
                 />
               </div>
               

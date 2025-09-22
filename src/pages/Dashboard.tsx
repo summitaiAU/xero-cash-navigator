@@ -29,7 +29,7 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [showPaidInvoices, setShowPaidInvoices] = useState(false);
+  const [viewState, setViewState] = useState<'payable' | 'paid' | 'flagged'>('payable');
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -58,10 +58,10 @@ export const Dashboard: React.FC = () => {
   // Load invoices from Supabase on mount and when filter changes
   useEffect(() => {
     const loadInvoices = async () => {
-      console.log('Loading invoices...', showPaidInvoices ? 'paid' : 'payable');
+      console.log('Loading invoices...', viewState);
       try {
         setLoading(true);
-        const fetchedInvoices = await fetchInvoices(showPaidInvoices);
+        const fetchedInvoices = await fetchInvoices(viewState === 'paid');
         console.log('Fetched invoices:', fetchedInvoices.length);
         setInvoices(fetchedInvoices);
         setCurrentIndex(0); // Reset to first invoice when switching views
@@ -79,7 +79,7 @@ export const Dashboard: React.FC = () => {
     };
 
     loadInvoices();
-  }, [toast, showPaidInvoices]);
+  }, [toast, viewState]);
 
   const currentInvoice = invoices[currentIndex];
 
@@ -351,8 +351,8 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleToggleView = (showPaid: boolean) => {
-    setShowPaidInvoices(showPaid);
+  const handleViewStateChange = (state: 'payable' | 'paid' | 'flagged') => {
+    setViewState(state);
   };
 
   const handleJumpToInvoice = (index: number) => {
@@ -459,8 +459,8 @@ export const Dashboard: React.FC = () => {
               completedCount={completedInvoices.size}
               emailLink={currentInvoice?.drive_view_url}
               invoices={invoices}
-              showPaidInvoices={showPaidInvoices}
-              onToggleView={handleToggleView}
+              viewState={viewState}
+              onViewStateChange={handleViewStateChange}
               onJumpToInvoice={handleJumpToInvoice}
             />
           </div>
@@ -473,14 +473,16 @@ export const Dashboard: React.FC = () => {
               /* No Invoices State */
               <div className="w-full h-full flex items-center justify-center">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-4">No {showPaidInvoices ? 'Paid' : 'Payable'} Invoices Found</h2>
+                  <h2 className="text-2xl font-bold mb-4">No {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : 'Payable'} Invoices Found</h2>
                   <p className="text-muted-foreground mb-4">
-                    {showPaidInvoices 
+                    {viewState === 'paid'
                       ? 'No paid invoices are available to view.'
+                      : viewState === 'flagged'
+                      ? 'No flagged invoices are available to view.'
                       : 'No invoices are available for processing.'
                     }
                   </p>
-                  {showPaidInvoices && (
+                  {viewState === 'paid' && (
                     <p className="text-sm text-muted-foreground">
                       Try switching to "Payable" to see unpaid invoices.
                     </p>
@@ -520,7 +522,7 @@ export const Dashboard: React.FC = () => {
                     )}
                     
                     {/* Delete Invoice Button - Only for payable invoices */}
-                    {!showPaidInvoices && currentInvoice && (
+                    {viewState === 'payable' && currentInvoice && (
                       <DeleteInvoiceButton
                         invoice={currentInvoice}
                         onDeleted={() => {
@@ -584,8 +586,8 @@ export const Dashboard: React.FC = () => {
             completedCount={completedInvoices.size}
             emailLink={currentInvoice?.drive_view_url}
             invoices={invoices}
-            showPaidInvoices={showPaidInvoices}
-            onToggleView={handleToggleView}
+            viewState={viewState}
+            onViewStateChange={handleViewStateChange}
             onJumpToInvoice={handleJumpToInvoice}
           />
 
@@ -593,14 +595,16 @@ export const Dashboard: React.FC = () => {
             /* Mobile No Invoices State */
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
-                <h2 className="text-xl font-bold mb-4">No {showPaidInvoices ? 'Paid' : 'Payable'} Invoices Found</h2>
+                <h2 className="text-xl font-bold mb-4">No {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : 'Payable'} Invoices Found</h2>
                 <p className="text-muted-foreground mb-4">
-                  {showPaidInvoices 
+                  {viewState === 'paid'
                     ? 'No paid invoices are available to view.'
+                    : viewState === 'flagged'
+                    ? 'No flagged invoices are available to view.'
                     : 'No invoices are available for processing.'
                   }
                 </p>
-                {showPaidInvoices && (
+                {viewState === 'paid' && (
                   <p className="text-sm text-muted-foreground">
                     Try switching to "Payable" to see unpaid invoices.
                   </p>
