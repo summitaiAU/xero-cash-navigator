@@ -11,10 +11,16 @@ const formatDate = (dateString?: string) => {
   });
 };
 
-export const fetchInvoices = async (showPaidOnly: boolean = false): Promise<Invoice[]> => {
-  const statusFilter = showPaidOnly 
-    ? ['PAID'] 
-    : ['READY', 'NEW SUPPLIER', 'REVIEW'];
+export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 'payable'): Promise<Invoice[]> => {
+  let statusFilter: string[];
+  
+  if (viewState === 'paid') {
+    statusFilter = ['PAID'];
+  } else if (viewState === 'flagged') {
+    statusFilter = ['REVIEW', 'NEW SUPPLIER']; // Flagged statuses
+  } else {
+    statusFilter = ['READY']; // Payable statuses
+  }
     
   const { data, error } = await supabase
     .from('invoices')
@@ -142,5 +148,85 @@ export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
 
   if (error) {
     throw new Error(`Failed to update invoice remittance status: ${error.message}`);
+  }
+};
+
+export interface FlagInvoiceData {
+  flagType: string;
+  emailAddress?: string;
+  subject?: string;
+  emailBody?: string;
+}
+
+export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) => {
+  // First get the invoice details to extract necessary fields for webhook
+  const { data: invoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('google_drive_id, invoice_no')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError || !invoice) {
+    throw new Error(`Failed to fetch invoice details: ${fetchError?.message}`);
+  }
+
+  // Update invoice with flag information
+  const updateData: any = {
+    status: flagData.flagType === 'wrong-entity' ? 'NEW SUPPLIER' : 'REVIEW',
+    flag_type: flagData.flagType
+  };
+
+  if (flagData.emailAddress) {
+    updateData.flag_email_address = flagData.emailAddress;
+  }
+  if (flagData.subject) {
+    updateData.flag_email_subject = flagData.subject;
+  }
+  if (flagData.emailBody) {
+    updateData.flag_email_body = flagData.emailBody;
+  }
+
+  const { error: updateError } = await supabase
+    .from('invoices')
+    .update(updateData)
+    .eq('id', invoiceId);
+
+  if (updateError) {
+    throw new Error(`Failed to flag invoice: ${updateError.message}`);
+  }
+
+  // Send webhook notification if email details provided
+  if (flagData.emailAddress && flagData.subject && flagData.emailBody) {
+    try {
+      const { sendN8NWebhook } = await import('./webhookService');
+      
+      await sendN8NWebhook({
+        flag_email_address: flagData.emailAddress,
+        flag_email_body: flagData.emailBody,
+        flag_email_subject: flagData.subject,
+        google_drive_id: invoice.google_drive_id || '',
+        invoice_no: invoice.invoice_no || ''
+      });
+    } catch (webhookError) {
+      console.error('Webhook failed but invoice was flagged:', webhookError);
+      // Don't throw here - we want the flagging to succeed even if webhook fails
+    }
+  }
+};
+
+export const resolveFlag = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      status: 'READY',
+      flag_type: null,
+      flag_email_address: null,
+      flag_email_subject: null,
+      flag_email_body: null
+    })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to resolve flag: ${error.message}`);
   }
 };

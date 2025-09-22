@@ -8,13 +8,14 @@ import { CompletionScreen } from '@/components/CompletionScreen';
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton';
 import { AddInvoiceButton } from '@/components/AddInvoiceButton';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
-import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus } from '@/services/invoiceService';
+import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus, flagInvoice } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
+import { FlaggedInvoiceSection } from '@/components/FlaggedInvoiceSection';
 import { useSafeOffsets } from '@/hooks/useSafeOffsets';
 
 export const Dashboard: React.FC = () => {
@@ -61,7 +62,7 @@ export const Dashboard: React.FC = () => {
       console.log('Loading invoices...', viewState);
       try {
         setLoading(true);
-        const fetchedInvoices = await fetchInvoices(viewState === 'paid');
+        const fetchedInvoices = await fetchInvoices(viewState);
         console.log('Fetched invoices:', fetchedInvoices.length);
         setInvoices(fetchedInvoices);
         setCurrentIndex(0); // Reset to first invoice when switching views
@@ -355,6 +356,38 @@ export const Dashboard: React.FC = () => {
     setViewState(state);
   };
 
+  const handleFlagInvoice = async (invoiceId: string) => {
+    try {
+      // Reload invoices to reflect the flagged status
+      const fetchedInvoices = await fetchInvoices(viewState);
+      setInvoices(fetchedInvoices);
+      
+      toast({
+        title: "Invoice Flagged",
+        description: "Invoice has been flagged successfully",
+      });
+    } catch (error) {
+      console.error('Failed to reload invoices after flagging:', error);
+    }
+  };
+
+  const handleResolveFlag = async () => {
+    try {
+      // Reload invoices to reflect the resolved status
+      const fetchedInvoices = await fetchInvoices(viewState);
+      setInvoices(fetchedInvoices);
+      
+      // If this was the last invoice in flagged view, handle navigation
+      if (fetchedInvoices.length === 0 && viewState === 'flagged') {
+        setCurrentIndex(0);
+      } else if (currentIndex >= fetchedInvoices.length) {
+        setCurrentIndex(Math.max(0, fetchedInvoices.length - 1));
+      }
+    } catch (error) {
+      console.error('Failed to reload invoices after resolving:', error);
+    }
+  };
+
   const handleJumpToInvoice = (index: number) => {
     setCurrentIndex(index);
     resetProcessingStatus();
@@ -512,11 +545,17 @@ export const Dashboard: React.FC = () => {
                         onReprocess={handleReprocessPayment}
                         onRemittanceSent={handleRemittanceSent}
                       />
+                    ) : viewState === 'flagged' ? (
+                      <FlaggedInvoiceSection
+                        invoice={currentInvoice}
+                        onResolve={handleResolveFlag}
+                      />
                     ) : (
                       <PaymentSection
                         invoice={currentInvoice}
                         onMarkAsPaid={handleMarkAsPaid}
                         onSkip={handleSkip}
+                        onFlag={handleFlagInvoice}
                         loading={loading}
                       />
                     )}
@@ -631,11 +670,17 @@ export const Dashboard: React.FC = () => {
                   onReprocess={handleReprocessPayment}
                   onRemittanceSent={handleRemittanceSent}
                 />
+              ) : viewState === 'flagged' ? (
+                <FlaggedInvoiceSection
+                  invoice={currentInvoice}
+                  onResolve={handleResolveFlag}
+                />
               ) : (
                 <PaymentSection
                   invoice={currentInvoice}
                   onMarkAsPaid={handleMarkAsPaid}
                   onSkip={handleSkip}
+                  onFlag={handleFlagInvoice}
                   loading={loading}
                 />
               )}

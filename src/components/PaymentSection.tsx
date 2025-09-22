@@ -8,12 +8,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
+import { FlagInvoiceButton } from './FlagInvoiceButton';
 import { useToast } from '@/hooks/use-toast';
 
 interface PaymentSectionProps {
   invoice: Invoice;
   onMarkAsPaid: (data: PaymentData) => Promise<void>;
   onSkip: () => void;
+  onFlag?: (invoiceId: string) => void;
   loading?: boolean;
 }
 
@@ -21,6 +23,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   invoice,
   onMarkAsPaid,
   onSkip,
+  onFlag,
   loading = false
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
@@ -584,6 +587,14 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             >
               Skip to Next Invoice
             </Button>
+
+            {/* Flag Invoice Button */}
+            {onFlag && (
+              <FlagInvoiceButton
+                invoice={invoice}
+                onFlag={onFlag}
+              />
+            )}
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { TriStateSwitch } from '@/components/ui/tri-state-switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, RefreshCw, Mail, CheckCircle, Flag, AlertTriangle } from 'lucide-react';
 import { AddInvoiceButton } from './AddInvoiceButton';
@@ -63,18 +63,16 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
     <>
       {/* Desktop Navigation */}
       <div className={`hidden lg:block dashboard-card p-4 ${isPaidStatus ? 'ring-2 ring-green-500 ring-opacity-50' : isFlaggedStatus ? 'ring-2 ring-amber-500 ring-opacity-50' : ''}`}>
-        {/* Filter Toggle */}
+        {/* Filter Tabs */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 text-sm">
-              <span className={viewState === 'payable' ? 'font-medium' : 'text-muted-foreground'}>Payable</span>
-              <TriStateSwitch 
-                value={viewState}
-                onValueChange={onViewStateChange}
-              />
-              <span className={viewState === 'paid' ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
-              <span className={viewState === 'flagged' ? 'font-medium text-amber-600' : 'text-muted-foreground'}>Flagged</span>
-            </div>
+            <Tabs value={viewState} onValueChange={onViewStateChange}>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="payable">Payable</TabsTrigger>
+                <TabsTrigger value="paid">Paid</TabsTrigger>
+                <TabsTrigger value="flagged">Flagged</TabsTrigger>
+              </TabsList>
+            </Tabs>
             {(isPaidStatus || isFlaggedStatus) && (
               <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStatusColor()}`}>
                 {getStatusIcon()}
@@ -175,16 +173,15 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
       {/* Mobile/Tablet Floating Navigation */}
       <div className="lg:hidden sticky top-4 z-10 mx-4">
         <div className={`bg-card/95 backdrop-blur-md border border-border rounded-lg p-3 shadow-lg ${isPaidStatus ? 'ring-1 ring-green-500' : isFlaggedStatus ? 'ring-1 ring-amber-500' : ''}`}>
-          {/* Mobile Filter Toggle */}
-          <div className="flex items-center justify-center gap-2 mb-3 text-xs">
-            <span className={viewState === 'payable' ? 'font-medium' : 'text-muted-foreground'}>Payable</span>
-            <TriStateSwitch 
-              value={viewState}
-              onValueChange={onViewStateChange}
-              className="scale-75"
-            />
-            <span className={viewState === 'paid' ? 'font-medium text-green-600' : 'text-muted-foreground'}>Paid</span>
-            <span className={viewState === 'flagged' ? 'font-medium text-amber-600' : 'text-muted-foreground'}>Flagged</span>
+          {/* Mobile Filter Tabs */}
+          <div className="flex items-center justify-center mb-3">
+            <Tabs value={viewState} onValueChange={onViewStateChange}>
+              <TabsList className="grid w-full grid-cols-3 text-xs h-8">
+                <TabsTrigger value="payable" className="text-xs px-2">Payable</TabsTrigger>
+                <TabsTrigger value="paid" className="text-xs px-2">Paid</TabsTrigger>
+                <TabsTrigger value="flagged" className="text-xs px-2">Flagged</TabsTrigger>
+              </TabsList>
+            </Tabs>
             {(isPaidStatus || isFlaggedStatus) && (
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor()}`}>
                 {getStatusIcon()}
