@@ -266,3 +266,25 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
     throw new Error(`Failed to update invoice: ${error.message}`);
   }
 };
+
+export const approveInvoice = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ status: 'APPROVED' })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to approve invoice: ${error.message}`);
+  }
+};
+
+export const undoApproveInvoice = async (invoiceId: string) => {
+  const { error } = await supabase
+    .from('invoices')
+    .update({ status: 'READY' })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to undo invoice approval: ${error.message}`);
+  }
+};

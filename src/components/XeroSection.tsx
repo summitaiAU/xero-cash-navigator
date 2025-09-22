@@ -16,7 +16,9 @@ import {
   Save,
   X,
   Plus,
-  Trash2
+  Trash2,
+  ThumbsUp,
+  Undo
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -130,6 +132,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const [editableData, setEditableData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [isApproving, setIsApproving] = useState(false);
   
   const { toast } = useToast();
 
@@ -165,6 +168,47 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     setIsEditing(false);
     setEditableData(null);
     setSaveError(null);
+  };
+
+  // Approval functions
+  const handleApprove = async () => {
+    setIsApproving(true);
+    try {
+      const { approveInvoice } = await import('@/services/invoiceService');
+      await approveInvoice(invoice.id);
+      
+      const updatedInvoice = { ...invoice, status: 'APPROVED' };
+      onUpdate(updatedInvoice);
+      toast({ title: 'Invoice Approved', description: 'Invoice has been approved successfully.' });
+    } catch (error: any) {
+      toast({
+        title: 'Approval Failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleUndoApproval = async () => {
+    setIsApproving(true);
+    try {
+      const { undoApproveInvoice } = await import('@/services/invoiceService');
+      await undoApproveInvoice(invoice.id);
+      
+      const updatedInvoice = { ...invoice, status: 'READY' };
+      onUpdate(updatedInvoice);
+      toast({ title: 'Approval Undone', description: 'Invoice approval has been reverted to Ready status.' });
+    } catch (error: any) {
+      toast({
+        title: 'Undo Failed',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsApproving(false);
+    }
   };
 
   // Real-time calculation functions
@@ -324,7 +368,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <h3 className="section-header mb-0 truncate">Invoice Details</h3>
-          <Badge variant="secondary">{invoice.status || 'Ready'}</Badge>
+          <Badge variant={invoice.status === 'APPROVED' ? 'default' : 'secondary'}>
+            {invoice.status === 'APPROVED' ? 'Approved' : (invoice.status || 'Ready')}
+          </Badge>
         </div>
         
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -788,14 +834,54 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4 pt-6 border-t border-border">
             <div className="flex flex-wrap items-center gap-2">
               {!isEditing ? (
-                <Button 
-                  onClick={startEditing}
-                  disabled={!hasInvoiceData}
-                  className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Edit
-                </Button>
+                <>
+                  <Button 
+                    onClick={startEditing}
+                    disabled={!hasInvoiceData}
+                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                  
+                  {invoice.status === 'APPROVED' ? (
+                    <Button 
+                      onClick={handleUndoApproval}
+                      disabled={isApproving}
+                      variant="outline"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Undoing...
+                        </>
+                      ) : (
+                        <>
+                          <Undo className="h-4 w-4 mr-2" />
+                          Undo Approval
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button 
+                      onClick={handleApprove}
+                      disabled={isApproving}
+                      variant="success"
+                    >
+                      {isApproving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Approving...
+                        </>
+                      ) : (
+                        <>
+                          <ThumbsUp className="h-4 w-4 mr-2" />
+                          Approve
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
               ) : (
                 <>
                   <Button 
