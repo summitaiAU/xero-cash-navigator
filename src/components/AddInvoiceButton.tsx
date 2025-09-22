@@ -91,7 +91,15 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         setFileData(null);
         setFileName('');
       } else {
-        throw new Error('Failed to submit invoice');
+        // Get detailed error message from response
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          // If response isn't JSON, use the status text
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
