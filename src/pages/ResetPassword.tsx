@@ -18,12 +18,39 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    // Debug: Log all URL parameters
+    console.log('ResetPassword page loaded');
+    console.log('Full URL:', window.location.href);
+    console.log('Search params:', searchParams.toString());
+    
     // Check if we have the necessary parameters from Supabase
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
     const type = searchParams.get('type');
+    const error = searchParams.get('error');
+    const errorDescription = searchParams.get('error_description');
+
+    console.log('URL parameters:', {
+      accessToken: accessToken ? 'present' : 'missing',
+      refreshToken: refreshToken ? 'present' : 'missing',
+      type,
+      error,
+      errorDescription
+    });
+
+    // Check for error in URL first
+    if (error) {
+      toast({
+        title: "Reset link error",
+        description: errorDescription || error,
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
 
     if (!accessToken || !refreshToken || type !== 'recovery') {
+      console.log('Missing required parameters or wrong type');
       toast({
         title: "Invalid reset link",
         description: "This password reset link is invalid or has expired.",
@@ -34,9 +61,21 @@ const ResetPassword = () => {
     }
 
     // Set the session with the tokens from the URL
+    console.log('Setting session with tokens');
     supabase.auth.setSession({
       access_token: accessToken,
       refresh_token: refreshToken,
+    }).then(({ data, error }) => {
+      console.log('setSession result:', { data: data ? 'success' : 'null', error });
+      if (error) {
+        console.error('setSession error:', error);
+        toast({
+          title: "Session error",
+          description: error.message,
+          variant: "destructive",
+        });
+        navigate('/auth');
+      }
     });
   }, [searchParams, navigate]);
 
