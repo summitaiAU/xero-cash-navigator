@@ -320,8 +320,8 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
             
             <div className="space-y-3">
               {/* Infinite loading animation */}
-              <div className="relative h-2.5 bg-muted rounded-full overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-primary to-primary/50 w-1/3 rounded-full animate-[slide-right_1.5s_ease-in-out_infinite]"></div>
+              <div className="relative h-2.5 bg-muted rounded-full overflow-hidden mx-1">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-primary to-primary/50 w-1/4 rounded-full animate-[slide-right_2s_ease-in-out_infinite]"></div>
               </div>
               
               <div className="text-center space-y-2">
