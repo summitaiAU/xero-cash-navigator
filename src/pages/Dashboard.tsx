@@ -57,28 +57,28 @@ export const Dashboard: React.FC = () => {
   };
 
   // Load invoices from Supabase on mount and when filter changes
-  useEffect(() => {
-    const loadInvoices = async () => {
-      console.log('Loading invoices...', viewState);
-      try {
-        setLoading(true);
-        const fetchedInvoices = await fetchInvoices(viewState);
-        console.log('Fetched invoices:', fetchedInvoices.length);
-        setInvoices(fetchedInvoices);
-        setCurrentIndex(0); // Reset to first invoice when switching views
-        setCompletedInvoices(new Set()); // Reset completed tracking
-      } catch (error) {
-        console.error('Failed to load invoices:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load invoices. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadInvoices = async () => {
+    console.log('Loading invoices...', viewState);
+    try {
+      setLoading(true);
+      const fetchedInvoices = await fetchInvoices(viewState);
+      console.log('Fetched invoices:', fetchedInvoices.length);
+      setInvoices(fetchedInvoices);
+      setCurrentIndex(0); // Reset to first invoice when switching views
+      setCompletedInvoices(new Set()); // Reset completed tracking
+    } catch (error) {
+      console.error('Failed to load invoices:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load invoices. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadInvoices();
   }, [toast, viewState]);
 
@@ -463,7 +463,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
-              <AddInvoiceButton />
+              <AddInvoiceButton onSuccess={loadInvoices} />
               <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
                 <User className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>

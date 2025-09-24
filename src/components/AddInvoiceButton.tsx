@@ -7,9 +7,10 @@ import { Progress } from '@/components/ui/progress';
 
 interface AddInvoiceButtonProps {
   isMobile?: boolean;
+  onSuccess?: () => void;
 }
 
-export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = false }) => {
+export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = false, onSuccess }) => {
   const [open, setOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [fileData, setFileData] = useState<string | null>(null);
@@ -104,6 +105,9 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           setOpen(false);
           setFileData(null);
           setFileName('');
+          
+          // Trigger refresh of invoice list
+          onSuccess?.();
         }, 2000);
         
       } else if (response.status === 409) {
