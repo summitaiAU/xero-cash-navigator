@@ -288,23 +288,23 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           </>
         ) : (
           /* Minimized Processing View */
-          <div className="py-6 px-2">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 mt-0.5">
+          <div className="py-6 px-4">
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
                   <div className="p-2 bg-primary/10 rounded-lg">
                     <FileText className="h-5 w-5 text-primary" />
                   </div>
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
                   <p className="text-sm font-semibold">Processing Invoice</p>
-                  <p className="text-xs text-muted-foreground truncate leading-relaxed">{processingFileName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{processingFileName}</p>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 -mt-1"
+                className="h-8 w-8"
                 onClick={() => {
                   setIsProcessing(false);
                   setProcessingFileName('');
@@ -317,18 +317,23 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <div className="space-y-4">
+            
+            <div className="space-y-3">
               {/* Infinite loading animation */}
               <div className="relative h-2.5 bg-muted rounded-full overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-primary to-primary/50 w-1/3 rounded-full animate-[slide-right_1.5s_ease-in-out_infinite]"></div>
               </div>
-              <div className="flex items-center justify-center gap-2 py-1">
-                <p className="text-xs text-muted-foreground font-medium">Analyzing document and extracting data</p>
-                <div className="flex gap-1">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+              
+              <div className="text-center space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <p className="text-xs text-muted-foreground font-medium">Analyzing document and extracting data</p>
+                  <div className="flex gap-1">
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground/80">This will take 2-3 minutes</p>
               </div>
             </div>
           </div>
