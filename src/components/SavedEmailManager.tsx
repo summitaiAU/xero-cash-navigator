@@ -117,9 +117,6 @@ export const SavedEmailManager: React.FC<SavedEmailManagerProps> = ({
       setIsAdding(false);
       onEmailSaved?.(newEmail);
       
-      // Refresh the page to update the invoice data
-      window.location.reload();
-      
     } catch (error: any) {
       toast({
         title: "Error saving email",
@@ -142,9 +139,6 @@ export const SavedEmailManager: React.FC<SavedEmailManagerProps> = ({
       });
       
       onEmailRemoved?.(email);
-      
-      // Refresh the page to update the invoice data
-      window.location.reload();
       
     } catch (error: any) {
       toast({

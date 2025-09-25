@@ -226,9 +226,16 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     }
   };
 
-  const handleEmailSaved = () => {
-    // Reload the page to refresh invoice data with new saved emails
-    window.location.reload();
+  const handleEmailSaved = (email: string) => {
+    // Update the invoice state to include the new saved email
+    if (!invoice.saved_emails?.includes(email)) {
+      invoice.saved_emails = [...(invoice.saved_emails || []), email];
+    }
+  };
+
+  const handleEmailRemoved = (email: string) => {
+    // Update the invoice state to remove the email
+    invoice.saved_emails = (invoice.saved_emails || []).filter(e => e !== email);
   };
 
   const handleEmailSelected = (email: string) => {
@@ -356,6 +363,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           <SavedEmailManager
             invoice={invoice}
             onEmailSaved={handleEmailSaved}
+            onEmailRemoved={handleEmailRemoved}
             onEmailSelected={handleEmailSelected}
             selectedEmail={selectedEmailForRemittance}
           />
