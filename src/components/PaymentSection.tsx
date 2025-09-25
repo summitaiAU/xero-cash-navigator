@@ -10,6 +10,7 @@ import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
 import { FlagInvoiceButton } from './FlagInvoiceButton';
 import { PartialPaymentModal } from './PartialPaymentModal';
+import { SavedEmailManager } from './SavedEmailManager';
 import { useToast } from '@/hooks/use-toast';
 
 interface PaymentSectionProps {
@@ -36,17 +37,14 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   const [ccJonathon, setCcJonathon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
-  const [showAddEmail, setShowAddEmail] = useState(false);
-  const [newSupplierEmail, setNewSupplierEmail] = useState('');
-  const [savingEmail, setSavingEmail] = useState(false);
+  const [selectedEmailForRemittance, setSelectedEmailForRemittance] = useState('');
   const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false);
   const { toast } = useToast();
 
   // Update email when invoice changes
   useEffect(() => {
     setEmail(invoice.remittance_email || '');
-    setShowAddEmail(false);
-    setNewSupplierEmail('');
+    setSelectedEmailForRemittance(invoice.remittance_email || '');
   }, [invoice.id]);
 
   useEffect(() => {
@@ -228,86 +226,14 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     }
   };
 
-  const saveSupplierEmail = async () => {
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!newSupplierEmail || !emailRegex.test(newSupplierEmail)) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleEmailSaved = () => {
+    // Reload the page to refresh invoice data with new saved emails
+    window.location.reload();
+  };
 
-    // Ensure required fields are present
-    if (!invoice.xero_bill_id) {
-      toast({
-        title: "Missing invoice data",
-        description: "Xero invoice ID is required to update supplier email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSavingEmail(true);
-    try {
-      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/d497731a-7362-4f0d-a199-bc6f217c5916', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          xero_invoice_id: invoice.xero_bill_id,
-          new_supplier_email: newSupplierEmail,
-          row_id: invoice.id
-        })
-      });
-
-      // Parse response robustly (can be array or object)
-      const rawText = await response.text();
-      let parsed: any = null;
-      try {
-        parsed = JSON.parse(rawText);
-      } catch {
-        parsed = rawText;
-      }
-      const payload = Array.isArray(parsed) ? parsed[0] : parsed;
-      const isSuccess = !!payload && (payload?.ok === true || payload?.Status === 'OK' || payload?.status === 'OK' || (!!payload?.Contacts && !payload?.error));
-
-      if (response.ok && isSuccess) {
-        // Update the email in state
-        setEmail(newSupplierEmail);
-        setShowAddEmail(false);
-        setNewSupplierEmail('');
-
-        toast({
-          title: "Email updated!",
-          description: `Supplier email updated to ${newSupplierEmail}`,
-        });
-      } else {
-        const errorMsg = (
-          (Array.isArray(parsed) && parsed[0]?.error?.message) ||
-          payload?.error?.message ||
-          (Array.isArray(parsed) && parsed[0]?.error) ||
-          'Failed to update supplier email'
-        );
-        toast({
-          title: "Failed to update email",
-          description: String(errorMsg),
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
-      toast({
-        title: "Failed to update email",
-        description: errorMsg,
-        variant: "destructive",
-      });
-    } finally {
-      setSavingEmail(false);
-    }
+  const handleEmailSelected = (email: string) => {
+    setSelectedEmailForRemittance(email);
+    setEmail(email);
   };
 
   const handlePartialPayment = async (amountPaid: number) => {
@@ -427,86 +353,12 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
         {/* Email Configuration */}
         <div className="space-y-4 pt-4 border-t border-border">
-          <Label className="text-base font-medium">Email Remittance</Label>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Supplier Email</Label>
-            {!showAddEmail ? (
-              <Select
-                value={(email ?? '') as any}
-                onValueChange={(value) => {
-                  if (value === 'add_email') {
-                    setShowAddEmail(true);
-                    // Focus input when it appears
-                    setTimeout(() => {
-                      const el = document.getElementById('new-supplier-email') as HTMLInputElement | null;
-                      el?.focus();
-                    }, 0);
-                  } else {
-                    setEmail(value);
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Email Source" />
-                </SelectTrigger>
-                <SelectContent className="z-50 bg-background">
-                  {invoice.remittance_email && (
-                    <SelectItem value={invoice.remittance_email}>
-                      {invoice.remittance_email} <span className="text-muted-foreground text-xs ml-2">(Database)</span>
-                    </SelectItem>
-                  )}
-                  {invoice.supplier_email_on_invoice && (
-                    <SelectItem value={invoice.supplier_email_on_invoice}>
-                      {invoice.supplier_email_on_invoice} <span className="text-muted-foreground text-xs ml-2">(On Invoice)</span>
-                    </SelectItem>
-                  )}
-                  {invoice.sender_email && (
-                    <SelectItem value={invoice.sender_email}>
-                      {invoice.sender_email} <span className="text-muted-foreground text-xs ml-2">(Sender Email)</span>
-                    </SelectItem>
-                  )}
-                  <SelectItem value="add_email">Add New Email</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Input
-                    id="new-supplier-email"
-                    type="email"
-                    value={newSupplierEmail}
-                    onChange={(e) => setNewSupplierEmail(e.target.value)}
-                    placeholder="Enter supplier email..."
-                    className="flex-1"
-                    autoFocus
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={saveSupplierEmail}
-                    disabled={savingEmail || !newSupplierEmail}
-                  >
-                    <Save className="h-4 w-4 mr-1" />
-                    {savingEmail ? 'Saving...' : 'Save email'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowAddEmail(false);
-                      setNewSupplierEmail('');
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-            {invoice.remittance_email && !showAddEmail && (
-              <p className="text-sm text-muted-foreground">📧 Default email from database: {invoice.remittance_email}</p>
-            )}
-          </div>
+          <SavedEmailManager
+            invoice={invoice}
+            onEmailSaved={handleEmailSaved}
+            onEmailSelected={handleEmailSelected}
+            selectedEmail={selectedEmailForRemittance}
+          />
 
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
@@ -520,7 +372,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               </Label>
             </div>
           </div>
-
 
           {/* Send Now Button */}
           <Button

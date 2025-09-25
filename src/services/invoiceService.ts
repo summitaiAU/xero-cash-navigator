@@ -567,10 +567,11 @@ export const addSavedEmail = async (invoiceId: string, email: string) => {
     invoice_number: currentInvoice.invoice_no,
     supplier_name: currentInvoice.supplier_name,
     amount: currentInvoice.total_amount,
-    field_changed: 'saved_emails',
-    old_value: currentEmails,
-    new_value: updatedEmails,
-    email_address: email
+    changes: [{
+      field: 'saved_emails',
+      old_value: currentEmails,
+      new_value: updatedEmails
+    }]
   });
 };
 
@@ -603,10 +604,11 @@ export const removeSavedEmail = async (invoiceId: string, email: string) => {
     invoice_number: currentInvoice.invoice_no,
     supplier_name: currentInvoice.supplier_name,
     amount: currentInvoice.total_amount,
-    field_changed: 'saved_emails',
-    old_value: currentEmails,
-    new_value: updatedEmails,
-    email_address: email
+    changes: [{
+      field: 'saved_emails',
+      old_value: currentEmails,
+      new_value: updatedEmails
+    }]
   });
 };
 
