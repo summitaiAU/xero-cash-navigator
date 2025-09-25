@@ -104,6 +104,18 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
     }
   };
 
+  const handleEmailSaved = (email: string) => {
+    // Update local invoice state
+    if (!invoice.saved_emails?.includes(email)) {
+      invoice.saved_emails = [...(invoice.saved_emails || []), email];
+    }
+  };
+
+  const handleEmailRemoved = (email: string) => {
+    // Update local invoice state
+    invoice.saved_emails = (invoice.saved_emails || []).filter(e => e !== email);
+  };
+
   const handleEmailAddressChange = (value: string) => {
     setEmailAddress(value);
     if (value !== 'custom') {
@@ -192,40 +204,14 @@ export const FlagInvoiceModal: React.FC<FlagInvoiceModalProps> = ({
               <div className="space-y-4">
                 <Label className="text-sm font-medium">Email Notification</Label>
                 
-                {/* Email Address Selection */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Send to:</Label>
-                  <Select value={emailAddress} onValueChange={handleEmailAddressChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select email address..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableEmails.map((email, index) => (
-                        <SelectItem key={index} value={email.value}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{email.label}</span>
-                            {email.value !== 'custom' && (
-                              <span className="text-xs text-muted-foreground">{email.value}</span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Custom Email Input */}
-                {emailAddress === 'custom' && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Custom email address:</Label>
-                    <Input
-                      type="email"
-                      value={customEmail}
-                      onChange={(e) => setCustomEmail(e.target.value)}
-                      placeholder="Enter email address..."
-                    />
-                  </div>
-                )}
+                {/* Email Address Selection using SavedEmailManager */}
+                <SavedEmailManager
+                  invoice={invoice}
+                  onEmailSaved={handleEmailSaved}
+                  onEmailRemoved={handleEmailRemoved}
+                  onEmailSelected={setEmailAddress}
+                  selectedEmail={emailAddress}
+                />
 
                 {/* Email Subject */}
                 <div className="space-y-2">
