@@ -135,6 +135,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const [isApproving, setIsApproving] = useState(false);
   
   const { toast } = useToast();
+  
+  // Multi-user presence and conflict detection
+  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
+    currentInvoiceId: invoice.id,
+    isEditing: isEditing
+  });
 
   // Edit mode functions
   const startEditing = () => {

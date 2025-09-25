@@ -7,11 +7,15 @@ import { InvoiceNavigation } from '@/components/InvoiceNavigation';
 import { CompletionScreen } from '@/components/CompletionScreen';
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton';
 import { AddInvoiceButton } from '@/components/AddInvoiceButton';
+import { UserPresenceIndicator } from '@/components/UserPresenceIndicator';
+import { ConflictWarning } from '@/components/ConflictWarning';
+import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
 import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus, flagInvoice } from '@/services/invoiceService';
 import { invoiceService } from '@/services/api';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserPresence } from '@/hooks/useUserPresence';
 import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
@@ -33,6 +37,15 @@ export const Dashboard: React.FC = () => {
   const [viewState, setViewState] = useState<'payable' | 'paid' | 'flagged'>('payable');
   const { toast } = useToast();
   const { user, signOut } = useAuth();
+  
+  // Current invoice for easy access
+  const currentInvoice = invoices[currentIndex];
+
+  // Multi-user presence tracking
+  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
+    currentInvoiceId: currentInvoice?.id,
+    isEditing: false // We'll update this based on actual editing state
+  });
 
   // Desktop fixed layout measurements
   const headerRef = React.useRef<HTMLDivElement | null>(null);
@@ -66,7 +79,7 @@ export const Dashboard: React.FC = () => {
   };
 
   // Load invoices from Supabase on mount and when filter changes
-  const loadInvoices = async () => {
+  const loadInvoices = async (showToast = false) => {
     console.log('Loading invoices...', viewState);
     try {
       setLoading(true);
@@ -75,6 +88,14 @@ export const Dashboard: React.FC = () => {
       setInvoices(fetchedInvoices);
       setCurrentIndex(0); // Reset to first invoice when switching views
       setCompletedInvoices(new Set()); // Reset completed tracking
+      
+      if (showToast) {
+        toast({
+          title: "Invoices Refreshed",
+          description: "Invoice list has been updated with latest changes.",
+          duration: 2000,
+        });
+      }
     } catch (error) {
       console.error('Failed to load invoices:', error);
       toast({
@@ -91,7 +112,6 @@ export const Dashboard: React.FC = () => {
     loadInvoices();
   }, [toast, viewState]);
 
-  const currentInvoice = invoices[currentIndex];
 
   // Load Xero data for current invoice when it changes
   useEffect(() => {
@@ -680,6 +700,34 @@ export const Dashboard: React.FC = () => {
               <div className="h-[60vh] md:h-[75vh]">
                 <PDFViewer invoice={currentInvoice} />
               </div>
+              
+              {/* Real-time notifications component */}
+              <RealtimeNotifications 
+                viewState={viewState}
+                onInvoiceListUpdate={() => loadInvoices(true)}
+              />
+              
+              {/* Conflict warning for multi-user scenarios */}
+              {currentInvoice && (
+                <ConflictWarning
+                  invoiceId={currentInvoice.id}
+                  isEditing={false} // This would be updated based on actual editing state
+                />
+              )}
+              
+              {/* Real-time notifications component */}
+              <RealtimeNotifications 
+                viewState={viewState}
+                onInvoiceListUpdate={() => loadInvoices(true)}
+              />
+              
+              {/* Conflict warning for multi-user scenarios */}
+              {currentInvoice && (
+                <ConflictWarning
+                  invoiceId={currentInvoice.id}
+                  isEditing={false} // This would be updated based on actual editing state
+                />
+              )}
               
               <XeroSection
                 invoice={currentInvoice}
