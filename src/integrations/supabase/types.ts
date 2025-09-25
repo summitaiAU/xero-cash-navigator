@@ -38,14 +38,116 @@ export type Database = {
         }
         Relationships: []
       }
+      email_queue: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          error_details: Json | null
+          error_message: string | null
+          history_id: number | null
+          id: string
+          locked_by: string | null
+          locked_until: string | null
+          max_attempts: number
+          message_id: string
+          priority: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          error_message?: string | null
+          history_id?: number | null
+          id?: string
+          locked_by?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          message_id: string
+          priority?: number
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_details?: Json | null
+          error_message?: string | null
+          history_id?: number | null
+          id?: string
+          locked_by?: string | null
+          locked_until?: string | null
+          max_attempts?: number
+          message_id?: string
+          priority?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      gmail_history_log: {
+        Row: {
+          date_for: string
+          email_address: string | null
+          history_id: number
+          id: number
+          received_at: string
+          source: string
+        }
+        Insert: {
+          date_for?: string
+          email_address?: string | null
+          history_id: number
+          id?: number
+          received_at?: string
+          source?: string
+        }
+        Update: {
+          date_for?: string
+          email_address?: string | null
+          history_id?: number
+          id?: number
+          received_at?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      gmail_watermark: {
+        Row: {
+          id: number
+          last_processed_history_id: number
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          last_processed_history_id?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          last_processed_history_id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount_due: number | null
           amount_paid: number | null
+          approved: boolean | null
           created_at: string | null
+          currency: string | null
           due_date: string | null
           email_id: string | null
           entity: string | null
+          flag_email_address: string | null
+          flag_email_body: string | null
+          flag_email_subject: string | null
+          flag_type: string | null
           google_drive_embed_link: string | null
           google_drive_id: string | null
           google_drive_link: string | null
@@ -55,24 +157,38 @@ export type Database = {
           invoice_no: string | null
           link_to_invoice: string | null
           list_items: Json[] | null
+          paid_date: string | null
+          partially_paid: boolean | null
           payment_ref: string | null
           project: string | null
           remittance_email: string | null
           remittance_sent: boolean | null
+          sender_email: string | null
           status: string | null
           subtotal: number | null
+          supplier_abn: string | null
+          supplier_bank: string | null
+          supplier_contact_no_on_invoice: string | null
+          supplier_email_on_invoice: string | null
           supplier_name: string | null
           total_amount: number | null
+          xero_contact_id: string | null
           xero_invoice_id: string | null
           xero_invoice_link: string | null
         }
         Insert: {
           amount_due?: number | null
           amount_paid?: number | null
+          approved?: boolean | null
           created_at?: string | null
+          currency?: string | null
           due_date?: string | null
           email_id?: string | null
           entity?: string | null
+          flag_email_address?: string | null
+          flag_email_body?: string | null
+          flag_email_subject?: string | null
+          flag_type?: string | null
           google_drive_embed_link?: string | null
           google_drive_id?: string | null
           google_drive_link?: string | null
@@ -82,24 +198,38 @@ export type Database = {
           invoice_no?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
+          paid_date?: string | null
+          partially_paid?: boolean | null
           payment_ref?: string | null
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
+          sender_email?: string | null
           status?: string | null
           subtotal?: number | null
+          supplier_abn?: string | null
+          supplier_bank?: string | null
+          supplier_contact_no_on_invoice?: string | null
+          supplier_email_on_invoice?: string | null
           supplier_name?: string | null
           total_amount?: number | null
+          xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
         }
         Update: {
           amount_due?: number | null
           amount_paid?: number | null
+          approved?: boolean | null
           created_at?: string | null
+          currency?: string | null
           due_date?: string | null
           email_id?: string | null
           entity?: string | null
+          flag_email_address?: string | null
+          flag_email_body?: string | null
+          flag_email_subject?: string | null
+          flag_type?: string | null
           google_drive_embed_link?: string | null
           google_drive_id?: string | null
           google_drive_link?: string | null
@@ -109,14 +239,22 @@ export type Database = {
           invoice_no?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
+          paid_date?: string | null
+          partially_paid?: boolean | null
           payment_ref?: string | null
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
+          sender_email?: string | null
           status?: string | null
           subtotal?: number | null
+          supplier_abn?: string | null
+          supplier_bank?: string | null
+          supplier_contact_no_on_invoice?: string | null
+          supplier_email_on_invoice?: string | null
           supplier_name?: string | null
           total_amount?: number | null
+          xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
         }
@@ -130,6 +268,10 @@ export type Database = {
       is_user_allowed: {
         Args: { user_email: string }
         Returns: boolean
+      }
+      test_pgnet_webhook: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
     }
     Enums: {
