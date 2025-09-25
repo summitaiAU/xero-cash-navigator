@@ -25,8 +25,15 @@ const Auth = () => {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        // Log successful sign in
+        try {
+          const { auditService } = await import('@/services/auditService');
+          await auditService.logSignIn();
+        } catch (error) {
+          console.error('Failed to log sign in:', error);
+        }
         navigate('/');
       }
     });

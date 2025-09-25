@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
+import { auditService } from './auditService';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -124,6 +125,17 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
 };
 
 export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSent: boolean) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ 
@@ -136,9 +148,30 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
   if (error) {
     throw new Error(`Failed to update invoice: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoiceMarkedPaid(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    status_from: currentInvoice.status,
+    status_to: 'PAID',
+    remittance_sent: remittanceSent
+  });
 };
 
 export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ 
@@ -151,6 +184,15 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to unmark invoice as paid: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoiceUnmarkedPaid(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    status_from: currentInvoice.status,
+    status_to: 'READY'
+  });
 };
 
 export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
@@ -174,10 +216,10 @@ export interface FlagInvoiceData {
 }
 
 export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) => {
-  // First get the invoice details to extract necessary fields for webhook
+  // First get the invoice details to extract necessary fields for webhook and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
-    .select('google_drive_id, invoice_no')
+    .select('*')
     .eq('id', invoiceId)
     .single();
 
@@ -227,9 +269,33 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
       // Don't throw here - we want the flagging to succeed even if webhook fails
     }
   }
+
+  // Audit log
+  await auditService.logInvoiceFlagged(invoiceId, {
+    invoice_number: invoice.invoice_no,
+    supplier_name: invoice.supplier_name,
+    amount: invoice.total_amount,
+    status_from: invoice.status,
+    status_to: 'FLAGGED',
+    flag_type: flagData.flagType,
+    email_address: flagData.emailAddress,
+    email_subject: flagData.subject,
+    email_body: flagData.emailBody
+  });
 };
 
 export const resolveFlag = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({
@@ -244,6 +310,16 @@ export const resolveFlag = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to resolve flag: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoiceFlagResolved(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    status_from: currentInvoice.status,
+    status_to: 'READY',
+    flag_type: currentInvoice.flag_type
+  });
 };
 
 export const updateInvoiceData = async (invoiceId: string, updateData: {
@@ -293,10 +369,10 @@ export const undoApproveInvoice = async (invoiceId: string) => {
 };
 
 export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number) => {
-  // First get current invoice data to calculate new amounts
+  // First get current invoice data to calculate new amounts and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
-    .select('amount_paid, total_amount')
+    .select('*')
     .eq('id', invoiceId)
     .single();
 
@@ -322,9 +398,30 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
   if (error) {
     throw new Error(`Failed to mark invoice as partially paid: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoicePartialPayment(invoiceId, {
+    invoice_number: invoice.invoice_no,
+    supplier_name: invoice.supplier_name,
+    amount: invoice.total_amount,
+    amount_paid: amountPaid,
+    status_from: invoice.status,
+    status_to: 'PARTIALLY PAID'
+  });
 };
 
 export const unmarkPartialPayment = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ 
@@ -338,4 +435,13 @@ export const unmarkPartialPayment = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to unmark partial payment: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoicePartialPaymentUndo(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    status_from: currentInvoice.status,
+    status_to: 'READY'
+  });
 };
