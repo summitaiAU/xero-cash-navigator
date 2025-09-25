@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { useUserPresence } from '@/hooks/useUserPresence';
+import { ConflictWarning } from '@/components/ConflictWarning';
 
 interface XeroSectionProps {
   invoice: Invoice;
