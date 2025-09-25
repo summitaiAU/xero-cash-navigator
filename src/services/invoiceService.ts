@@ -55,6 +55,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     project: invoice.project || '',
     approved: (invoice as any).approved || false,
     partially_paid: (invoice as any).partially_paid || false,
+    saved_emails: (invoice as any).saved_emails || [], // Include saved emails
     
     // Additional Supabase fields for editing
     entity: invoice.entity || '',
@@ -527,6 +528,85 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
     amount_paid: amountPaid,
     status_from: invoice.status,
     status_to: 'PARTIALLY PAID'
+  });
+};
+
+// Email management functions
+export const addSavedEmail = async (invoiceId: string, email: string) => {
+  // First get the current invoice to capture current saved emails
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for email update: ${fetchError.message}`);
+  }
+
+  const currentEmails = currentInvoice.saved_emails || [];
+  
+  // Check if email already exists
+  if (currentEmails.includes(email)) {
+    throw new Error('Email already exists in saved emails');
+  }
+
+  const updatedEmails = [...currentEmails, email];
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ saved_emails: updatedEmails })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to add saved email: ${error.message}`);
+  }
+
+  // Audit log
+  await auditService.logInvoiceDataUpdate(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    field_changed: 'saved_emails',
+    old_value: currentEmails,
+    new_value: updatedEmails,
+    email_address: email
+  });
+};
+
+export const removeSavedEmail = async (invoiceId: string, email: string) => {
+  // First get the current invoice to capture current saved emails
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for email removal: ${fetchError.message}`);
+  }
+
+  const currentEmails = currentInvoice.saved_emails || [];
+  const updatedEmails = currentEmails.filter(e => e !== email);
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({ saved_emails: updatedEmails })
+    .eq('id', invoiceId);
+
+  if (error) {
+    throw new Error(`Failed to remove saved email: ${error.message}`);
+  }
+
+  // Audit log
+  await auditService.logInvoiceDataUpdate(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    field_changed: 'saved_emails',
+    old_value: currentEmails,
+    new_value: updatedEmails,
+    email_address: email
   });
 };
 

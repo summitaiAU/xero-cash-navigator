@@ -78,6 +78,7 @@ export interface Invoice {
   project?: string;
   approved?: boolean;
   partially_paid?: boolean;
+  saved_emails?: string[]; // Array of user-added emails
   xero_data: ProcessedXeroData;
   
   // Additional Supabase fields for editing

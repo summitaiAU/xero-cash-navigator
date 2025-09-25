@@ -205,6 +205,7 @@ export type Database = {
           project: string | null
           remittance_email: string | null
           remittance_sent: boolean | null
+          saved_emails: string[] | null
           sender_email: string | null
           status: string | null
           subtotal: number | null
@@ -246,6 +247,7 @@ export type Database = {
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
+          saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
           subtotal?: number | null
@@ -287,6 +289,7 @@ export type Database = {
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
+          saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
           subtotal?: number | null
