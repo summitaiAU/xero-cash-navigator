@@ -196,6 +196,17 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
 };
 
 export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ 
@@ -206,6 +217,14 @@ export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to update invoice remittance status: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logRemittanceEmailSent(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    remittance_sent: true
+  });
 };
 
 export interface FlagInvoiceData {
@@ -336,6 +355,17 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   total_amount?: number,
   approved?: boolean
 }) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update(updateData)
@@ -344,9 +374,70 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   if (error) {
     throw new Error(`Failed to update invoice: ${error.message}`);
   }
+
+  // Log detailed changes for each field that was updated
+  const changes: Array<{field: string, old_value: any, new_value: any}> = [];
+  
+  if (updateData.entity !== undefined && updateData.entity !== currentInvoice.entity) {
+    changes.push({ field: 'entity', old_value: currentInvoice.entity, new_value: updateData.entity });
+  }
+  if (updateData.project !== undefined && updateData.project !== currentInvoice.project) {
+    changes.push({ field: 'project', old_value: currentInvoice.project, new_value: updateData.project });
+  }
+  if (updateData.supplier_name !== undefined && updateData.supplier_name !== currentInvoice.supplier_name) {
+    changes.push({ field: 'supplier_name', old_value: currentInvoice.supplier_name, new_value: updateData.supplier_name });
+  }
+  if (updateData.invoice_no !== undefined && updateData.invoice_no !== currentInvoice.invoice_no) {
+    changes.push({ field: 'invoice_no', old_value: currentInvoice.invoice_no, new_value: updateData.invoice_no });
+  }
+  if (updateData.invoice_date !== undefined && updateData.invoice_date !== currentInvoice.invoice_date) {
+    changes.push({ field: 'invoice_date', old_value: currentInvoice.invoice_date, new_value: updateData.invoice_date });
+  }
+  if (updateData.due_date !== undefined && updateData.due_date !== currentInvoice.due_date) {
+    changes.push({ field: 'due_date', old_value: currentInvoice.due_date, new_value: updateData.due_date });
+  }
+  if (updateData.currency !== undefined && updateData.currency !== currentInvoice.currency) {
+    changes.push({ field: 'currency', old_value: currentInvoice.currency, new_value: updateData.currency });
+  }
+  if (updateData.list_items !== undefined && JSON.stringify(updateData.list_items) !== JSON.stringify(currentInvoice.list_items)) {
+    changes.push({ field: 'list_items', old_value: currentInvoice.list_items, new_value: updateData.list_items });
+  }
+  if (updateData.subtotal !== undefined && updateData.subtotal !== Number(currentInvoice.subtotal)) {
+    changes.push({ field: 'subtotal', old_value: currentInvoice.subtotal, new_value: updateData.subtotal });
+  }
+  if (updateData.gst !== undefined && updateData.gst !== Number(currentInvoice.gst)) {
+    changes.push({ field: 'gst', old_value: currentInvoice.gst, new_value: updateData.gst });
+  }
+  if (updateData.total_amount !== undefined && updateData.total_amount !== Number(currentInvoice.total_amount)) {
+    changes.push({ field: 'total_amount', old_value: currentInvoice.total_amount, new_value: updateData.total_amount });
+  }
+  if (updateData.approved !== undefined && updateData.approved !== currentInvoice.approved) {
+    changes.push({ field: 'approved', old_value: currentInvoice.approved, new_value: updateData.approved });
+  }
+
+  // Only log if there were actual changes
+  if (changes.length > 0) {
+    await auditService.logInvoiceDataUpdate(invoiceId, {
+      invoice_number: currentInvoice.invoice_no,
+      supplier_name: currentInvoice.supplier_name,
+      amount: currentInvoice.total_amount,
+      changes: changes
+    });
+  }
 };
 
 export const approveInvoice = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ approved: true } as any)
@@ -355,9 +446,29 @@ export const approveInvoice = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to approve invoice: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoiceApproved(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    old_value: currentInvoice.approved,
+    new_value: true
+  });
 };
 
 export const undoApproveInvoice = async (invoiceId: string) => {
+  // First get the current invoice to capture audit details
+  const { data: currentInvoice, error: fetchError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', invoiceId)
+    .single();
+
+  if (fetchError) {
+    throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
+  }
+
   const { error } = await supabase
     .from('invoices')
     .update({ approved: false } as any)
@@ -366,6 +477,15 @@ export const undoApproveInvoice = async (invoiceId: string) => {
   if (error) {
     throw new Error(`Failed to undo invoice approval: ${error.message}`);
   }
+
+  // Audit log
+  await auditService.logInvoiceApprovalUndone(invoiceId, {
+    invoice_number: currentInvoice.invoice_no,
+    supplier_name: currentInvoice.supplier_name,
+    amount: currentInvoice.total_amount,
+    old_value: currentInvoice.approved,
+    new_value: false
+  });
 };
 
 export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number) => {

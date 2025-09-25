@@ -42,6 +42,15 @@ export const Dashboard: React.FC = () => {
 
   const handleSignOut = async () => {
     try {
+      // Log the sign out action before actually signing out
+      try {
+        const { auditService } = await import('@/services/auditService');
+        await auditService.logSignOut();
+      } catch (error) {
+        console.error('Failed to log sign out:', error);
+        // Don't prevent sign out if audit logging fails
+      }
+      
       await signOut();
       toast({
         title: "Signed out",
@@ -227,14 +236,34 @@ export const Dashboard: React.FC = () => {
   const handleXeroUpdate = async (updatedInvoice: any) => {
     if (!currentInvoice) return;
 
-    // Update the local invoice state with the updated data
-    setInvoices(prevInvoices => 
-      prevInvoices.map(invoice => 
-        invoice.id === updatedInvoice.id ? updatedInvoice : invoice
-      )
-    );
-    
-    setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+    try {
+      // Refresh the entire invoice list to get the latest data from the database
+      const refreshedInvoices = await fetchInvoices(viewState);
+      setInvoices(refreshedInvoices);
+      
+      // Find the updated invoice in the refreshed list to ensure we have the latest version
+      const latestInvoice = refreshedInvoices.find(inv => inv.id === updatedInvoice.id);
+      
+      if (latestInvoice) {
+        // Update local state with the fresh data from database
+        setInvoices(prevInvoices => 
+          prevInvoices.map(invoice => 
+            invoice.id === latestInvoice.id ? latestInvoice : invoice
+          )
+        );
+      }
+      
+      setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+    } catch (error) {
+      console.error('Failed to refresh invoice data after update:', error);
+      // Fallback to just updating local state if refresh fails
+      setInvoices(prevInvoices => 
+        prevInvoices.map(invoice => 
+          invoice.id === updatedInvoice.id ? updatedInvoice : invoice
+        )
+      );
+      setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+    }
   };
 
   const handleMarkAsPaid = async (paymentData: PaymentData) => {

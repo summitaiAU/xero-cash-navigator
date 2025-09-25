@@ -29,6 +29,7 @@ export interface InvoiceAuditDetails {
   old_value?: any;
   new_value?: any;
   remittance_sent?: boolean;
+  changes?: Array<{field: string, old_value: any, new_value: any}>;
 }
 
 class AuditService {

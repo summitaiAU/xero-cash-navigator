@@ -82,6 +82,15 @@ export const DeleteInvoiceButton: React.FC<DeleteInvoiceButtonProps> = ({
         throw new Error(`Failed to delete from database: ${error.message}`);
       }
 
+      // Audit log the deletion
+      const { auditService } = await import('@/services/auditService');
+      await auditService.logInvoiceDeleted(invoice.id, {
+        invoice_number: invoice.invoice_number,
+        supplier_name: invoice.supplier,
+        amount: invoice.amount,
+        status_from: invoice.status
+      });
+
       toast({
         title: "Invoice Deleted",
         description: `Invoice ${invoice.invoice_number} has been deleted successfully.`,

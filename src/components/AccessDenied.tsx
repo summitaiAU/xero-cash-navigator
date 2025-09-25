@@ -8,6 +8,15 @@ const AccessDenied = () => {
 
   const handleSignOut = async () => {
     try {
+      // Log the sign out action before actually signing out
+      try {
+        const { auditService } = await import('@/services/auditService');
+        await auditService.logSignOut();
+      } catch (error) {
+        console.error('Failed to log sign out:', error);
+        // Don't prevent sign out if audit logging fails
+      }
+      
       await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
