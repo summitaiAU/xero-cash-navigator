@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
 import { auditService } from './auditService';
+import { ApiErrorLogger } from './apiErrorLogger';
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
@@ -23,12 +24,16 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
   } else if (viewState === 'flagged') {
     query = query.eq('status', 'FLAGGED');
   } else {
-    // Payable: all statuses that aren't FLAGGED or PAID
-    query = query.not('status', 'in', '(FLAGGED,PAID)');
+    // Payable: all statuses that aren't FLAGGED, PAID, or DELETED
+    query = query.not('status', 'in', '(FLAGGED,PAID,DELETED)');
   }
   const { data, error } = await query;
 
   if (error) {
+    await ApiErrorLogger.logSupabaseError('SELECT', error, {
+      table: 'invoices',
+      userContext: `Fetch ${viewState} invoices`
+    });
     throw new Error(`Failed to fetch invoices: ${error.message}`);
   }
 
@@ -134,6 +139,11 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
     .single();
 
   if (fetchError) {
+    await ApiErrorLogger.logSupabaseError('SELECT', fetchError, {
+      table: 'invoices',
+      invoiceId: invoiceId,
+      userContext: 'Update payment status - fetch for audit'
+    });
     throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
   }
 
@@ -147,6 +157,12 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
     .eq('id', invoiceId);
 
   if (error) {
+    await ApiErrorLogger.logSupabaseError('UPDATE', error, {
+      table: 'invoices',
+      invoiceId: invoiceId,
+      invoiceNumber: currentInvoice.invoice_no,
+      userContext: 'Mark invoice as paid'
+    });
     throw new Error(`Failed to update invoice: ${error.message}`);
   }
 

@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { ApiErrorLogger } from './apiErrorLogger';
 
 export interface N8NWebhookPayload {
   flag_email_address: string;
@@ -11,25 +12,27 @@ export interface N8NWebhookPayload {
 export const sendN8NWebhook = async (payload: N8NWebhookPayload): Promise<void> => {
   const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/589ba0d5-ce5a-48b6-989a-60e512190157';
   
-  try {
-    const response = await fetch(webhookUrl, {
+  const response = await ApiErrorLogger.fetchWithLogging(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...payload,
+      flag_email_body: payload.flag_email_body.replace(/\n/g, '\\n')
+    }),
+    logContext: {
+      endpoint: webhookUrl,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+      requestData: {
+        flag_email_address: payload.flag_email_address,
+        flag_email_subject: payload.flag_email_subject,
+        google_drive_id: payload.google_drive_id
       },
-      body: JSON.stringify({
-        ...payload,
-        flag_email_body: payload.flag_email_body.replace(/\n/g, '\\n')
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Webhook failed with status: ${response.status}`);
+      invoiceNumber: payload.invoice_no,
+      userContext: 'Send flag notification email'
     }
+  });
 
-    console.log('N8N webhook sent successfully');
-  } catch (error) {
-    console.error('Failed to send N8N webhook:', error);
-    throw new Error('Failed to send notification email');
-  }
+  console.log('N8N webhook sent successfully');
 };

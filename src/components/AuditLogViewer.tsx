@@ -21,6 +21,7 @@ interface AuditLog {
   details: any;
   ip_address?: string;
   created_at: string;
+  invoice_number?: string;
 }
 
 export const AuditLogViewer: React.FC = () => {
@@ -65,13 +66,14 @@ export const AuditLogViewer: React.FC = () => {
 
   const exportLogs = () => {
     const csv = [
-      ['Timestamp', 'User', 'Action', 'Entity', 'Entity ID', 'Details', 'IP Address'],
+      ['Timestamp', 'User', 'Action', 'Entity', 'Entity ID', 'Invoice Number', 'Details', 'IP Address'],
       ...logs.map(log => [
         new Date(log.created_at).toLocaleString(),
         log.user_email,
         log.action_type,
         log.entity_type,
         log.entity_id || '',
+        log.invoice_number || '',
         JSON.stringify(log.details),
         log.ip_address || ''
       ])
@@ -147,6 +149,8 @@ export const AuditLogViewer: React.FC = () => {
                 <SelectItem value="INVOICE_FLAGGED">Flagged</SelectItem>
                 <SelectItem value="INVOICE_PARTIAL_PAYMENT">Partial Payment</SelectItem>
                 <SelectItem value="INVOICE_DATA_UPDATE">Data Update</SelectItem>
+                <SelectItem value="INVOICE_SOFT_DELETED">Soft Deleted</SelectItem>
+                <SelectItem value="API_ERROR">API Error</SelectItem>
               </SelectContent>
             </Select>
             <Select
@@ -212,6 +216,11 @@ export const AuditLogViewer: React.FC = () => {
                       <span className="text-sm text-muted-foreground">
                         {log.entity_type}
                       </span>
+                      {log.invoice_number && (
+                        <span className="text-sm font-semibold bg-primary/10 text-primary px-2 py-1 rounded">
+                          #{log.invoice_number}
+                        </span>
+                      )}
                       {log.entity_id && (
                         <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
                           {log.entity_id.substring(0, 8)}...

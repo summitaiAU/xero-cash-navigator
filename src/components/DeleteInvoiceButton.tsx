@@ -3,8 +3,8 @@ import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Trash2, Loader2 } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { deleteInvoice } from '@/services/invoiceDeletionService';
 
 interface DeleteInvoiceButtonProps {
   invoice: Invoice;
@@ -20,85 +20,28 @@ export const DeleteInvoiceButton: React.FC<DeleteInvoiceButtonProps> = ({
   const { toast } = useToast();
 
   const handleDelete = async () => {
-    if (!invoice.xero_bill_id) {
-      toast({
-        title: "Error",
-        description: "No Xero invoice ID found for this invoice.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsDeleting(true);
+    
     try {
-      // First check if Xero invoice is approved
-      const checkResponse = await fetch('https://sodhipg.app.n8n.cloud/webhook/f31b75ff-6eda-4a72-93ea-91c541daaa4e', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ xero_invoice_id: invoice.xero_bill_id })
-      });
-
-      if (!checkResponse.ok) {
-        throw new Error('Failed to check invoice status');
-      }
-
-      const xeroData = await checkResponse.json();
-      const xeroInvoice = Array.isArray(xeroData) ? xeroData[0] : xeroData;
+      const result = await deleteInvoice(invoice);
       
-      // Check if invoice is approved (AUTHORISED or AWAITING_PAYMENT)
-      if (xeroInvoice?.Status && xeroInvoice.Status !== 'DRAFT') {
+      if (result.success) {
         toast({
-          title: "Cannot Delete",
-          description: "Cannot Delete Xero Invoice is Approved. Unapprove Xero Invoice First",
-          variant: "destructive",
+          title: "Invoice Deleted",
+          description: result.message,
         });
         setOpen(false);
-        return;
+        onDeleted?.();
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: result.message,
+          variant: "destructive",
+        });
+        if (result.message.includes("Unapprove")) {
+          setOpen(false); // Close dialog for approval errors
+        }
       }
-
-      // Delete from Xero first
-      const deleteXeroResponse = await fetch('https://sodhipg.app.n8n.cloud/webhook/3382a24f-d60a-4f11-882d-1e4b595d0a3d', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ xero_invoice_id: invoice.xero_bill_id })
-      });
-
-      if (!deleteXeroResponse.ok) {
-        const errorText = await deleteXeroResponse.text();
-        throw new Error(`Failed to delete from Xero: ${errorText}`);
-      }
-
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('invoices')
-        .delete()
-        .eq('id', invoice.id);
-
-      if (error) {
-        throw new Error(`Failed to delete from database: ${error.message}`);
-      }
-
-      // Audit log the deletion
-      const { auditService } = await import('@/services/auditService');
-      await auditService.logInvoiceDeleted(invoice.id, {
-        invoice_number: invoice.invoice_number,
-        supplier_name: invoice.supplier,
-        amount: invoice.amount,
-        status_from: invoice.status
-      });
-
-      toast({
-        title: "Invoice Deleted",
-        description: `Invoice ${invoice.invoice_number} has been deleted successfully.`,
-      });
-
-      setOpen(false);
-      onDeleted?.();
-
     } catch (error: any) {
       console.error('Delete invoice error:', error);
       toast({
@@ -111,8 +54,8 @@ export const DeleteInvoiceButton: React.FC<DeleteInvoiceButtonProps> = ({
     }
   };
 
-  // Only show for payable invoices (not paid)
-  if (invoice.status === 'PAID') {
+  // Only show for payable invoices (not paid or deleted)
+  if (invoice.status === 'PAID' || invoice.status === 'DELETED') {
     return null;
   }
 
@@ -133,7 +76,7 @@ export const DeleteInvoiceButton: React.FC<DeleteInvoiceButtonProps> = ({
           <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to delete invoice <strong>{invoice.invoice_number}</strong>? 
-            This action cannot be undone. The invoice will be removed from both Xero and the database.
+            This action will mark the invoice as deleted and remove it from Xero if it exists. The invoice record will be preserved for audit purposes.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

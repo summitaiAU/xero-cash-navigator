@@ -12,6 +12,7 @@ import { FlagInvoiceButton } from './FlagInvoiceButton';
 import { PartialPaymentModal } from './PartialPaymentModal';
 import { SavedEmailManager } from './SavedEmailManager';
 import { useToast } from '@/hooks/use-toast';
+import { ApiErrorLogger } from '@/services/apiErrorLogger';
 
 interface PaymentSectionProps {
   invoice: Invoice;
@@ -169,50 +170,46 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       formData.append('send_to_jonathon', ccJonathon.toString());
       formData.append('row_id', invoice.id);
 
-      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        try {
-          const responseData = await response.json();
-          const isSuccess = Array.isArray(responseData) 
-            ? responseData.some(item => item.remittance_sent === true)
-            : responseData.remittance_sent === true;
-
-          if (isSuccess) {
-            const successItem = Array.isArray(responseData) 
-              ? responseData.find(item => item.remittance_sent === true)
-              : responseData;
-            
-            setRemittanceResponse(`✅ Remittance sent successfully`);
-            toast({
-              title: "Remittance sent!",
-              description: "Successfully uploaded and forwarded remittance",
-            });
-          } else {
-            throw new Error('Remittance not sent successfully');
+      const response = await ApiErrorLogger.fetchWithLogging(
+        'https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6',
+        {
+          method: 'POST',
+          body: formData,
+          expectJson: true,
+          logContext: {
+            endpoint: '/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6',
+            method: 'POST',
+            requestData: { 
+              to_email: email,
+              invoice_number: invoice.invoice_number,
+              xero_invoice_id: invoice.xero_bill_id,
+              send_to_jonathon: ccJonathon,
+              row_id: invoice.id
+            },
+            invoiceNumber: invoice.invoice_number,
+            userContext: 'Send remittance email with payment confirmation'
           }
-        } catch (error) {
-          console.error('Failed to parse response or remittance not sent:', error);
-          setRemittanceResponse(`❌ Error: Failed to upload and forward remittance`);
-          toast({
-            title: "Failed to send remittance",
-            description: "Failed to upload and forward remittance",
-            variant: "destructive",
-          });
         }
-      } else {
-        const errorText = await response.text();
-        console.error('Upload failed:', errorText);
-        setRemittanceResponse(`❌ Error: Upload failed`);
-        toast({
-          title: "Failed to send remittance",
-          description: "Failed to upload and forward remittance",
-          variant: "destructive",
-        });
-      }
+      );
+
+      const responseData = await response.json();
+      const isSuccess = Array.isArray(responseData)
+          ? responseData.some(item => item.remittance_sent === true)
+          : responseData.remittance_sent === true;
+
+        if (isSuccess) {
+          const successItem = Array.isArray(responseData) 
+            ? responseData.find(item => item.remittance_sent === true)
+            : responseData;
+          
+          setRemittanceResponse(`✅ Remittance sent successfully`);
+          toast({
+            title: "Remittance sent!",
+            description: "Successfully uploaded and forwarded remittance",
+          });
+        } else {
+          throw new Error('Remittance not sent successfully');
+        }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
       setRemittanceResponse(`❌ Error: ${errorMsg}`);

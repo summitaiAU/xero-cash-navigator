@@ -32,6 +32,16 @@ export interface InvoiceAuditDetails {
   changes?: Array<{field: string, old_value: any, new_value: any}>;
 }
 
+export interface ApiErrorDetails {
+  api_endpoint: string;
+  error_message: string;
+  error_details?: any;
+  request_data?: any;
+  response_status?: number;
+  response_data?: string;
+  invoice_number?: string;
+}
+
 class AuditService {
   private async getCurrentUser() {
     const { data: { session } } = await supabase.auth.getSession();
@@ -53,11 +63,12 @@ class AuditService {
       const user = await this.getCurrentUser();
       const clientInfo = await this.getClientInfo();
 
-      const logEntry: AuditLogEntry = {
+      const logEntry: AuditLogEntry & { invoice_number?: string } = {
         ...entry,
         user_email: user.email,
         user_id: user.id,
-        ...clientInfo
+        ...clientInfo,
+        invoice_number: (entry.details as any)?.invoice_number
       };
 
       // Use edge function to insert audit log to avoid RLS issues
@@ -212,7 +223,20 @@ class AuditService {
     });
   }
 
-  // Invoice deletion
+  // Invoice deletion (soft delete)
+  async logInvoiceSoftDeleted(invoiceId: string, details: InvoiceAuditDetails & {
+    deleted_from_xero?: boolean;
+    had_xero_id?: boolean;
+  }) {
+    await this.log({
+      action_type: 'INVOICE_SOFT_DELETED',
+      entity_type: 'INVOICE',
+      entity_id: invoiceId,
+      details
+    });
+  }
+
+  // Invoice deletion (legacy - kept for compatibility)
   async logInvoiceDeleted(invoiceId: string, details: InvoiceAuditDetails) {
     await this.log({
       action_type: 'INVOICE_DELETED',
@@ -277,6 +301,27 @@ class AuditService {
     }
 
     return query;
+  }
+
+  // Log API errors with comprehensive details
+  async logApiError(details: ApiErrorDetails): Promise<void> {
+    try {
+      // Use the database function directly for API errors
+      const { error } = await supabase.rpc('log_api_error', {
+        api_endpoint: details.api_endpoint,
+        error_message: details.error_message,
+        error_details: details.error_details || {},
+        request_data: details.request_data || {},
+        response_status: details.response_status,
+        response_data: details.response_data
+      });
+
+      if (error) {
+        console.error('Failed to log API error:', error);
+      }
+    } catch (error) {
+      console.error('API error logging failed:', error);
+    }
   }
 }
 
