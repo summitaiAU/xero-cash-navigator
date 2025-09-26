@@ -63,12 +63,15 @@ class AuditService {
       const user = await this.getCurrentUser();
       const clientInfo = await this.getClientInfo();
 
+      // Extract invoice_number from details for top-level logging
+      const invoiceNumber = (entry.details as any)?.invoice_number;
+
       const logEntry: AuditLogEntry & { invoice_number?: string } = {
         ...entry,
         user_email: user.email,
         user_id: user.id,
         ...clientInfo,
-        invoice_number: (entry.details as any)?.invoice_number
+        invoice_number: invoiceNumber
       };
 
       // Use edge function to insert audit log to avoid RLS issues
@@ -311,7 +314,10 @@ class AuditService {
         api_endpoint: details.api_endpoint,
         error_message: details.error_message,
         error_details: details.error_details || {},
-        request_data: details.request_data || {},
+        request_data: {
+          ...details.request_data || {},
+          invoice_number: details.invoice_number
+        },
         response_status: details.response_status,
         response_data: details.response_data
       });
