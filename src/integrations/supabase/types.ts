@@ -46,6 +46,7 @@ export type Database = {
           entity_id: string | null
           entity_type: string
           id: string
+          invoice_number: string | null
           ip_address: unknown | null
           session_id: string | null
           user_agent: string | null
@@ -59,6 +60,7 @@ export type Database = {
           entity_id?: string | null
           entity_type: string
           id?: string
+          invoice_number?: string | null
           ip_address?: unknown | null
           session_id?: string | null
           user_agent?: string | null
@@ -72,6 +74,7 @@ export type Database = {
           entity_id?: string | null
           entity_type?: string
           id?: string
+          invoice_number?: string | null
           ip_address?: unknown | null
           session_id?: string | null
           user_agent?: string | null
@@ -313,6 +316,17 @@ export type Database = {
       is_user_allowed: {
         Args: { user_email: string }
         Returns: boolean
+      }
+      log_api_error: {
+        Args: {
+          api_endpoint: string
+          error_details?: Json
+          error_message: string
+          request_data?: Json
+          response_data?: string
+          response_status?: number
+        }
+        Returns: undefined
       }
       test_pgnet_webhook: {
         Args: Record<PropertyKey, never>
