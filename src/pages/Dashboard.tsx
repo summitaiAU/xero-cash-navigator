@@ -464,29 +464,30 @@ export const Dashboard: React.FC = () => {
     } else if (selectedInvoice.status === 'FLAGGED') {
       targetView = 'flagged';
     } else {
-      // Check if it's overdue for payable classification
-      const dueDate = new Date(selectedInvoice.due_date);
-      const today = new Date();
+      // For all other statuses (READY, APPROVED, PARTIALLY PAID), use payable view
       targetView = 'payable';
     }
 
-    // Switch view if necessary
+    // If we need to switch views, do it first
     if (targetView !== viewState) {
       setViewState(targetView);
-      // Wait for the view to update, then navigate to the invoice
-      setTimeout(() => {
-        // The useEffect will reload invoices for the new view
-        // We need to wait for that to complete, then find the invoice
-        loadInvoices().then(() => {
-          // Find the invoice in the updated list
-          const updatedInvoices = invoices;
-          const invoiceIndex = updatedInvoices.findIndex(inv => inv.id === selectedInvoice.id);
+      // Use a timeout to ensure the view state change is processed
+      setTimeout(async () => {
+        try {
+          // Fetch invoices for the new view
+          const newViewInvoices = await fetchInvoices(targetView);
+          setInvoices(newViewInvoices);
+          
+          // Find the invoice in the new view
+          const invoiceIndex = newViewInvoices.findIndex(inv => inv.id === selectedInvoice.id);
           if (invoiceIndex !== -1) {
             setCurrentIndex(invoiceIndex);
             resetProcessingStatus();
             scrollToTop();
           }
-        });
+        } catch (error) {
+          console.error('Failed to load invoices for new view:', error);
+        }
       }, 100);
     } else {
       // Same view, just navigate to the invoice

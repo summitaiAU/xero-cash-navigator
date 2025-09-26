@@ -87,21 +87,9 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
         </div>
 
-        {/* Search and Navigation */}
+        {/* Navigation and Search */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            {/* Global Invoice Search */}
-            <div className="flex flex-col gap-2">
-              <InvoiceSearch
-                invoices={allInvoices}
-                onInvoiceSelect={onInvoiceSelect}
-                placeholder="Search all invoices..."
-              />
-              <div className="text-xs text-muted-foreground">
-                Search across all invoices or select from current view
-              </div>
-            </div>
-            
             {/* Current View Dropdown */}
             <div className="flex flex-col gap-2">
               <Select value={safeIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
@@ -135,6 +123,12 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
+            {/* Global Search Icon */}
+            <InvoiceSearch
+              invoices={allInvoices}
+              onInvoiceSelect={onInvoiceSelect}
+            />
+            
             {emailLink && (
               <Button
                 variant="outline"
