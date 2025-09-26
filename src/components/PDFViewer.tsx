@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, ZoomIn, ZoomOut, Maximize, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ZoomIn, ZoomOut, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 
 interface PDFViewerProps {
@@ -17,19 +17,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
     setPdfError(false);
   }, [invoice.id]);
 
-  const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = invoice.drive_view_url;
-    link.target = '_blank';
-    link.click();
-  };
-
   const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
   const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
-
-  const handleFullscreen = () => {
-    window.open(invoice.drive_view_url, '_blank');
-  };
 
   return (
     <div className="dashboard-card p-4 flex flex-col h-full">
@@ -54,16 +43,6 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
             disabled={zoom >= 200}
           >
             <ZoomIn className="h-4 w-4" />
-          </Button>
-          <div className="h-4 w-px bg-border mx-1" />
-          <Button variant="ghost" size="sm" onClick={handleDownload}>
-            <Download className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleFullscreen}>
-            <Maximize className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => window.open(invoice.drive_view_url, '_blank')}>
-            <ExternalLink className="h-4 w-4" />
           </Button>
         </div>
       </div>
