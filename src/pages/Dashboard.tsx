@@ -24,6 +24,7 @@ import { useSafeOffsets } from '@/hooks/useSafeOffsets';
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // All invoices for search
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [completedInvoices, setCompletedInvoices] = useState<Set<string>>(new Set());
@@ -108,8 +109,23 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Load all invoices for search functionality
+  const loadAllInvoices = async () => {
+    try {
+      const [payable, paid, flagged] = await Promise.all([
+        fetchInvoices('payable'),
+        fetchInvoices('paid'),
+        fetchInvoices('flagged')
+      ]);
+      setAllInvoices([...payable, ...paid, ...flagged]);
+    } catch (error) {
+      console.error('Failed to load all invoices for search:', error);
+    }
+  };
+
   useEffect(() => {
     loadInvoices();
+    loadAllInvoices(); // Load all invoices for search
   }, [toast, viewState]);
 
 
@@ -438,6 +454,51 @@ export const Dashboard: React.FC = () => {
     scrollToTop();
   };
 
+  // Handle invoice selection from search
+  const handleInvoiceSelect = (selectedInvoice: Invoice) => {
+    // Determine which view the invoice belongs to and switch if necessary
+    let targetView: 'payable' | 'paid' | 'flagged' = 'payable';
+    
+    if (selectedInvoice.status === 'PAID') {
+      targetView = 'paid';
+    } else if (selectedInvoice.status === 'FLAGGED') {
+      targetView = 'flagged';
+    } else {
+      // Check if it's overdue for payable classification
+      const dueDate = new Date(selectedInvoice.due_date);
+      const today = new Date();
+      targetView = 'payable';
+    }
+
+    // Switch view if necessary
+    if (targetView !== viewState) {
+      setViewState(targetView);
+      // Wait for the view to update, then navigate to the invoice
+      setTimeout(() => {
+        // The useEffect will reload invoices for the new view
+        // We need to wait for that to complete, then find the invoice
+        loadInvoices().then(() => {
+          // Find the invoice in the updated list
+          const updatedInvoices = invoices;
+          const invoiceIndex = updatedInvoices.findIndex(inv => inv.id === selectedInvoice.id);
+          if (invoiceIndex !== -1) {
+            setCurrentIndex(invoiceIndex);
+            resetProcessingStatus();
+            scrollToTop();
+          }
+        });
+      }, 100);
+    } else {
+      // Same view, just navigate to the invoice
+      const invoiceIndex = invoices.findIndex(inv => inv.id === selectedInvoice.id);
+      if (invoiceIndex !== -1) {
+        setCurrentIndex(invoiceIndex);
+        resetProcessingStatus();
+        scrollToTop();
+      }
+    }
+  };
+
   const handleExportReport = () => {
     const reportData = invoices.map(invoice => ({
       invoice_number: invoice.invoice_number,
@@ -536,9 +597,11 @@ export const Dashboard: React.FC = () => {
               completedCount={completedInvoices.size}
               emailLink={currentInvoice?.drive_view_url}
               invoices={invoices}
+              allInvoices={allInvoices}
               viewState={viewState}
               onViewStateChange={handleViewStateChange}
               onJumpToInvoice={handleJumpToInvoice}
+              onInvoiceSelect={handleInvoiceSelect}
             />
           </div>
         </div>
@@ -669,9 +732,11 @@ export const Dashboard: React.FC = () => {
             completedCount={completedInvoices.size}
             emailLink={currentInvoice?.drive_view_url}
             invoices={invoices}
+            allInvoices={allInvoices}
             viewState={viewState}
             onViewStateChange={handleViewStateChange}
             onJumpToInvoice={handleJumpToInvoice}
+            onInvoiceSelect={handleInvoiceSelect}
           />
 
           {hasNoInvoices ? (

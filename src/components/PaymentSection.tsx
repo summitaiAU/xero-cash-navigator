@@ -80,20 +80,22 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     setDragOver(false);
     
     const files = Array.from(e.dataTransfer.files);
-    const imageFile = files.find(file => file.type.startsWith('image/'));
+    const validFile = files.find(file => 
+      file.type.startsWith('image/') || file.type === 'application/pdf'
+    );
     
-    if (imageFile) {
+    if (validFile) {
       const reader = new FileReader();
       reader.onload = (event) => {
         setImageData(event.target?.result as string);
       };
-      reader.readAsDataURL(imageFile);
+      reader.readAsDataURL(validFile);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && (file.type.startsWith('image/') || file.type === 'application/pdf')) {
       const reader = new FileReader();
       reader.onload = (event) => {
         setImageData(event.target?.result as string);
@@ -311,8 +313,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             <div className="space-y-4">
               <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
               <div className="text-center">
-                <h4 className="text-lg font-medium mb-2">Drop your remittance screenshot here</h4>
-                <p className="text-muted-foreground mb-4">or click to browse files</p>
+                <h4 className="text-lg font-medium mb-2">Drop your remittance file here</h4>
+                <p className="text-muted-foreground mb-4">Images or PDFs accepted • Click to browse files</p>
                 <div className="flex items-center justify-center gap-2 text-sm text-primary">
                   <Camera className="h-4 w-4" />
                   <span>💡 Press Ctrl+V to paste from clipboard</span>
@@ -321,7 +323,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               <input
                 id="file-input"
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={handleFileSelect}
                 className="hidden"
               />

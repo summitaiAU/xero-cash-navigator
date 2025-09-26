@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight, RefreshCw, Mail, CheckCircle, Flag, AlertTriangle } from 'lucide-react';
 import { AddInvoiceButton } from './AddInvoiceButton';
+import { InvoiceSearch } from './InvoiceSearch';
 import { Invoice } from '@/types/invoice';
 
 interface InvoiceNavigationProps {
@@ -15,9 +16,11 @@ interface InvoiceNavigationProps {
   completedCount: number;
   emailLink?: string;
   invoices: Invoice[];
+  allInvoices: Invoice[]; // All invoices for search
   viewState: 'payable' | 'paid' | 'flagged';
   onViewStateChange: (state: 'payable' | 'paid' | 'flagged') => void;
   onJumpToInvoice: (index: number) => void;
+  onInvoiceSelect: (invoice: Invoice) => void;
 }
 
 export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
@@ -28,9 +31,11 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
   completedCount,
   emailLink,
   invoices,
+  allInvoices,
   viewState,
   onViewStateChange,
-  onJumpToInvoice
+  onJumpToInvoice,
+  onInvoiceSelect
 }) => {
   const progressPercentage = totalInvoices > 0 ? (completedCount / totalInvoices) * 100 : 0;
   const hasNext = currentIndex < totalInvoices - 1;
@@ -82,10 +87,22 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
         </div>
 
-        {/* Invoice Dropdown and Navigation */}
+        {/* Search and Navigation */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            {/* Invoice Dropdown */}
+            {/* Global Invoice Search */}
+            <div className="flex flex-col gap-2">
+              <InvoiceSearch
+                invoices={allInvoices}
+                onInvoiceSelect={onInvoiceSelect}
+                placeholder="Search all invoices..."
+              />
+              <div className="text-xs text-muted-foreground">
+                Search across all invoices or select from current view
+              </div>
+            </div>
+            
+            {/* Current View Dropdown */}
             <div className="flex flex-col gap-2">
               <Select value={safeIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
                 <SelectTrigger className="w-80">
@@ -157,17 +174,20 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
         </div>
         
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>Progress</span>
-            <span>{Math.round(progressPercentage)}% complete</span>
+        {/* Progress Bar - only show for payable invoices */}
+        {viewState === 'payable' && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Progress</span>
+              <span>{Math.round(progressPercentage)}% complete</span>
+            </div>
+            <Progress 
+              value={progressPercentage} 
+              variant="default"
+              className="h-2" 
+            />
           </div>
-          <Progress 
-            value={progressPercentage} 
-            variant={viewState === 'paid' ? 'success' : 'default'}
-            className={`h-2 ${isPaidStatus ? 'border border-green-500' : isFlaggedStatus ? 'border border-amber-500' : ''}`} 
-          />
-        </div>
+        )}
       </div>
 
       {/* Mobile/Tablet Floating Navigation */}
@@ -253,13 +273,16 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               
-              <div className="w-16 px-2">
-                <Progress 
-                  value={progressPercentage} 
-                  variant={viewState === 'paid' ? 'success' : 'default'}
-                  className={`h-1 ${isPaidStatus ? 'border border-green-500' : isFlaggedStatus ? 'border border-amber-500' : ''}`} 
-                />
-              </div>
+              {/* Progress Bar - only show for payable invoices on mobile */}
+              {viewState === 'payable' && (
+                <div className="w-16 px-2">
+                  <Progress 
+                    value={progressPercentage} 
+                    variant="default"
+                    className="h-1" 
+                  />
+                </div>
+              )}
               
               <Button
                 variant="ghost"
