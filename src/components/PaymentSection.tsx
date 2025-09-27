@@ -367,18 +367,28 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             selectedEmail={selectedEmailForRemittance}
           />
 
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="cc-jonathon"
-                checked={ccJonathon}
-                onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
-              />
-              <Label htmlFor="cc-jonathon" className="text-sm">
-                CC Jonathon
-              </Label>
-            </div>
-          </div>
+          {/* Only show CC Jonathon if there are actual emails (not just default) */}
+          {(() => {
+            const hasRealEmails = invoice.remittance_email || 
+                                 invoice.supplier_email_on_invoice || 
+                                 invoice.sender_email || 
+                                 (invoice.saved_emails && invoice.saved_emails.length > 0);
+            
+            return hasRealEmails ? (
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="cc-jonathon"
+                    checked={ccJonathon}
+                    onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
+                  />
+                  <Label htmlFor="cc-jonathon" className="text-sm">
+                    CC Jonathon
+                  </Label>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {/* Send Now Button */}
           <Button

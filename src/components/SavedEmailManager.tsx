@@ -54,6 +54,11 @@ export const SavedEmailManager: React.FC<SavedEmailManagerProps> = ({
       });
     }
 
+    // If no emails are available, add the default email
+    if (emails.length === 0) {
+      emails.push({ email: 'jay@jayproconstruction.com.au', source: 'Default' });
+    }
+
     // Remove duplicates
     const uniqueEmails = emails.filter((item, index, self) => 
       index === self.findIndex(e => e.email.toLowerCase() === item.email.toLowerCase())
