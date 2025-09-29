@@ -243,6 +243,12 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
             </div>
             
             <div className="flex items-center gap-1">
+              {/* Mobile Search */}
+              <InvoiceSearch
+                invoices={allInvoices}
+                onInvoiceSelect={onInvoiceSelect}
+              />
+              
               <AddInvoiceButton isMobile={true} />
               
               {emailLink && (
