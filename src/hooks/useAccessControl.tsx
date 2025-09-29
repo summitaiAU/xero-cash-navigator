@@ -26,24 +26,43 @@ export const useAccessControl = (): AccessControlData => {
       }
 
       try {
-        console.log('Checking access for user:', user.email);
-        const { data, error } = await supabase
-          .from('allowed_users')
-          .select('role, active')
-          .eq('email', user.email.toLowerCase())
-          .eq('active', true)
-          .single();
+        console.log('Checking access for user via RPC:', user.email);
+        // First, check access using the database function (runs with proper auth context)
+        const { data: allowData, error: allowError } = await supabase.rpc('is_user_allowed', {
+          user_email: user.email,
+        });
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error checking access:', error);
+        if (allowError) {
+          console.error('is_user_allowed RPC error:', allowError);
           setIsAllowed(false);
           setRole(null);
-        } else if (data) {
-          console.log('User access granted:', data);
-          setIsAllowed(true);
-          setRole(data.role);
+          setLoading(false);
+          return;
+        }
+
+        if (allowData === true) {
+          // Optionally fetch role for UI purposes
+          const { data: roleData, error: roleError } = await supabase
+            .from('allowed_users')
+            .select('role')
+            .eq('email', user.email.toLowerCase())
+            .eq('active', true)
+            .single();
+
+          if (roleError && roleError.code !== 'PGRST116') {
+            console.warn('Could not load user role, proceeding with access granted:', roleError);
+            setIsAllowed(true);
+            setRole(null);
+          } else if (roleData) {
+            console.log('User access granted with role:', roleData.role);
+            setIsAllowed(true);
+            setRole(roleData.role);
+          } else {
+            setIsAllowed(true);
+            setRole(null);
+          }
         } else {
-          console.log('User not in allowlist');
+          console.log('User not allowed by function');
           setIsAllowed(false);
           setRole(null);
         }
