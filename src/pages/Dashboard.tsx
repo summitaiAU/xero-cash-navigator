@@ -822,6 +822,25 @@ export const Dashboard: React.FC = () => {
                   loading={loading}
                 />
               )}
+              
+              {/* Delete Invoice Button - Only for payable invoices (Mobile) */}
+              {viewState === 'payable' && currentInvoice && (
+                <DeleteInvoiceButton
+                  invoice={currentInvoice}
+                  onDeleted={() => {
+                    // Reload invoices after deletion
+                    setInvoices(prev => prev.filter(inv => inv.id !== currentInvoice.id));
+                    // If this was the last invoice or we're at the end, go to previous
+                    if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
+                      setCurrentIndex(currentIndex - 1);
+                    }
+                    toast({
+                      title: "Invoice deleted",
+                      description: "Invoice has been removed successfully.",
+                    });
+                  }}
+                />
+              )}
             </>
           )}
         </main>
