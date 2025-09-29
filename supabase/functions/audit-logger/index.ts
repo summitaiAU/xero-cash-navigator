@@ -16,6 +16,7 @@ interface AuditLogRequest {
   ip_address?: string;
   user_agent?: string;
   session_id?: string;
+  invoice_number?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -58,6 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_address: clientIP,
       user_agent: logData.user_agent,
       session_id: logData.session_id,
+      invoice_number: logData.details?.invoice_number || logData.invoice_number,
       created_at: new Date().toISOString()
     };
 

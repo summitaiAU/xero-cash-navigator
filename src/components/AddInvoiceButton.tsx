@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Upload, Plus, Camera, X, Loader2, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
+import { auditService } from '@/services/auditService';
 
 interface AddInvoiceButtonProps {
   isMobile?: boolean;
@@ -46,6 +47,14 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       reader.onload = (event) => {
         setFileData(event.target?.result as string);
         setFileName(file.name);
+        
+        // Log file validation success
+        auditService.logInvoiceUploadStarted({
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type
+        });
+        
         toast({
           title: "File uploaded!",
           description: `${file.name} has been uploaded and is ready for processing.`,
@@ -53,6 +62,13 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       };
       reader.readAsDataURL(file);
     } else {
+      // Log file validation failure
+      auditService.logDocumentProcessingFailed({
+        file_name: file.name,
+        error_message: `Invalid file type: ${file.type}. Only images and PDF files are supported.`,
+        error_code: 'INVALID_FILE_TYPE'
+      });
+      
       toast({
         title: "Invalid file type",
         description: "Please upload an image or PDF file.",
@@ -71,6 +87,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       return;
     }
 
+    const uploadStartTime = Date.now();
     setIsProcessing(true);
     setProcessingFileName(fileName);
     setIsMinimized(true); // Minimize the dialog instead of closing it
@@ -92,6 +109,15 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
 
       // Handle specific response codes
       if (response.status === 200) {
+        const processingTime = Date.now() - uploadStartTime;
+        
+        // Log successful upload completion
+        auditService.logInvoiceUploadCompleted({
+          file_name: fileName,
+          file_size: fileData.length,
+          processing_time_ms: processingTime
+        });
+        
         toast({
           title: "Invoice processed successfully!",
           description: "Your invoice has been processed and added to the system.",
@@ -111,6 +137,13 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         }, 2000);
         
       } else if (response.status === 409) {
+        // Log duplicate invoice detection
+        auditService.logDocumentProcessingFailed({
+          file_name: fileName,
+          error_message: "Duplicate invoice detected",
+          error_code: response.status
+        });
+        
         setIsProcessing(false);
         setProcessingFileName('');
         setIsMinimized(false);
@@ -122,6 +155,13 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         });
         
       } else if (response.status === 429) {
+        // Log duplicate invoice (different error type)
+        auditService.logDocumentProcessingFailed({
+          file_name: fileName,
+          error_message: "Invoice has already been processed in the system",
+          error_code: response.status
+        });
+        
         setIsProcessing(false);
         setProcessingFileName('');
         setIsMinimized(false);
@@ -133,6 +173,13 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         });
         
       } else if (response.status === 415) {
+        // Log format issues
+        auditService.logDocumentProcessingFailed({
+          file_name: fileName,
+          error_message: "Issue with invoice format",
+          error_code: response.status
+        });
+        
         setIsProcessing(false);
         setProcessingFileName('');
         setIsMinimized(false);
@@ -155,11 +202,18 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
         throw new Error(errorMessage);
       }
     } catch (error) {
+      // Log processing failures
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      auditService.logDocumentProcessingFailed({
+        file_name: fileName,
+        error_message: errorMsg,
+        error_code: 'NETWORK_ERROR'
+      });
+      
       setIsProcessing(false);
       setProcessingFileName('');
       setIsMinimized(false);
       
-      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
       toast({
         title: "Failed to submit invoice",
         description: errorMsg,

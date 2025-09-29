@@ -226,6 +226,40 @@ class AuditService {
     });
   }
 
+  // Invoice upload lifecycle
+  async logInvoiceUploadStarted(details: { file_name: string; file_size: number; file_type: string }) {
+    await this.log({
+      action_type: 'INVOICE_UPLOAD_STARTED',
+      entity_type: 'DOCUMENT',
+      details
+    });
+  }
+
+  async logInvoiceUploadCompleted(details: { file_name: string; file_size: number; processing_time_ms?: number }) {
+    await this.log({
+      action_type: 'INVOICE_UPLOAD_COMPLETED',
+      entity_type: 'DOCUMENT',
+      details
+    });
+  }
+
+  async logInvoiceCreatedFromUpload(invoiceId: string, details: InvoiceAuditDetails & { file_name: string; processing_time_ms?: number }) {
+    await this.log({
+      action_type: 'INVOICE_CREATED_FROM_UPLOAD',
+      entity_type: 'INVOICE',
+      entity_id: invoiceId,
+      details
+    });
+  }
+
+  async logDocumentProcessingFailed(details: { file_name: string; error_message: string; error_code?: string | number }) {
+    await this.log({
+      action_type: 'DOCUMENT_PROCESSING_FAILED',
+      entity_type: 'DOCUMENT',
+      details
+    });
+  }
+
   // Invoice deletion (soft delete)
   async logInvoiceSoftDeleted(invoiceId: string, details: InvoiceAuditDetails & {
     deleted_from_xero?: boolean;
