@@ -104,7 +104,9 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
 
       const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/b3e9dcc8-0c43-4614-a2eb-94c50264090c', {
         method: 'POST',
-        body: formData
+        body: formData,
+        // Extended timeout for longer processing times
+        signal: AbortSignal.timeout(300000) // 5 minutes
       });
 
       // Handle specific response codes
@@ -236,7 +238,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className={`transition-all duration-300 ${isMinimized ? 'sm:max-w-sm' : 'sm:max-w-md'}`}>
+      <DialogContent className={`transition-all duration-300 ${isMinimized ? 'sm:max-w-md' : 'sm:max-w-md'}`}>
         {!isMinimized ? (
           <>
             <DialogHeader>
@@ -346,23 +348,23 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
           </>
         ) : (
           /* Minimized Processing View */
-          <div className="py-6 px-4">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-start gap-3">
+          <div className="py-6 px-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="flex-shrink-0">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <FileText className="h-5 w-5 text-primary" />
+                  <div className="p-3 bg-primary/10 rounded-xl">
+                    <FileText className="h-6 w-6 text-primary" />
                   </div>
                 </div>
-                <div className="flex-1 min-w-0 space-y-1">
-                  <p className="text-sm font-semibold">Processing Invoice</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground mb-1">Processing Invoice</p>
                   <p className="text-xs text-muted-foreground truncate">{processingFileName}</p>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 flex-shrink-0 ml-2"
                 onClick={() => {
                   setIsProcessing(false);
                   setProcessingFileName('');
@@ -376,22 +378,22 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
               </Button>
             </div>
             
-            <div className="space-y-3 px-2">
+            <div className="space-y-4">
               {/* Infinite loading animation */}
-              <div className="relative w-full h-2.5 bg-muted rounded-full overflow-hidden">
-                <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/50 via-primary to-primary/50 w-1/4 rounded-full animate-[slide-right_2s_ease-in-out_infinite]"></div>
+              <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
+                <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/60 via-primary to-primary/60 w-1/3 rounded-full animate-[slide-right_2.5s_ease-in-out_infinite]"></div>
               </div>
               
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-3">
                 <div className="flex items-center justify-center gap-2">
-                  <p className="text-xs text-muted-foreground font-medium">Analyzing document and extracting data</p>
+                  <p className="text-sm text-muted-foreground font-medium">Analyzing document and extracting data</p>
                   <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '600ms' }}></div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground/80">This will take 2-3 minutes</p>
+                <p className="text-xs text-muted-foreground/80">This may take 4-5 minutes for complex documents</p>
               </div>
             </div>
           </div>
