@@ -12,40 +12,40 @@ export interface InvoiceDeletionResult {
 
 export const deleteInvoice = async (invoice: Invoice): Promise<InvoiceDeletionResult> => {
   try {
-    // Soft delete in Supabase (change status to DELETED instead of actual deletion)
+    // Hard delete from Supabase (completely remove the row)
     const { error } = await supabase
       .from('invoices')
-      .update({ status: 'DELETED' })
+      .delete()
       .eq('id', invoice.id);
 
     if (error) {
-      await ApiErrorLogger.logSupabaseError('UPDATE', error, {
+      await ApiErrorLogger.logSupabaseError('DELETE', error, {
         table: 'invoices',
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoice_number,
-        userContext: 'Soft delete invoice (set status to DELETED)'
+        userContext: 'Hard delete invoice (completely remove row)'
       });
-      throw new Error(`Failed to soft delete invoice: ${error.message}`);
+      throw new Error(`Failed to delete invoice: ${error.message}`);
     }
 
-    // Audit log the soft deletion
+    // Audit log the hard deletion
     await auditService.logInvoiceSoftDeleted(invoice.id, {
       invoice_number: invoice.invoice_number,
       supplier_name: invoice.supplier,
       amount: invoice.amount,
       status_from: invoice.status,
-      status_to: 'DELETED',
+      status_to: 'PERMANENTLY_DELETED',
       deleted_from_xero: false,
       had_xero_id: !!invoice.xero_bill_id
     });
 
-    console.log(`Successfully soft deleted invoice ${invoice.invoice_number}`);
+    console.log(`Successfully deleted invoice ${invoice.invoice_number}`);
 
     return {
       success: true,
-      message: `Invoice ${invoice.invoice_number} has been deleted successfully.`,
+      message: `Invoice ${invoice.invoice_number} has been permanently deleted.`,
       deletedFromXero: false,
-      softDeleted: true
+      softDeleted: false
     };
 
   } catch (error: any) {
