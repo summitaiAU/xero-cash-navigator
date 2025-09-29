@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Flag, CheckCircle, Mail, Calendar } from 'lucide-react';
+import { Flag, CheckCircle, Mail } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 import { resolveFlag } from '@/services/invoiceService';
 import { useToast } from '@/hooks/use-toast';
@@ -125,10 +125,6 @@ export const FlaggedInvoiceSection: React.FC<FlaggedInvoiceSectionProps> = ({
             >
               <CheckCircle className="h-4 w-4 mr-2" />
               {loading ? 'Resolving...' : 'Resolve Flag'}
-            </Button>
-            <Button variant="outline" disabled={loading}>
-              <Calendar className="h-4 w-4 mr-2" />
-              View History
             </Button>
           </div>
         </CardContent>
