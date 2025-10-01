@@ -190,7 +190,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       const base64Data = fileData.split(',')[1];
 
       console.log('Sending to webhook...');
-      const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/b40eec46-6ca3-44aa-a3eb-55744011a820';
+      const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/b3e9dcc8-0c43-4614-a2eb-94c50264090c';
       
       const response = await fetch(webhookUrl, {
         method: 'POST',
