@@ -249,7 +249,7 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                 onInvoiceSelect={onInvoiceSelect}
               />
               
-              <AddInvoiceButton isMobile={true} />
+              {/* <AddInvoiceButton isMobile={true} /> */}
               
               {emailLink && (
                 <Button

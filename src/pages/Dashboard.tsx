@@ -574,7 +574,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
-              <AddInvoiceButton onSuccess={loadInvoices} />
+              {/* <AddInvoiceButton onSuccess={loadInvoices} /> */}
               <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
                 <User className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
