@@ -161,6 +161,30 @@ export type Database = {
         }
         Relationships: []
       }
+      gmail_messages_stage: {
+        Row: {
+          check_date: string
+          email_address: string | null
+          history_id: number
+          loaded_at: string
+          message_id: string
+        }
+        Insert: {
+          check_date: string
+          email_address?: string | null
+          history_id?: number
+          loaded_at?: string
+          message_id: string
+        }
+        Update: {
+          check_date?: string
+          email_address?: string | null
+          history_id?: number
+          loaded_at?: string
+          message_id?: string
+        }
+        Relationships: []
+      }
       gmail_watermark: {
         Row: {
           id: number
@@ -205,6 +229,10 @@ export type Database = {
           paid_date: string | null
           partially_paid: boolean | null
           payment_ref: string | null
+          processing_completed_at: string | null
+          processing_error: string | null
+          processing_started_at: string | null
+          processing_status: string | null
           project: string | null
           remittance_email: string | null
           remittance_sent: boolean | null
@@ -218,6 +246,7 @@ export type Database = {
           supplier_email_on_invoice: string | null
           supplier_name: string | null
           total_amount: number | null
+          upload_tracking_id: string | null
           xero_contact_id: string | null
           xero_invoice_id: string | null
           xero_invoice_link: string | null
@@ -247,6 +276,10 @@ export type Database = {
           paid_date?: string | null
           partially_paid?: boolean | null
           payment_ref?: string | null
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
@@ -260,6 +293,7 @@ export type Database = {
           supplier_email_on_invoice?: string | null
           supplier_name?: string | null
           total_amount?: number | null
+          upload_tracking_id?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
@@ -289,6 +323,10 @@ export type Database = {
           paid_date?: string | null
           partially_paid?: boolean | null
           payment_ref?: string | null
+          processing_completed_at?: string | null
+          processing_error?: string | null
+          processing_started_at?: string | null
+          processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
@@ -302,9 +340,58 @@ export type Database = {
           supplier_email_on_invoice?: string | null
           supplier_name?: string | null
           total_amount?: number | null
+          upload_tracking_id?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
+        }
+        Relationships: []
+      }
+      reconciliation_log: {
+        Row: {
+          check_date: string
+          completed_at: string | null
+          created_at: string | null
+          db_message_count: number
+          details: Json | null
+          email_address: string | null
+          end_history_id: number
+          extra_in_db: string[]
+          gmail_message_count: number
+          id: string
+          missing_in_db: string[]
+          start_history_id: number
+          status: string
+        }
+        Insert: {
+          check_date: string
+          completed_at?: string | null
+          created_at?: string | null
+          db_message_count: number
+          details?: Json | null
+          email_address?: string | null
+          end_history_id: number
+          extra_in_db?: string[]
+          gmail_message_count: number
+          id?: string
+          missing_in_db?: string[]
+          start_history_id: number
+          status?: string
+        }
+        Update: {
+          check_date?: string
+          completed_at?: string | null
+          created_at?: string | null
+          db_message_count?: number
+          details?: Json | null
+          email_address?: string | null
+          end_history_id?: number
+          extra_in_db?: string[]
+          gmail_message_count?: number
+          id?: string
+          missing_in_db?: string[]
+          start_history_id?: number
+          status?: string
         }
         Relationships: []
       }

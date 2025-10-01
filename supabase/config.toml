@@ -13,6 +13,9 @@ verify_jwt = false
 [functions.send-reset-email]
 verify_jwt = false
 
+[functions.invoice-processing-callback]
+verify_jwt = false
+
 [db]
 port = 54322
 

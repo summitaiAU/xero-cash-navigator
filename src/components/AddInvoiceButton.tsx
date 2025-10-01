@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Upload, Plus, Camera, X, Loader2, FileText } from 'lucide-react';
+import { Upload, Plus, Camera, X, Loader2, FileText, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Progress } from '@/components/ui/progress';
 import { auditService } from '@/services/auditService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AddInvoiceButtonProps {
   isMobile?: boolean;
   onSuccess?: () => void;
 }
+
+type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = false, onSuccess }) => {
   const [open, setOpen] = useState(false);
@@ -19,7 +21,92 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingFileName, setProcessingFileName] = useState<string>('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState<ProcessingStatus | null>(null);
+  const [uploadTrackingId, setUploadTrackingId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Set up real-time listener for processing status updates
+  useEffect(() => {
+    if (!uploadTrackingId) return;
+
+    console.log('Setting up realtime listener for:', uploadTrackingId);
+
+    const channel = supabase
+      .channel(`invoice-processing-${uploadTrackingId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices',
+          filter: `upload_tracking_id=eq.${uploadTrackingId}`,
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newStatus = payload.new.processing_status as ProcessingStatus;
+            console.log('Status updated to:', newStatus);
+            
+            setProcessingStatus(newStatus);
+
+            if (newStatus === 'completed') {
+              toast({
+                title: "Success",
+                description: "Invoice processed successfully!",
+              });
+              
+              setTimeout(() => {
+                setIsProcessing(false);
+                setProcessingFileName('');
+                setIsMinimized(false);
+                setOpen(false);
+                setFileData(null);
+                setFileName('');
+                setUploadTrackingId(null);
+                setProcessingStatus(null);
+                if (onSuccess) onSuccess();
+              }, 1500);
+            } else if (newStatus === 'failed') {
+              const errorData = payload.new.processing_error;
+              let errorMessage = "Failed to process invoice.";
+              
+              if (errorData) {
+                try {
+                  const parsed = JSON.parse(errorData);
+                  errorMessage = parsed.message || errorMessage;
+                } catch (e) {
+                  errorMessage = errorData;
+                }
+              }
+
+              toast({
+                title: "Processing Failed",
+                description: errorMessage,
+                variant: "destructive",
+              });
+              
+              setTimeout(() => {
+                setIsProcessing(false);
+                setProcessingFileName('');
+                setIsMinimized(false);
+                setOpen(false);
+                setFileData(null);
+                setFileName('');
+                setUploadTrackingId(null);
+                setProcessingStatus(null);
+              }, 2000);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up realtime listener');
+      supabase.removeChannel(channel);
+    };
+  }, [uploadTrackingId, onSuccess, toast]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -87,140 +174,145 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
       return;
     }
 
-    const uploadStartTime = Date.now();
     setIsProcessing(true);
     setProcessingFileName(fileName);
-    setIsMinimized(true); // Minimize the dialog instead of closing it
+    setIsMinimized(true);
+    setProcessingStatus('pending');
 
     try {
-      // Convert base64 to blob
-      const base64Response = await fetch(fileData);
-      const blob = await base64Response.blob();
+      console.log('Starting file upload:', fileName);
       
-      // Create form data
-      const formData = new FormData();
-      formData.append('data', blob, fileName);
-      formData.append('file_name', fileName);
+      // Create unique tracking ID
+      const trackingId = `${Date.now()}_${fileName}`;
+      setUploadTrackingId(trackingId);
 
-      const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/b3e9dcc8-0c43-4614-a2eb-94c50264090c', {
+      // Extract base64 data
+      const base64Data = fileData.split(',')[1];
+
+      console.log('Sending to webhook...');
+      const webhookUrl = 'https://sodhipg.app.n8n.cloud/webhook/b40eec46-6ca3-44aa-a3eb-55744011a820';
+      
+      const response = await fetch(webhookUrl, {
         method: 'POST',
-        body: formData,
-        // Extended timeout for longer processing times
-        signal: AbortSignal.timeout(300000) // 5 minutes
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_name: trackingId,
+          file_data: base64Data,
+          content_type: fileData.split(',')[0].split(':')[1].split(';')[0],
+        }),
       });
 
-      // Handle specific response codes
-      if (response.status === 200) {
-        const processingTime = Date.now() - uploadStartTime;
+      console.log('Webhook response status:', response.status);
+
+      // Handle 201 response (async processing started)
+      if (response.status === 201) {
+        console.log('Upload accepted, creating pending invoice record');
         
-        // Log successful upload completion
-        auditService.logInvoiceUploadCompleted({
-          file_name: fileName,
-          file_size: fileData.length,
-          processing_time_ms: processingTime
-        });
-        
-        toast({
-          title: "Invoice processed successfully!",
-          description: "Your invoice has been processed and added to the system.",
-        });
-        
-        // Close the dialog after successful processing
-        setTimeout(() => {
-          setIsProcessing(false);
-          setProcessingFileName('');
-          setIsMinimized(false);
-          setOpen(false);
-          setFileData(null);
-          setFileName('');
-          
-          // Trigger refresh of invoice list
-          onSuccess?.();
-        }, 2000);
-        
-      } else if (response.status === 409) {
-        // Log duplicate invoice detection
-        auditService.logDocumentProcessingFailed({
-          file_name: fileName,
-          error_message: "Duplicate invoice detected",
-          error_code: response.status
-        });
-        
-        setIsProcessing(false);
-        setProcessingFileName('');
-        setIsMinimized(false);
-        
-        toast({
-          title: "Duplicate Invoice Detected",
-          description: "Please check existing records.",
-          variant: "destructive",
-        });
-        
-      } else if (response.status === 429) {
-        // Log duplicate invoice (different error type)
-        auditService.logDocumentProcessingFailed({
-          file_name: fileName,
-          error_message: "Invoice has already been processed in the system",
-          error_code: response.status
-        });
-        
-        setIsProcessing(false);
-        setProcessingFileName('');
-        setIsMinimized(false);
-        
-        toast({
-          title: "Duplicate Invoice",
-          description: "This invoice has already been processed in the system.",
-          variant: "destructive",
-        });
-        
-      } else if (response.status === 415) {
-        // Log format issues
-        auditService.logDocumentProcessingFailed({
-          file_name: fileName,
-          error_message: "Issue with invoice format",
-          error_code: response.status
-        });
-        
-        setIsProcessing(false);
-        setProcessingFileName('');
-        setIsMinimized(false);
-        
-        toast({
-          title: "Check Invoice",
-          description: "There was an issue with the invoice format. Please check and try again.",
-          variant: "destructive",
-        });
-        
-      } else {
-        // Handle other error responses
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          // If response isn't JSON, use the status text
+        // Create pending invoice record
+        const { error: insertError } = await supabase
+          .from('invoices')
+          .insert({
+            upload_tracking_id: trackingId,
+            processing_status: 'pending',
+            processing_started_at: new Date().toISOString(),
+            status: 'READY',
+            invoice_no: 'Processing...',
+            supplier_name: 'Processing...',
+          });
+
+        if (insertError) {
+          console.error('Error creating pending invoice:', insertError);
+          throw new Error('Failed to create invoice record');
         }
-        throw new Error(errorMessage);
+
+        setProcessingStatus('processing');
+        
+        toast({
+          title: "Upload Received",
+          description: "Your invoice is being processed...",
+        });
+
+        await auditService.logInvoiceStatusChange(trackingId, {
+          invoice_number: trackingId,
+          status_from: 'none',
+          status_to: 'processing',
+          field_changed: 'processing_status',
+        });
+
+        return;
       }
+
+      // Handle error responses
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Webhook error:', errorText);
+        
+        // Try to parse error response
+        try {
+          const errorData = JSON.parse(errorText);
+          
+          if (errorData.error === 'duplicate_invoice') {
+            toast({
+              title: "Duplicate Invoice",
+              description: `Invoice ${errorData.invoice_number} already exists.`,
+              variant: "destructive",
+            });
+            
+            await auditService.logInvoiceDataUpdate(errorData.invoice_number, {
+              invoice_number: errorData.invoice_number,
+              changes: [{ field: 'duplicate_detected', old_value: false, new_value: true }],
+            });
+          } else if (errorData.error === 'unsupported_format') {
+            toast({
+              title: "Unsupported Format",
+              description: "Please upload a PDF or image file (JPG, PNG).",
+              variant: "destructive",
+            });
+          } else {
+            throw new Error(errorData.message || 'Processing failed');
+          }
+        } catch (parseError) {
+          throw new Error(`Failed to process invoice: ${response.status}`);
+        }
+
+        setIsProcessing(false);
+        setProcessingFileName('');
+        setIsMinimized(false);
+        setOpen(false);
+        setFileData(null);
+        setFileName('');
+        return;
+      }
+
+      // Unexpected success response (should be 201)
+      console.warn('Unexpected response status:', response.status);
+      throw new Error('Unexpected response from server');
+
     } catch (error) {
-      // Log processing failures
-      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
-      auditService.logDocumentProcessingFailed({
-        file_name: fileName,
-        error_message: errorMsg,
-        error_code: 'NETWORK_ERROR'
+      console.error('Error in handleSubmit:', error);
+      
+      await auditService.logInvoiceDataUpdate('unknown', {
+        changes: [{ 
+          field: 'upload_error', 
+          old_value: null, 
+          new_value: error instanceof Error ? error.message : 'Unknown error' 
+        }],
+      });
+
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to process invoice. Please try again.",
+        variant: "destructive",
       });
       
       setIsProcessing(false);
       setProcessingFileName('');
       setIsMinimized(false);
-      
-      toast({
-        title: "Failed to submit invoice",
-        description: errorMsg,
-        variant: "destructive",
-      });
+      setOpen(false);
+      setFileData(null);
+      setFileName('');
     }
   };
 
@@ -296,7 +388,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
                         />
                       )}
                       <Button
-                        variant="ghost-destructive"
+                        variant="ghost"
                         size="icon"
                         className="absolute top-2 right-2 bg-background/80 hover:bg-background h-6 w-6"
                         onClick={(e) => {
@@ -353,11 +445,22 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="flex-shrink-0">
                   <div className="p-3 bg-primary/10 rounded-xl">
-                    <FileText className="h-6 w-6 text-primary" />
+                    {processingStatus === 'completed' ? (
+                      <CheckCircle2 className="h-6 w-6 text-green-500" />
+                    ) : processingStatus === 'failed' ? (
+                      <AlertCircle className="h-6 w-6 text-destructive" />
+                    ) : (
+                      <FileText className="h-6 w-6 text-primary" />
+                    )}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground mb-1">Processing Invoice</p>
+                  <p className="text-sm font-semibold text-foreground mb-1">
+                    {processingStatus === 'pending' && 'Uploading Invoice'}
+                    {processingStatus === 'processing' && 'Processing Invoice'}
+                    {processingStatus === 'completed' && 'Processing Complete!'}
+                    {processingStatus === 'failed' && 'Processing Failed'}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">{processingFileName}</p>
                 </div>
               </div>
@@ -372,6 +475,8 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
                   setOpen(false);
                   setFileData(null);
                   setFileName('');
+                  setUploadTrackingId(null);
+                  setProcessingStatus(null);
                 }}
               >
                 <X className="h-4 w-4" />
@@ -379,22 +484,46 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
             </div>
             
             <div className="space-y-4">
-              {/* Infinite loading animation */}
-              <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
-                <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/60 via-primary to-primary/60 w-1/3 rounded-full animate-[slide-right_2.5s_ease-in-out_infinite]"></div>
-              </div>
-              
-              <div className="text-center space-y-3">
-                <div className="flex items-center justify-center gap-2">
-                  <p className="text-sm text-muted-foreground font-medium">Analyzing document and extracting data</p>
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
-                    <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '600ms' }}></div>
+              {/* Loading animation */}
+              {processingStatus !== 'completed' && processingStatus !== 'failed' && (
+                <>
+                  <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
+                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary/60 via-primary to-primary/60 w-1/3 rounded-full animate-[slide-right_2.5s_ease-in-out_infinite]"></div>
                   </div>
+                  
+                  <div className="text-center space-y-3">
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="text-sm text-muted-foreground font-medium">
+                        {processingStatus === 'pending' ? 'Sending file to processing system...' : 'Analyzing document and extracting data'}
+                      </p>
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                        <div className="w-2 h-2 bg-primary rounded-full animate-pulse" style={{ animationDelay: '600ms' }}></div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground/80">
+                      {processingStatus === 'pending' 
+                        ? 'Uploading invoice...' 
+                        : 'This may take a few minutes for complex documents'}
+                    </p>
+                  </div>
+                </>
+              )}
+              
+              {processingStatus === 'completed' && (
+                <div className="text-center py-4">
+                  <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-green-600">Invoice processed successfully!</p>
                 </div>
-                <p className="text-xs text-muted-foreground/80">This may take 4-5 minutes for complex documents</p>
-              </div>
+              )}
+              
+              {processingStatus === 'failed' && (
+                <div className="text-center py-4">
+                  <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
+                  <p className="text-sm font-medium text-destructive">Processing failed</p>
+                </div>
+              )}
             </div>
           </div>
         )}
