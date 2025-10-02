@@ -320,13 +320,26 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {isMobile ? (
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-            <Plus className="h-4 w-4" />
+          <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={isProcessing}>
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
           </Button>
         ) : (
-          <Button variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Invoice
+          <Button variant="outline" size="sm" disabled={isProcessing}>
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Invoice
+              </>
+            )}
           </Button>
         )}
       </DialogTrigger>
