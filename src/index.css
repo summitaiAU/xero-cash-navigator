@@ -8,63 +8,63 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Professional light theme with brand colors */
-    --background: 220 14% 96%;
-    --foreground: 224 18% 20%;
+    /* Microsoft-inspired professional light theme */
+    --background: 0 0% 98%;
+    --foreground: 210 11% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 224 18% 20%;
+    --card-foreground: 210 11% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 224 18% 20%;
+    --popover-foreground: 210 11% 15%;
 
-    --primary: 23 92% 50%;
+    --primary: 210 100% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 95%;
-    --secondary-foreground: 224 18% 20%;
+    --secondary: 210 17% 95%;
+    --secondary-foreground: 210 11% 15%;
 
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 210 15% 94%;
+    --muted-foreground: 210 9% 45%;
 
-    --accent: 33 100% 70%;
-    --accent-foreground: 26 83% 14%;
+    --accent: 210 100% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 33 100% 70%;
-    --warning-foreground: 26 83% 14%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 23 92% 50%;
+    --border: 210 14% 89%;
+    --input: 210 14% 89%;
+    --ring: 210 100% 50%;
 
-    /* Dashboard specific tokens - Professional theme */
-    --dashboard-bg: 220 14% 96%;
-    --pdf-bg: 0 0% 98%;
-    --section-border: 220 13% 91%;
+    /* Dashboard specific tokens - Microsoft-inspired theme */
+    --dashboard-bg: 0 0% 98%;
+    --pdf-bg: 0 0% 99%;
+    --section-border: 210 14% 89%;
     
-    /* Professional gradients with brand colors */
-    --gradient-primary: linear-gradient(135deg, hsl(23 92% 50%), hsl(33 100% 70%));
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 55%));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 98%));
-    --gradient-subtle: linear-gradient(180deg, hsl(220 14% 96%), hsl(220 14% 98%));
+    /* Microsoft-inspired professional gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50%), hsl(210 100% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 46%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 15% 97%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 98%), hsl(210 15% 96%));
     
-    /* Professional shadows with subtle brand accent */
-    --shadow-soft: 0 2px 8px -2px hsl(220 20% 20% / 0.08), 0 1px 3px -1px hsl(23 92% 50% / 0.02);
-    --shadow-medium: 0 4px 16px -4px hsl(220 20% 20% / 0.12), 0 2px 6px -2px hsl(23 92% 50% / 0.04);
-    --shadow-large: 0 8px 32px -8px hsl(220 20% 20% / 0.16), 0 4px 12px -4px hsl(23 92% 50% / 0.06);
-    --shadow-glow: 0 0 24px hsl(23 92% 50% / 0.15);
+    /* Clean, subtle shadows for corporate look */
+    --shadow-soft: 0 1px 3px 0 hsl(210 20% 20% / 0.05), 0 1px 2px -1px hsl(210 20% 20% / 0.05);
+    --shadow-medium: 0 4px 6px -1px hsl(210 20% 20% / 0.08), 0 2px 4px -2px hsl(210 20% 20% / 0.05);
+    --shadow-large: 0 10px 15px -3px hsl(210 20% 20% / 0.1), 0 4px 6px -4px hsl(210 20% 20% / 0.05);
+    --shadow-glow: 0 0 20px hsl(210 100% 50% / 0.12);
     
-    /* Smooth transitions */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    /* Smooth professional transitions */
+    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -84,57 +84,57 @@ All colors MUST be HSL.
   }
 
   .dark {
-    /* Professional dark theme with brand colors */
-    --background: 220 27% 8%;
-    --foreground: 220 9% 96%;
+    /* Microsoft-inspired professional dark theme */
+    --background: 210 20% 10%;
+    --foreground: 210 8% 95%;
 
-    --card: 220 27% 12%;
-    --card-foreground: 220 9% 96%;
+    --card: 210 20% 14%;
+    --card-foreground: 210 8% 95%;
 
-    --popover: 220 27% 12%;
-    --popover-foreground: 220 9% 96%;
+    --popover: 210 20% 14%;
+    --popover-foreground: 210 8% 95%;
 
-    --primary: 23 92% 50%;
+    --primary: 210 100% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 20% 20%;
-    --secondary-foreground: 220 9% 96%;
+    --secondary: 210 15% 20%;
+    --secondary-foreground: 210 8% 95%;
 
-    --muted: 220 20% 20%;
-    --muted-foreground: 220 9% 60%;
+    --muted: 210 15% 20%;
+    --muted-foreground: 210 8% 60%;
 
-    --accent: 33 100% 70%;
-    --accent-foreground: 26 83% 14%;
+    --accent: 210 100% 55%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 33 100% 70%;
-    --warning-foreground: 26 83% 14%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 220 20% 20%;
-    --input: 220 20% 20%;
-    --ring: 23 92% 50%;
+    --border: 210 15% 22%;
+    --input: 210 15% 22%;
+    --ring: 210 100% 55%;
 
-    /* Dashboard specific tokens - Professional dark theme */
-    --dashboard-bg: 220 27% 8%;
-    --pdf-bg: 220 27% 10%;
-    --section-border: 220 20% 20%;
+    /* Dashboard specific tokens - Microsoft-inspired dark theme */
+    --dashboard-bg: 210 20% 10%;
+    --pdf-bg: 210 20% 12%;
+    --section-border: 210 15% 22%;
     
-    /* Professional gradients with brand colors */
-    --gradient-primary: linear-gradient(135deg, hsl(23 92% 50%), hsl(33 100% 70%));
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 35%), hsl(142 71% 45%));
-    --gradient-card: linear-gradient(145deg, hsl(220 27% 12%), hsl(220 20% 20%));
-    --gradient-subtle: linear-gradient(180deg, hsl(220 27% 8%), hsl(220 20% 18%));
+    /* Microsoft-inspired professional gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(210 100% 50%), hsl(210 100% 60%));
+    --gradient-success: linear-gradient(135deg, hsl(142 76% 30%), hsl(142 76% 40%));
+    --gradient-card: linear-gradient(145deg, hsl(210 20% 14%), hsl(210 15% 20%));
+    --gradient-subtle: linear-gradient(180deg, hsl(210 20% 10%), hsl(210 15% 18%));
     
-    /* Professional shadows with subtle brand accent */
-    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.25), 0 1px 3px -1px hsl(23 92% 50% / 0.05);
-    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.35), 0 2px 6px -2px hsl(23 92% 50% / 0.08);
-    --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.45), 0 4px 12px -4px hsl(23 92% 50% / 0.1);
-    --shadow-glow: 0 0 24px hsl(23 92% 50% / 0.25);
+    /* Clean, subtle shadows for corporate dark mode */
+    --shadow-soft: 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
+    --shadow-medium: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-large: 0 10px 15px -3px hsl(0 0% 0% / 0.5), 0 4px 6px -4px hsl(0 0% 0% / 0.4);
+    --shadow-glow: 0 0 20px hsl(210 100% 50% / 0.2);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;

@@ -205,13 +205,17 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
           </div>
           
           {/* Mobile Invoice Dropdown */}
-          <div className="mb-3">
+          <div className="mb-3 space-y-1.5">
+            {currentInvoice && (
+              <div className="text-xs font-semibold text-foreground px-1">
+                Invoice: {currentInvoice.invoice_number}
+              </div>
+            )}
             <Select value={safeIndex.toString()} onValueChange={(value) => onJumpToInvoice(parseInt(value))}>
               <SelectTrigger className="w-full text-xs">
                 <SelectValue>
                   {currentInvoice && (
-                    <div className="flex items-center gap-1.5 w-full min-w-0">
-                      <span className="font-semibold text-xs whitespace-nowrap">{currentInvoice.invoice_number}</span>
+                    <div className="flex items-center justify-between gap-2 w-full min-w-0">
                       <span className="text-xs text-muted-foreground truncate flex-1 min-w-0">{currentInvoice.supplier}</span>
                       <span className="text-xs font-medium whitespace-nowrap">${currentInvoice.amount.toLocaleString()}</span>
                     </div>
