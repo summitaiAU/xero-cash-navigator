@@ -104,13 +104,13 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                     )}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent className="max-h-60 bg-popover">
                   {safeInvoices.map((invoice, index) => (
-                    <SelectItem key={invoice.id} value={index.toString()}>
-                      <div className="flex items-center gap-4 w-full min-w-0">
-                        <span className="font-medium truncate flex-shrink-0 min-w-[80px]">{invoice.invoice_number}</span>
-                        <span className="text-sm text-muted-foreground truncate flex-1">{invoice.supplier}</span>
-                        <span className="text-sm font-medium whitespace-nowrap flex-shrink-0">${invoice.amount.toLocaleString()}</span>
+                    <SelectItem key={invoice.id} value={index.toString()} className="py-2">
+                      <div className="flex items-center justify-between gap-3 w-full min-w-0">
+                        <span className="font-medium truncate flex-shrink-0 min-w-[90px]">{invoice.invoice_number}</span>
+                        <span className="text-sm text-muted-foreground truncate flex-1 text-left">{invoice.supplier}</span>
+                        <span className="text-sm font-medium whitespace-nowrap flex-shrink-0 ml-2">${invoice.amount.toLocaleString()}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -218,13 +218,13 @@ export const InvoiceNavigation: React.FC<InvoiceNavigationProps> = ({
                   )}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="max-h-60 z-50">
+              <SelectContent className="max-h-60 z-50 bg-popover">
                 {safeInvoices.map((invoice, index) => (
-                  <SelectItem key={invoice.id} value={index.toString()}>
-                    <div className="flex items-center gap-3 w-full min-w-0">
-                      <span className="font-medium truncate text-xs flex-shrink-0 min-w-[60px]">{invoice.invoice_number}</span>
-                      <span className="text-xs text-muted-foreground truncate flex-1">{invoice.supplier}</span>
-                      <span className="text-xs font-medium whitespace-nowrap flex-shrink-0">${invoice.amount.toLocaleString()}</span>
+                  <SelectItem key={invoice.id} value={index.toString()} className="py-2">
+                    <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                      <span className="font-medium truncate text-xs flex-shrink-0 min-w-[70px]">{invoice.invoice_number}</span>
+                      <span className="text-xs text-muted-foreground truncate flex-1 text-left">{invoice.supplier}</span>
+                      <span className="text-xs font-medium whitespace-nowrap flex-shrink-0 ml-1">${invoice.amount.toLocaleString()}</span>
                     </div>
                   </SelectItem>
                 ))}
