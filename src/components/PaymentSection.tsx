@@ -114,14 +114,109 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       return;
     }
 
-    const paymentData: PaymentData = {
-      email,
-      message,
-      payment_method: paymentMethod as any,
-      image_base64: imageData || undefined
-    };
+    if (!imageData) {
+      toast({
+        title: "Payment proof required",
+        description: "Please upload a payment screenshot before sending remittance.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    await onMarkAsPaid(paymentData);
+    setSendingRemittance(true);
+    setRemittanceResponse(null);
+
+    try {
+      console.log('Starting remittance send with mark as paid process', {
+        invoiceNumber: invoice.invoice_number,
+        email,
+        hasImage: !!imageData
+      });
+
+      // Step 1: Send the remittance first
+      const base64Response = await fetch(imageData);
+      const blob = await base64Response.blob();
+      
+      const formData = new FormData();
+      formData.append('data', blob, `${invoice.invoice_number}-remittance.jpg`);
+      formData.append('to_email', email);
+      formData.append('file_name', `${invoice.invoice_number}-remittance.jpg`);
+      formData.append('xero_invoice_id', invoice.xero_bill_id);
+      formData.append('invoice_number', invoice.invoice_number);
+      formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('row_id', invoice.id);
+
+      console.log('Calling N8N webhook to send remittance', {
+        to_email: email,
+        invoice_number: invoice.invoice_number,
+        xero_invoice_id: invoice.xero_bill_id
+      });
+
+      const response = await ApiErrorLogger.fetchWithLogging(
+        'https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6',
+        {
+          method: 'POST',
+          body: formData,
+          expectJson: true,
+          logContext: {
+            endpoint: '/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6',
+            method: 'POST',
+            requestData: { 
+              to_email: email,
+              invoice_number: invoice.invoice_number,
+              xero_invoice_id: invoice.xero_bill_id,
+              send_to_jonathon: ccJonathon,
+              row_id: invoice.id
+            },
+            invoiceNumber: invoice.invoice_number,
+            userContext: 'Mark as paid with remittance - sending remittance email'
+          }
+        }
+      );
+
+      const responseData = await response.json();
+      console.log('N8N webhook response:', responseData);
+
+      const isSuccess = Array.isArray(responseData)
+        ? responseData.some(item => item.remittance_sent === true)
+        : responseData.remittance_sent === true;
+
+      if (!isSuccess) {
+        throw new Error('Remittance was not sent successfully');
+      }
+
+      console.log('Remittance sent successfully, now marking as paid');
+      setRemittanceResponse(`✅ Remittance sent successfully`);
+
+      // Step 2: Mark as paid (only if remittance succeeded)
+      const paymentData: PaymentData = {
+        email,
+        message,
+        payment_method: paymentMethod as any,
+        image_base64: imageData
+      };
+
+      await onMarkAsPaid(paymentData);
+      
+      console.log('Invoice marked as paid successfully');
+      
+      toast({
+        title: "Success!",
+        description: "Remittance sent and invoice marked as paid.",
+      });
+
+    } catch (error) {
+      console.error('Error in mark as paid with remittance:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
+      setRemittanceResponse(`❌ Error: ${errorMsg}`);
+      toast({
+        title: "Failed to send remittance",
+        description: "The remittance could not be sent. The invoice has NOT been marked as paid.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingRemittance(false);
+    }
   };
 
   const handleMarkAsPaidOnly = async () => {
@@ -158,6 +253,12 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
     setRemittanceResponse(null);
 
     try {
+      console.log('Starting send remittance now process', {
+        invoiceNumber: invoice.invoice_number,
+        email,
+        hasImage: !!imageData
+      });
+
       // Convert base64 to blob
       const base64Response = await fetch(imageData);
       const blob = await base64Response.blob();
@@ -171,6 +272,12 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
       formData.append('row_id', invoice.id);
+
+      console.log('Calling N8N webhook to send remittance', {
+        to_email: email,
+        invoice_number: invoice.invoice_number,
+        xero_invoice_id: invoice.xero_bill_id
+      });
 
       const response = await ApiErrorLogger.fetchWithLogging(
         'https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6',
@@ -195,15 +302,14 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       );
 
       const responseData = await response.json();
+      console.log('N8N webhook response:', responseData);
+
       const isSuccess = Array.isArray(responseData)
           ? responseData.some(item => item.remittance_sent === true)
           : responseData.remittance_sent === true;
 
         if (isSuccess) {
-          const successItem = Array.isArray(responseData) 
-            ? responseData.find(item => item.remittance_sent === true)
-            : responseData;
-          
+          console.log('Remittance sent successfully');
           setRemittanceResponse(`✅ Remittance sent successfully`);
           toast({
             title: "Remittance sent!",
@@ -213,6 +319,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           throw new Error('Remittance not sent successfully');
         }
     } catch (error) {
+      console.error('Error sending remittance:', error);
       const errorMsg = error instanceof Error ? error.message : 'Network error occurred';
       setRemittanceResponse(`❌ Error: ${errorMsg}`);
       toast({
