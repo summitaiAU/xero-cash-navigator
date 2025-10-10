@@ -48,6 +48,9 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     parsedItems = invoice.list_items;
   }
 
+  // Check if invoice has GST at the invoice level (for backward compatibility)
+  const invoiceHasGst = Number(invoice.gst) > 0;
+
   return {
     // Header fields
     invoiceNumber: invoice.invoice_no || invoice.invoice_number || 'No number',
@@ -67,19 +70,34 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
       // Check if this is the new format with per-line GST
       const hasPerLineGst = 'gst_included' in item || 'line_gst' in item;
       
+      // For old format, use the item total; for new format check which total to use
+      let displayAmount = item?.total || item?.amount || 0;
+      let taxRate = 'No Tax';
+      let lineGstValue: number | undefined = undefined;
+      let gstIncludedValue = false;
+      
+      if (hasPerLineGst) {
+        // New format: use per-line GST data
+        displayAmount = item?.line_total_ex_gst || item?.total || 0;
+        lineGstValue = item?.line_gst || 0;
+        gstIncludedValue = item?.gst_included || false;
+        taxRate = (lineGstValue > 0) ? 'GST (10%)' : 'No Tax';
+      } else {
+        // Old format: inherit GST from invoice level
+        taxRate = invoiceHasGst ? 'GST (10%)' : 'No Tax';
+      }
+      
       return {
         itemNumber: index + 1,
         description: item?.description || '',
         quantity: item?.quantity || 1,
         unitAmount: item?.unit_price || item?.unitAmount || 0,
         account: `${item?.account_code || '429'} - Expenses`,
-        taxRate: hasPerLineGst 
-          ? ((item.line_gst !== undefined && item.line_gst > 0) ? 'GST (10%)' : 'No Tax')
-          : 'GST (10%)',
-        amount: item?.total || item?.amount || 0,
+        taxRate,
+        amount: displayAmount,
         // New fields for per-line GST tracking
-        gstIncluded: item?.gst_included || false,
-        lineGst: item?.line_gst !== undefined ? item.line_gst : undefined,
+        gstIncluded: gstIncludedValue,
+        lineGst: lineGstValue,
         lineTotalExGst: item?.line_total_ex_gst || item?.total || item?.amount || 0,
         lineTotalIncGst: item?.line_total_inc_gst || (item?.total || item?.amount || 0)
       };
@@ -163,6 +181,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       return;
     }
     
+    // Check if invoice has GST at the invoice level (for backward compatibility)
+    const invoiceHasGst = Number(invoice.gst) > 0;
+    
     setEditableData({
       entity: invoice.entity || '',
       project: invoice.project || '',
@@ -171,15 +192,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       invoiceDate: invoice.invoice_date || '',
       dueDate: invoice.due_date || '',
       currency: invoice.currency || 'AUD',
-      lineItems: invoiceData.lineItems.map((item, index) => ({
-        id: `item_${Date.now()}_${index}`,
-        description: item.description || '',
-        quantity: item.quantity || 1,
-        unitAmount: item.unitAmount || 0,
-        accountCode: item.account?.split(' -')[0] || '429',
-        taxType: (item.lineGst !== undefined && item.lineGst > 0) ? 'INPUT' : 'NONE',
-        gstIncluded: item.gstIncluded || false
-      }))
+      lineItems: invoiceData.lineItems.map((item, index) => {
+        // Determine tax type based on per-line GST if available, otherwise use invoice-level GST
+        let taxType = 'NONE';
+        if (item.lineGst !== undefined) {
+          // New format: use per-line GST
+          taxType = item.lineGst > 0 ? 'INPUT' : 'NONE';
+        } else if (invoiceHasGst) {
+          // Old format: inherit from invoice level
+          taxType = 'INPUT';
+        }
+        
+        return {
+          id: `item_${Date.now()}_${index}`,
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unitAmount: item.unitAmount || 0,
+          accountCode: item.account?.split(' -')[0] || '429',
+          taxType,
+          gstIncluded: item.gstIncluded || false
+        };
+      })
     });
     setIsEditing(true);
     setSaveError(null);
@@ -717,10 +750,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
                         <td className="px-3 py-4 text-xs text-center">{item.taxRate}</td>
                         <td className="px-3 py-4 text-xs text-center">
-                          {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : '-'}
+                          {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : (item.taxRate === 'GST (10%)' ? 'No' : '-')}
                         </td>
                         <td className="px-3 py-4 text-sm text-right text-muted-foreground">
-                          {item.lineGst !== undefined ? formatCurrency(item.lineGst) : '-'}
+                          {item.lineGst !== undefined ? formatCurrency(item.lineGst) : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
                         </td>
                         <td className="px-3 py-4 text-sm font-medium text-right">{formatCurrency(item.amount)}</td>
                       </tr>
@@ -868,16 +901,20 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         </div>
                       </div>
                       
-                      {item.lineGst !== undefined && (
+                      {(item.lineGst !== undefined || item.taxRate === 'GST (10%)') && (
                         <div className="pt-2 border-t border-border">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <Label className="text-xs text-muted-foreground">GST Included</Label>
-                              <div className="text-xs">{item.gstIncluded ? 'Yes' : 'No'}</div>
+                              <div className="text-xs">
+                                {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : (item.taxRate === 'GST (10%)' ? 'No' : '-')}
+                              </div>
                             </div>
                             <div>
                               <Label className="text-xs text-muted-foreground">GST Amount</Label>
-                              <div className="text-xs font-medium">{formatCurrency(item.lineGst)}</div>
+                              <div className="text-xs font-medium">
+                                {item.lineGst !== undefined ? formatCurrency(item.lineGst) : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
+                              </div>
                             </div>
                           </div>
                         </div>
