@@ -74,12 +74,12 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
         unitAmount: item?.unit_price || item?.unitAmount || 0,
         account: `${item?.account_code || '429'} - Expenses`,
         taxRate: hasPerLineGst 
-          ? (item.line_gst > 0 ? 'GST (10%)' : 'No Tax')
+          ? ((item.line_gst !== undefined && item.line_gst > 0) ? 'GST (10%)' : 'No Tax')
           : 'GST (10%)',
         amount: item?.total || item?.amount || 0,
         // New fields for per-line GST tracking
         gstIncluded: item?.gst_included || false,
-        lineGst: item?.line_gst || 0,
+        lineGst: item?.line_gst !== undefined ? item.line_gst : undefined,
         lineTotalExGst: item?.line_total_ex_gst || item?.total || item?.amount || 0,
         lineTotalIncGst: item?.line_total_inc_gst || (item?.total || item?.amount || 0)
       };
@@ -177,7 +177,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         quantity: item.quantity || 1,
         unitAmount: item.unitAmount || 0,
         accountCode: item.account?.split(' -')[0] || '429',
-        taxType: item.lineGst > 0 ? 'INPUT' : 'NONE',
+        taxType: (item.lineGst !== undefined && item.lineGst > 0) ? 'INPUT' : 'NONE',
         gstIncluded: item.gstIncluded || false
       }))
     });
@@ -692,62 +692,41 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 </table>
               </div>
             ) : (
-              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[auto_1fr_80px_120px_120px_100px_80px_100px_120px] gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                  <div className="p-4 text-center">Item</div>
-                  <div className="p-4 border-l border-border">Description</div>
-                  <div className="p-4 border-l border-border text-center">Qty.</div>
-                  <div className="p-4 border-l border-border text-center">Unit Price</div>
-                  <div className="p-4 border-l border-border text-center">Account</div>
-                  <div className="p-4 border-l border-border text-center">Tax</div>
-                  <div className="p-4 border-l border-border text-center">GST Incl.</div>
-                  <div className="p-4 border-l border-border text-center">GST</div>
-                  <div className="p-4 border-l border-border text-center">Amount</div>
-                </div>
-
-                {invoiceData.lineItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[auto_1fr_80px_120px_120px_100px_80px_100px_120px] gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                    <div className="p-4 flex items-center justify-center">
-                      <div className="text-sm">{item.itemNumber}</div>
-                    </div>
-                    
-                   <div className="p-4 border-l border-border">
-                      <div className="text-sm break-words pr-2 leading-relaxed">{item.description || 'No description'}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-sm">{item.quantity}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border">
-                      <div className="text-xs break-words leading-relaxed">{item.account}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-xs break-words">{item.taxRate}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-xs">
-                        {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : '-'}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {item.lineGst !== undefined ? formatCurrency(item.lineGst) : '-'}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-right">
-                      <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="hidden lg:block border border-border rounded-lg overflow-x-auto">
+                <table className="min-w-full table-auto">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase w-16">Item</th>
+                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase min-w-[280px]">Description</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty.</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Account</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">Tax</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">GST Incl.</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-background divide-y divide-border">
+                    {invoiceData.lineItems.map((item, index) => (
+                      <tr key={index} className="hover:bg-muted/20">
+                        <td className="px-3 py-4 text-sm text-center font-medium">{item.itemNumber}</td>
+                        <td className="px-3 py-4 text-sm break-words leading-relaxed">{item.description || 'No description'}</td>
+                        <td className="px-3 py-4 text-sm text-center">{item.quantity}</td>
+                        <td className="px-3 py-4 text-sm text-right">{formatCurrency(item.unitAmount)}</td>
+                        <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
+                        <td className="px-3 py-4 text-xs text-center">{item.taxRate}</td>
+                        <td className="px-3 py-4 text-xs text-center">
+                          {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : '-'}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-right text-muted-foreground">
+                          {item.lineGst !== undefined ? formatCurrency(item.lineGst) : '-'}
+                        </td>
+                        <td className="px-3 py-4 text-sm font-medium text-right">{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
