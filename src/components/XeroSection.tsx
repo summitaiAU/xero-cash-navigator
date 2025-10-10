@@ -48,8 +48,14 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     parsedItems = invoice.list_items;
   }
 
-  // Check if invoice has GST at the invoice level (for backward compatibility)
-  const invoiceHasGst = Number(invoice.gst) > 0;
+  // Step 1: Check if ANY line item has per-line GST data (new format)
+  const hasPerLineGstData = parsedItems.some(item => 
+    'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
+  );
+  
+  // Step 2: For old format, check if invoice-level GST exists
+  const invoiceLevelGst = Number(invoice.gst) || 0;
+  const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
 
   return {
     // Header fields
@@ -67,24 +73,22 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     
     // Line items - support both old and new formats
     lineItems: parsedItems.map((item: any, index: number) => {
-      // Check if this is the new format with per-line GST
-      const hasPerLineGst = 'gst_included' in item || 'line_gst' in item;
-      
-      // For old format, use the item total; for new format check which total to use
-      let displayAmount = item?.total || item?.amount || 0;
-      let taxRate = 'No Tax';
+      let displayAmount: number;
+      let taxRate: string;
       let lineGstValue: number | undefined = undefined;
       let gstIncludedValue = false;
       
-      if (hasPerLineGst) {
-        // New format: use per-line GST data
+      if (hasPerLineGstData) {
+        // NEW FORMAT: Has per-line GST data
         displayAmount = item?.line_total_ex_gst || item?.total || 0;
-        lineGstValue = item?.line_gst || 0;
+        lineGstValue = item?.line_gst !== undefined ? Number(item.line_gst) : undefined;
         gstIncludedValue = item?.gst_included || false;
-        taxRate = (lineGstValue > 0) ? 'GST (10%)' : 'No Tax';
+        taxRate = (lineGstValue !== undefined && lineGstValue > 0) ? 'GST (10%)' : 'No Tax';
       } else {
-        // Old format: inherit GST from invoice level
-        taxRate = invoiceHasGst ? 'GST (10%)' : 'No Tax';
+        // OLD FORMAT: Use invoice-level GST
+        displayAmount = item?.total || item?.amount || 0;
+        taxRate = oldFormatHasGst ? 'GST (10%)' : 'No Tax';
+        // Don't set lineGstValue - will be calculated in display logic
       }
       
       return {
@@ -98,8 +102,8 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
         // New fields for per-line GST tracking
         gstIncluded: gstIncludedValue,
         lineGst: lineGstValue,
-        lineTotalExGst: item?.line_total_ex_gst || item?.total || item?.amount || 0,
-        lineTotalIncGst: item?.line_total_inc_gst || (item?.total || item?.amount || 0)
+        lineTotalExGst: item?.line_total_ex_gst || displayAmount,
+        lineTotalIncGst: item?.line_total_inc_gst || displayAmount
       };
     }),
     
@@ -181,8 +185,26 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       return;
     }
     
-    // Check if invoice has GST at the invoice level (for backward compatibility)
-    const invoiceHasGst = Number(invoice.gst) > 0;
+    // Parse list_items to check format
+    let parsedItems: any[] = [];
+    if (typeof invoice.list_items === 'string') {
+      try {
+        parsedItems = JSON.parse(invoice.list_items);
+      } catch (error) {
+        parsedItems = [];
+      }
+    } else if (Array.isArray(invoice.list_items)) {
+      parsedItems = invoice.list_items;
+    }
+    
+    // Check if line items have per-line GST data (new format)
+    const hasPerLineGstData = parsedItems.some(item => 
+      'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
+    );
+    
+    // For old format, check invoice-level GST
+    const invoiceLevelGst = Number(invoice.gst) || 0;
+    const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
     
     setEditableData({
       entity: invoice.entity || '',
@@ -193,12 +215,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       dueDate: invoice.due_date || '',
       currency: invoice.currency || 'AUD',
       lineItems: invoiceData.lineItems.map((item, index) => {
-        // Determine tax type based on per-line GST if available, otherwise use invoice-level GST
+        // Determine tax type
         let taxType = 'NONE';
         if (item.lineGst !== undefined) {
           // New format: use per-line GST
           taxType = item.lineGst > 0 ? 'INPUT' : 'NONE';
-        } else if (invoiceHasGst) {
+        } else if (oldFormatHasGst) {
           // Old format: inherit from invoice level
           taxType = 'INPUT';
         }
