@@ -559,20 +559,18 @@ export const Dashboard: React.FC = () => {
       {/* Desktop Layout */}
       <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
         {/* Fixed Header */}
-        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-card border-b border-border shadow-soft z-30">
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3 lg:py-4 flex justify-between items-center">
+        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-30">
+          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-4 lg:py-5 flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
-              <div>
-                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 bg-clip-text text-transparent">
-                  Payment Dashboard
-                </h1>
-                <p className="text-sm text-muted-foreground">Process invoices and manage payments</p>
+              <img src={SodhiLogo} alt="Sodhi Logo" className="h-10 w-auto" />
+              <div className="border-l border-gray-300 pl-4">
+                <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 tracking-tight">Payment Dashboard</h1>
+                <p className="text-sm text-gray-600 mt-0.5">Process invoices and manage payments</p>
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
               <AddInvoiceButton onSuccess={loadInvoices} />
-              <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-muted-foreground">
+              <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-gray-600">
                 <User className="h-3 w-3 lg:h-4 lg:w-4" />
                 <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
               </div>
