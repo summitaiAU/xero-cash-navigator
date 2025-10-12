@@ -296,14 +296,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   const calculateTaxAmount = (subtotal: number, taxType: string, gstIncluded: boolean = false) => {
+    // If gstIncluded is true, GST is excluded (no GST applies)
+    if (gstIncluded) return 0;
+    
+    // If taxType is not INPUT, no GST
     if (taxType !== 'INPUT') return 0;
     
-    // If GST is included in the price, extract it from the subtotal
-    if (gstIncluded) {
-      return subtotal * (10 / 110); // Extract GST from inclusive amount
-    }
-    
-    // If GST is not included, add it on top
+    // GST is 10% of the subtotal
     return subtotal * 0.1;
   };
 
@@ -315,15 +314,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       const lineAmount = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
       const lineTax = calculateTaxAmount(lineAmount, item.taxType, item.gstIncluded);
       
-      if (item.gstIncluded) {
-        // If GST is included, the subtotal is the amount minus GST
-        subtotal += lineAmount - lineTax;
-        totalTax += lineTax;
-      } else {
-        // If GST is not included, the subtotal is the full amount
-        subtotal += lineAmount;
-        totalTax += lineTax;
-      }
+      subtotal += lineAmount;
+      totalTax += lineTax;
     });
     
     return { subtotal, totalTax, total: subtotal + totalTax };
@@ -336,6 +328,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       ...updatedLineItems[index],
       [field]: field === 'quantity' || field === 'unitAmount' ? parseFloat(value) || 0 : value
     };
+    
+    // If gstIncluded is changed, update taxType accordingly
+    const item = updatedLineItems[index];
+    if (field === 'gstIncluded') {
+      item.taxType = value ? 'NONE' : 'INPUT';
+    }
+    
     setEditableData({ ...editableData, lineItems: updatedLineItems });
   };
 
@@ -377,24 +376,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       // Format line items for Supabase with per-line GST tracking
       const formattedLineItems = editableData.lineItems.map((item: any) => {
         const lineAmount = item.quantity * item.unitAmount;
-        const hasGst = item.taxType === 'INPUT';
-        let lineGst = 0;
-        let lineTotalExGst = lineAmount;
-        let lineTotalIncGst = lineAmount;
-        
-        if (hasGst) {
-          if (item.gstIncluded) {
-            // GST is included in the price
-            lineGst = lineAmount * (10 / 110);
-            lineTotalExGst = lineAmount - lineGst;
-            lineTotalIncGst = lineAmount;
-          } else {
-            // GST is added on top
-            lineGst = lineAmount * 0.1;
-            lineTotalExGst = lineAmount;
-            lineTotalIncGst = lineAmount + lineGst;
-          }
-        }
+        const hasGst = !item.gstIncluded; // If gstIncluded is false (checkbox unchecked), GST applies
+        const lineGst = hasGst ? lineAmount * 0.1 : 0;
+        const lineTotalExGst = lineAmount;
+        const lineTotalIncGst = lineAmount + lineGst;
         
         return {
           description: item.description,
@@ -643,8 +628,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">Account</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Tax</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST Incl.</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST Excl</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
                       <th className="px-2 py-3 w-16">Actions</th>
@@ -693,27 +677,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                               className="text-sm text-center"
                             />
                           </td>
-                          <td className="px-2 py-4 relative">
-                            <select
-                              value={item.taxType}
-                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-input bg-background rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                            >
-                              <option value="INPUT">INPUT</option>
-                              <option value="NONE">NONE</option>
-                            </select>
-                          </td>
                           <td className="px-2 py-4 text-center">
                             <input
                               type="checkbox"
                               checked={item.gstIncluded || false}
                               onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
-                              disabled={item.taxType === 'NONE'}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                             />
                           </td>
                           <td className="px-2 py-4 text-sm text-right text-muted-foreground">
-                            {item.taxType === 'INPUT' ? formatCurrency(gstAmount) : '-'}
+                            {!item.gstIncluded ? formatCurrency(gstAmount) : '-'}
                           </td>
                           <td className="px-2 py-4 text-sm font-medium text-right">{formatCurrency(subtotal)}</td>
                           <td className="px-2 py-4 text-center">
@@ -732,7 +705,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={10} className="px-2 py-3 bg-muted/20">
+                      <td colSpan={9} className="px-2 py-3 bg-muted/20">
                         <Button
                           variant="outline"
                           onClick={addLineItem}
@@ -756,8 +729,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                       <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty.</th>
                       <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
                       <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Account</th>
-                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">Tax</th>
-                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">GST Incl.</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">GST Excl</th>
                       <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
                       <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
                     </tr>
@@ -770,12 +742,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         <td className="px-3 py-4 text-sm text-center">{item.quantity}</td>
                         <td className="px-3 py-4 text-sm text-right">{formatCurrency(item.unitAmount)}</td>
                         <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
-                        <td className="px-3 py-4 text-xs text-center">{item.taxRate}</td>
                         <td className="px-3 py-4 text-xs text-center">
                           {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : (item.taxRate === 'GST (10%)' ? 'No' : '-')}
                         </td>
                         <td className="px-3 py-4 text-sm text-right text-muted-foreground">
-                          {item.lineGst !== undefined ? formatCurrency(item.lineGst) : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
+                          {item.lineGst !== undefined 
+                            ? (item.gstIncluded ? '-' : formatCurrency(item.lineGst)) 
+                            : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
                         </td>
                         <td className="px-3 py-4 text-sm font-medium text-right">{formatCurrency(item.amount)}</td>
                       </tr>
@@ -843,7 +816,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
+                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="text-xs text-muted-foreground">Account</Label>
                             <Input
@@ -854,29 +827,23 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-muted-foreground">Tax Rate</Label>
-                            <select
-                              value={item.taxType}
-                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                              className="mt-1 relative z-10 flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                              <option value="INPUT">INPUT</option>
-                              <option value="NONE">NONE</option>
-                            </select>
-                          </div>
-                        </div>
-                        
-                        {item.taxType === 'INPUT' && (
-                          <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-xs text-muted-foreground">GST Included in Price</Label>
+                            <Label className="text-xs text-muted-foreground">GST Excluded</Label>
+                            <div className="flex items-center mt-3">
                               <input
                                 type="checkbox"
                                 checked={item.gstIncluded || false}
                                 onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
                                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                               />
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {item.gstIncluded ? 'No GST' : 'GST Applies'}
+                              </span>
                             </div>
+                          </div>
+                        </div>
+                        
+                        {!item.gstIncluded && (
+                          <div className="p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center justify-between text-xs">
                               <span className="text-muted-foreground">GST Amount:</span>
                               <span className="font-medium">{formatCurrency(gstAmount)}</span>
