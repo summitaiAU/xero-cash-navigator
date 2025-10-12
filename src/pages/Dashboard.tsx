@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { PDFViewer } from '@/components/PDFViewer';
-import { XeroSection } from '@/components/XeroSection';
-import { PaymentSection } from '@/components/PaymentSection';
-import { PaidInvoiceSection } from '@/components/PaidInvoiceSection';
-import { InvoiceNavigation } from '@/components/InvoiceNavigation';
-import { CompletionScreen } from '@/components/CompletionScreen';
-import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton';
-import { AddInvoiceButton } from '@/components/AddInvoiceButton';
-import { UserPresenceIndicator } from '@/components/UserPresenceIndicator';
-import { ConflictWarning } from '@/components/ConflictWarning';
-import { RealtimeNotifications } from '@/components/RealtimeNotifications';
-import { Invoice, ProcessingStatus, PaymentData } from '@/types/invoice';
-import { fetchInvoices, updateInvoicePaymentStatus, updateInvoiceRemittanceStatus, flagInvoice } from '@/services/invoiceService';
-import { invoiceService } from '@/services/api';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
-import { useUserPresence } from '@/hooks/useUserPresence';
-import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
-import SodhiLogo from '@/assets/sodhi-logo.svg';
-import { FlaggedInvoiceSection } from '@/components/FlaggedInvoiceSection';
-import { useSafeOffsets } from '@/hooks/useSafeOffsets';
+import React, { useState, useEffect } from "react";
+import { PDFViewer } from "@/components/PDFViewer";
+import { XeroSection } from "@/components/XeroSection";
+import { PaymentSection } from "@/components/PaymentSection";
+import { PaidInvoiceSection } from "@/components/PaidInvoiceSection";
+import { InvoiceNavigation } from "@/components/InvoiceNavigation";
+import { CompletionScreen } from "@/components/CompletionScreen";
+import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
+import { AddInvoiceButton } from "@/components/AddInvoiceButton";
+import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
+import { ConflictWarning } from "@/components/ConflictWarning";
+import { RealtimeNotifications } from "@/components/RealtimeNotifications";
+import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
+import {
+  fetchInvoices,
+  updateInvoicePaymentStatus,
+  updateInvoiceRemittanceStatus,
+  flagInvoice,
+} from "@/services/invoiceService";
+import { invoiceService } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useUserPresence } from "@/hooks/useUserPresence";
+import { Button } from "@/components/ui/button";
+import { LogOut, User } from "lucide-react";
+import SodhiLogo from "@/assets/sodhi-logo.svg";
+import { FlaggedInvoiceSection } from "@/components/FlaggedInvoiceSection";
+import { useSafeOffsets } from "@/hooks/useSafeOffsets";
 
 export const Dashboard: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -32,20 +37,20 @@ export const Dashboard: React.FC = () => {
   const [processingStatus, setProcessingStatus] = useState<ProcessingStatus>({
     xeroSynced: false,
     paymentUploaded: false,
-    remittanceSent: false
+    remittanceSent: false,
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [viewState, setViewState] = useState<'payable' | 'paid' | 'flagged'>('payable');
+  const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">("payable");
   const { toast } = useToast();
   const { user, signOut } = useAuth();
-  
+
   // Current invoice for easy access
   const currentInvoice = invoices[currentIndex];
 
   // Multi-user presence tracking
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
     currentInvoiceId: currentInvoice?.id,
-    isEditing: false // We'll update this based on actual editing state
+    isEditing: false, // We'll update this based on actual editing state
   });
 
   // Desktop fixed layout measurements
@@ -58,13 +63,13 @@ export const Dashboard: React.FC = () => {
     try {
       // Log the sign out action before actually signing out
       try {
-        const { auditService } = await import('@/services/auditService');
+        const { auditService } = await import("@/services/auditService");
         await auditService.logSignOut();
       } catch (error) {
-        console.error('Failed to log sign out:', error);
+        console.error("Failed to log sign out:", error);
         // Don't prevent sign out if audit logging fails
       }
-      
+
       await signOut();
       toast({
         title: "Signed out",
@@ -81,15 +86,15 @@ export const Dashboard: React.FC = () => {
 
   // Load invoices from Supabase on mount and when filter changes
   const loadInvoices = async (showToast = false) => {
-    console.log('Loading invoices...', viewState);
+    console.log("Loading invoices...", viewState);
     try {
       setLoading(true);
       const fetchedInvoices = await fetchInvoices(viewState);
-      console.log('Fetched invoices:', fetchedInvoices.length);
+      console.log("Fetched invoices:", fetchedInvoices.length);
       setInvoices(fetchedInvoices);
       setCurrentIndex(0); // Reset to first invoice when switching views
       setCompletedInvoices(new Set()); // Reset completed tracking
-      
+
       if (showToast) {
         toast({
           title: "Invoices Refreshed",
@@ -98,7 +103,7 @@ export const Dashboard: React.FC = () => {
         });
       }
     } catch (error) {
-      console.error('Failed to load invoices:', error);
+      console.error("Failed to load invoices:", error);
       toast({
         title: "Error",
         description: "Failed to load invoices. Please try again.",
@@ -113,13 +118,13 @@ export const Dashboard: React.FC = () => {
   const loadAllInvoices = async () => {
     try {
       const [payable, paid, flagged] = await Promise.all([
-        fetchInvoices('payable'),
-        fetchInvoices('paid'),
-        fetchInvoices('flagged')
+        fetchInvoices("payable"),
+        fetchInvoices("paid"),
+        fetchInvoices("flagged"),
       ]);
       setAllInvoices([...payable, ...paid, ...flagged]);
     } catch (error) {
-      console.error('Failed to load all invoices for search:', error);
+      console.error("Failed to load all invoices for search:", error);
     }
   };
 
@@ -127,7 +132,6 @@ export const Dashboard: React.FC = () => {
     loadInvoices();
     loadAllInvoices(); // Load all invoices for search
   }, [toast, viewState]);
-
 
   // Load Xero data for current invoice when it changes
   useEffect(() => {
@@ -147,23 +151,23 @@ export const Dashboard: React.FC = () => {
       }
 
       switch (e.key) {
-        case 'ArrowLeft':
+        case "ArrowLeft":
           e.preventDefault();
           handlePrevious();
           break;
-        case 'ArrowRight':
+        case "ArrowRight":
           e.preventDefault();
           handleNext();
           break;
-        case '?':
+        case "?":
           e.preventDefault();
           showKeyboardShortcuts();
           break;
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, [currentIndex, invoices.length]);
 
   // Touch/swipe handling for mobile
@@ -181,7 +185,7 @@ export const Dashboard: React.FC = () => {
 
       const endX = e.changedTouches[0].clientX;
       const endY = e.changedTouches[0].clientY;
-      
+
       const diffX = startX - endX;
       const diffY = startY - endY;
 
@@ -198,12 +202,12 @@ export const Dashboard: React.FC = () => {
       startY = 0;
     };
 
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchend', handleTouchEnd);
-    
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchend", handleTouchEnd);
+
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [currentIndex, invoices.length]);
 
@@ -235,28 +239,26 @@ export const Dashboard: React.FC = () => {
     setProcessingStatus({
       xeroSynced: false,
       paymentUploaded: false,
-      remittanceSent: false
+      remittanceSent: false,
     });
   };
 
   const scrollToTop = () => {
     if (rightScrollRef.current) {
-      rightScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      rightScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const loadXeroData = async (invoiceId: string, xeroInvoiceId: string) => {
-    setXeroLoadingStates(prev => new Map(prev.set(invoiceId, true)));
-    
+    setXeroLoadingStates((prev) => new Map(prev.set(invoiceId, true)));
+
     try {
       const xeroData = await invoiceService.getXeroData(xeroInvoiceId);
-      
+
       // Update the invoice in state with fetched Xero data
-      setInvoices(prev => prev.map(inv => 
-        inv.id === invoiceId 
-          ? { ...inv, xero_data: { ...inv.xero_data, ...xeroData } }
-          : inv
-      ));
+      setInvoices((prev) =>
+        prev.map((inv) => (inv.id === invoiceId ? { ...inv, xero_data: { ...inv.xero_data, ...xeroData } } : inv)),
+      );
     } catch (error) {
       console.error(`Failed to fetch Xero data for invoice ${invoiceId}:`, error);
       toast({
@@ -265,7 +267,7 @@ export const Dashboard: React.FC = () => {
         variant: "destructive",
       });
     } finally {
-      setXeroLoadingStates(prev => new Map(prev.set(invoiceId, false)));
+      setXeroLoadingStates((prev) => new Map(prev.set(invoiceId, false)));
     }
   };
 
@@ -276,29 +278,25 @@ export const Dashboard: React.FC = () => {
       // Refresh the entire invoice list to get the latest data from the database
       const refreshedInvoices = await fetchInvoices(viewState);
       setInvoices(refreshedInvoices);
-      
+
       // Find the updated invoice in the refreshed list to ensure we have the latest version
-      const latestInvoice = refreshedInvoices.find(inv => inv.id === updatedInvoice.id);
-      
+      const latestInvoice = refreshedInvoices.find((inv) => inv.id === updatedInvoice.id);
+
       if (latestInvoice) {
         // Update local state with the fresh data from database
-        setInvoices(prevInvoices => 
-          prevInvoices.map(invoice => 
-            invoice.id === latestInvoice.id ? latestInvoice : invoice
-          )
+        setInvoices((prevInvoices) =>
+          prevInvoices.map((invoice) => (invoice.id === latestInvoice.id ? latestInvoice : invoice)),
         );
       }
-      
-      setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+
+      setProcessingStatus((prev) => ({ ...prev, xeroSynced: true }));
     } catch (error) {
-      console.error('Failed to refresh invoice data after update:', error);
+      console.error("Failed to refresh invoice data after update:", error);
       // Fallback to just updating local state if refresh fails
-      setInvoices(prevInvoices => 
-        prevInvoices.map(invoice => 
-          invoice.id === updatedInvoice.id ? updatedInvoice : invoice
-        )
+      setInvoices((prevInvoices) =>
+        prevInvoices.map((invoice) => (invoice.id === updatedInvoice.id ? updatedInvoice : invoice)),
       );
-      setProcessingStatus(prev => ({ ...prev, xeroSynced: true }));
+      setProcessingStatus((prev) => ({ ...prev, xeroSynced: true }));
     }
   };
 
@@ -310,20 +308,20 @@ export const Dashboard: React.FC = () => {
       // Update invoice status in Supabase - remittance sent only if email provided
       const remittanceSent = !!paymentData.email;
       await updateInvoicePaymentStatus(currentInvoice.id, remittanceSent);
-      
+
       // Update the invoice in state
-      setInvoices(prev => prev.map(inv => 
-        inv.id === currentInvoice.id 
-          ? { ...inv, status: 'PAID' as const, remittance_sent: remittanceSent }
-          : inv
-      ));
-      
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === currentInvoice.id ? { ...inv, status: "PAID" as const, remittance_sent: remittanceSent } : inv,
+        ),
+      );
+
       // Mark as completed
-      setCompletedInvoices(prev => new Set([...prev, currentInvoice.id]));
-      setProcessingStatus(prev => ({ 
-        ...prev, 
-        paymentUploaded: true, 
-        remittanceSent: remittanceSent
+      setCompletedInvoices((prev) => new Set([...prev, currentInvoice.id]));
+      setProcessingStatus((prev) => ({
+        ...prev,
+        paymentUploaded: true,
+        remittanceSent: remittanceSent,
       }));
 
       // Show success overlay temporarily
@@ -344,9 +342,8 @@ export const Dashboard: React.FC = () => {
 
       // Reset scroll immediately when marked as paid
       scrollToTop();
-
     } catch (error) {
-      console.error('Failed to process payment:', error);
+      console.error("Failed to process payment:", error);
       toast({
         title: "Error",
         description: "Failed to process payment. Please try again.",
@@ -363,9 +360,9 @@ export const Dashboard: React.FC = () => {
 
   const handleReprocessPayment = async () => {
     if (!currentInvoice) return;
-    
+
     // Remove from completed invoices to allow reprocessing
-    setCompletedInvoices(prev => {
+    setCompletedInvoices((prev) => {
       const newSet = new Set(prev);
       newSet.delete(currentInvoice.id);
       return newSet;
@@ -373,7 +370,7 @@ export const Dashboard: React.FC = () => {
 
     // Reset processing status
     resetProcessingStatus();
-    
+
     toast({
       title: "Invoice reopened",
       description: "You can now reprocess this payment.",
@@ -384,20 +381,16 @@ export const Dashboard: React.FC = () => {
     try {
       // Update remittance status in Supabase
       await updateInvoiceRemittanceStatus(invoiceId);
-      
+
       // Update the invoice in state
-      setInvoices(prev => prev.map(inv => 
-        inv.id === invoiceId 
-          ? { ...inv, remittance_sent: true }
-          : inv
-      ));
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, remittance_sent: true } : inv)));
 
       toast({
         title: "Remittance status updated",
         description: "Invoice remittance has been marked as sent.",
       });
     } catch (error) {
-      console.error('Failed to update remittance status:', error);
+      console.error("Failed to update remittance status:", error);
       toast({
         title: "Error",
         description: "Failed to update remittance status. Please try again.",
@@ -412,7 +405,7 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleViewStateChange = (state: 'payable' | 'paid' | 'flagged') => {
+  const handleViewStateChange = (state: "payable" | "paid" | "flagged") => {
     setViewState(state);
   };
 
@@ -421,13 +414,13 @@ export const Dashboard: React.FC = () => {
       // Reload invoices to reflect the flagged status
       const fetchedInvoices = await fetchInvoices(viewState);
       setInvoices(fetchedInvoices);
-      
+
       toast({
         title: "Invoice Flagged",
         description: "Invoice has been flagged successfully",
       });
     } catch (error) {
-      console.error('Failed to reload invoices after flagging:', error);
+      console.error("Failed to reload invoices after flagging:", error);
     }
   };
 
@@ -436,15 +429,15 @@ export const Dashboard: React.FC = () => {
       // Reload invoices to reflect the resolved status
       const fetchedInvoices = await fetchInvoices(viewState);
       setInvoices(fetchedInvoices);
-      
+
       // If this was the last invoice in flagged view, handle navigation
-      if (fetchedInvoices.length === 0 && viewState === 'flagged') {
+      if (fetchedInvoices.length === 0 && viewState === "flagged") {
         setCurrentIndex(0);
       } else if (currentIndex >= fetchedInvoices.length) {
         setCurrentIndex(Math.max(0, fetchedInvoices.length - 1));
       }
     } catch (error) {
-      console.error('Failed to reload invoices after resolving:', error);
+      console.error("Failed to reload invoices after resolving:", error);
     }
   };
 
@@ -457,15 +450,15 @@ export const Dashboard: React.FC = () => {
   // Handle invoice selection from search
   const handleInvoiceSelect = (selectedInvoice: Invoice) => {
     // Determine which view the invoice belongs to and switch if necessary
-    let targetView: 'payable' | 'paid' | 'flagged' = 'payable';
-    
-    if (selectedInvoice.status === 'PAID') {
-      targetView = 'paid';
-    } else if (selectedInvoice.status === 'FLAGGED') {
-      targetView = 'flagged';
+    let targetView: "payable" | "paid" | "flagged" = "payable";
+
+    if (selectedInvoice.status === "PAID") {
+      targetView = "paid";
+    } else if (selectedInvoice.status === "FLAGGED") {
+      targetView = "flagged";
     } else {
       // For all other statuses (READY, APPROVED, PARTIALLY PAID), use payable view
-      targetView = 'payable';
+      targetView = "payable";
     }
 
     // If we need to switch views, do it first
@@ -477,21 +470,21 @@ export const Dashboard: React.FC = () => {
           // Fetch invoices for the new view
           const newViewInvoices = await fetchInvoices(targetView);
           setInvoices(newViewInvoices);
-          
+
           // Find the invoice in the new view
-          const invoiceIndex = newViewInvoices.findIndex(inv => inv.id === selectedInvoice.id);
+          const invoiceIndex = newViewInvoices.findIndex((inv) => inv.id === selectedInvoice.id);
           if (invoiceIndex !== -1) {
             setCurrentIndex(invoiceIndex);
             resetProcessingStatus();
             scrollToTop();
           }
         } catch (error) {
-          console.error('Failed to load invoices for new view:', error);
+          console.error("Failed to load invoices for new view:", error);
         }
       }, 100);
     } else {
       // Same view, just navigate to the invoice
-      const invoiceIndex = invoices.findIndex(inv => inv.id === selectedInvoice.id);
+      const invoiceIndex = invoices.findIndex((inv) => inv.id === selectedInvoice.id);
       if (invoiceIndex !== -1) {
         setCurrentIndex(invoiceIndex);
         resetProcessingStatus();
@@ -501,30 +494,32 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleExportReport = () => {
-    const reportData = invoices.map(invoice => ({
+    const reportData = invoices.map((invoice) => ({
       invoice_number: invoice.invoice_number,
       supplier: invoice.supplier,
       amount: invoice.amount,
-      status: completedInvoices.has(invoice.id) ? 'PAID' : 'PENDING',
-      processed_at: completedInvoices.has(invoice.id) ? new Date().toISOString() : null
+      status: completedInvoices.has(invoice.id) ? "PAID" : "PENDING",
+      processed_at: completedInvoices.has(invoice.id) ? new Date().toISOString() : null,
     }));
 
     const csv = [
-      ['Invoice Number', 'Supplier', 'Amount', 'Status', 'Processed At'],
-      ...reportData.map(row => [
+      ["Invoice Number", "Supplier", "Amount", "Status", "Processed At"],
+      ...reportData.map((row) => [
         row.invoice_number,
         row.supplier,
         row.amount.toString(),
         row.status,
-        row.processed_at || ''
-      ])
-    ].map(row => row.join(',')).join('\n');
+        row.processed_at || "",
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `invoice-processing-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `invoice-processing-report-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 
@@ -569,7 +564,9 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-4">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold text-gradient-primary">Payment Dashboard</h1>
+                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
+                  Payment Dashboard
+                </h1>
                 <p className="text-sm text-muted-foreground">Process invoices and manage payments</p>
               </div>
             </div>
@@ -588,7 +585,11 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Navigation Bar */}
-        <div ref={navRef} className="fixed left-0 right-0 bg-dashboard-bg z-20 pt-4" style={{ top: desktopOffset.header }}>
+        <div
+          ref={navRef}
+          className="fixed left-0 right-0 bg-dashboard-bg z-20 pt-4"
+          style={{ top: desktopOffset.header }}
+        >
           <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
@@ -614,19 +615,18 @@ export const Dashboard: React.FC = () => {
               /* No Invoices State */
               <div className="w-full h-full flex items-center justify-center">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-4">No {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : 'Payable'} Invoices Found</h2>
+                  <h2 className="text-2xl font-bold mb-4">
+                    No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
+                  </h2>
                   <p className="text-muted-foreground mb-4">
-                    {viewState === 'paid'
-                      ? 'No paid invoices are available to view.'
-                      : viewState === 'flagged'
-                      ? 'No flagged invoices are available to view.'
-                      : 'No invoices are available for processing.'
-                    }
+                    {viewState === "paid"
+                      ? "No paid invoices are available to view."
+                      : viewState === "flagged"
+                        ? "No flagged invoices are available to view."
+                        : "No invoices are available for processing."}
                   </p>
-                  {viewState === 'paid' && (
-                    <p className="text-sm text-muted-foreground">
-                      Try switching to "Payable" to see unpaid invoices.
-                    </p>
+                  {viewState === "paid" && (
+                    <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
                   )}
                 </div>
               </div>
@@ -636,28 +636,27 @@ export const Dashboard: React.FC = () => {
                 <div className="w-1/2 h-full flex-shrink-0">
                   <PDFViewer invoice={currentInvoice} />
                 </div>
-                
-                 {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
+
+                {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
                 <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
                   <div className="space-y-6 pr-2 pt-0">
                     <XeroSection
                       invoice={currentInvoice}
                       onUpdate={handleXeroUpdate}
-                      onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                      onSync={() =>
+                        currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
+                      }
                       loading={isXeroLoading}
                     />
-                    
+
                     {isCompleted ? (
                       <PaidInvoiceSection
                         invoice={currentInvoice}
                         onReprocess={handleReprocessPayment}
                         onRemittanceSent={handleRemittanceSent}
                       />
-                    ) : viewState === 'flagged' ? (
-                      <FlaggedInvoiceSection
-                        invoice={currentInvoice}
-                        onResolve={handleResolveFlag}
-                      />
+                    ) : viewState === "flagged" ? (
+                      <FlaggedInvoiceSection invoice={currentInvoice} onResolve={handleResolveFlag} />
                     ) : (
                       <PaymentSection
                         invoice={currentInvoice}
@@ -667,14 +666,14 @@ export const Dashboard: React.FC = () => {
                         loading={loading}
                       />
                     )}
-                    
+
                     {/* Delete Invoice Button - Only for payable invoices */}
-                    {viewState === 'payable' && currentInvoice && (
+                    {viewState === "payable" && currentInvoice && (
                       <DeleteInvoiceButton
                         invoice={currentInvoice}
                         onDeleted={() => {
                           // Reload invoices after deletion
-                          setInvoices(prev => prev.filter(inv => inv.id !== currentInvoice.id));
+                          setInvoices((prev) => prev.filter((inv) => inv.id !== currentInvoice.id));
                           // If this was the last invoice or we're at the end, go to previous
                           if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
                             setCurrentIndex(currentIndex - 1);
@@ -686,7 +685,7 @@ export const Dashboard: React.FC = () => {
                         }}
                       />
                     )}
-                    
+
                     {/* Extra spacing at bottom for better scrolling */}
                     <div className="h-6"></div>
                   </div>
@@ -744,19 +743,18 @@ export const Dashboard: React.FC = () => {
             /* Mobile No Invoices State */
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
-                <h2 className="text-xl font-bold mb-4">No {viewState === 'paid' ? 'Paid' : viewState === 'flagged' ? 'Flagged' : 'Payable'} Invoices Found</h2>
+                <h2 className="text-xl font-bold mb-4">
+                  No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
+                </h2>
                 <p className="text-muted-foreground mb-4">
-                  {viewState === 'paid'
-                    ? 'No paid invoices are available to view.'
-                    : viewState === 'flagged'
-                    ? 'No flagged invoices are available to view.'
-                    : 'No invoices are available for processing.'
-                  }
+                  {viewState === "paid"
+                    ? "No paid invoices are available to view."
+                    : viewState === "flagged"
+                      ? "No flagged invoices are available to view."
+                      : "No invoices are available for processing."}
                 </p>
-                {viewState === 'paid' && (
-                  <p className="text-sm text-muted-foreground">
-                    Try switching to "Payable" to see unpaid invoices.
-                  </p>
+                {viewState === "paid" && (
+                  <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
                 )}
               </div>
             </div>
@@ -766,13 +764,10 @@ export const Dashboard: React.FC = () => {
               <div className="h-[60vh] md:h-[75vh]">
                 <PDFViewer invoice={currentInvoice} />
               </div>
-              
+
               {/* Real-time notifications component */}
-              <RealtimeNotifications 
-                viewState={viewState}
-                onInvoiceListUpdate={() => loadInvoices(true)}
-              />
-              
+              <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
+
               {/* Conflict warning for multi-user scenarios */}
               {currentInvoice && (
                 <ConflictWarning
@@ -780,13 +775,10 @@ export const Dashboard: React.FC = () => {
                   isEditing={false} // This would be updated based on actual editing state
                 />
               )}
-              
+
               {/* Real-time notifications component */}
-              <RealtimeNotifications 
-                viewState={viewState}
-                onInvoiceListUpdate={() => loadInvoices(true)}
-              />
-              
+              <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
+
               {/* Conflict warning for multi-user scenarios */}
               {currentInvoice && (
                 <ConflictWarning
@@ -794,25 +786,24 @@ export const Dashboard: React.FC = () => {
                   isEditing={false} // This would be updated based on actual editing state
                 />
               )}
-              
+
               <XeroSection
                 invoice={currentInvoice}
                 onUpdate={handleXeroUpdate}
-                onSync={() => currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)}
+                onSync={() =>
+                  currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
+                }
                 loading={isXeroLoading}
               />
-              
+
               {isCompleted ? (
                 <PaidInvoiceSection
                   invoice={currentInvoice}
                   onReprocess={handleReprocessPayment}
                   onRemittanceSent={handleRemittanceSent}
                 />
-              ) : viewState === 'flagged' ? (
-                <FlaggedInvoiceSection
-                  invoice={currentInvoice}
-                  onResolve={handleResolveFlag}
-                />
+              ) : viewState === "flagged" ? (
+                <FlaggedInvoiceSection invoice={currentInvoice} onResolve={handleResolveFlag} />
               ) : (
                 <PaymentSection
                   invoice={currentInvoice}
@@ -822,14 +813,14 @@ export const Dashboard: React.FC = () => {
                   loading={loading}
                 />
               )}
-              
+
               {/* Delete Invoice Button - Only for payable invoices (Mobile) */}
-              {viewState === 'payable' && currentInvoice && (
+              {viewState === "payable" && currentInvoice && (
                 <DeleteInvoiceButton
                   invoice={currentInvoice}
                   onDeleted={() => {
                     // Reload invoices after deletion
-                    setInvoices(prev => prev.filter(inv => inv.id !== currentInvoice.id));
+                    setInvoices((prev) => prev.filter((inv) => inv.id !== currentInvoice.id));
                     // If this was the last invoice or we're at the end, go to previous
                     if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
                       setCurrentIndex(currentIndex - 1);
@@ -856,9 +847,7 @@ export const Dashboard: React.FC = () => {
               </svg>
             </div>
             <h3 className="text-xl font-semibold mb-2">Invoice Processed!</h3>
-            <p className="text-muted-foreground">
-              {currentInvoice.invoice_number} has been marked as paid.
-            </p>
+            <p className="text-muted-foreground">{currentInvoice.invoice_number} has been marked as paid.</p>
           </div>
         </div>
       )}
