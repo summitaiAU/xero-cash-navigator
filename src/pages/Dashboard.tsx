@@ -564,8 +564,8 @@ export const Dashboard: React.FC = () => {
             <div className="flex items-center gap-4">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-10 w-auto" />
               <div className="border-l border-gray-300 pl-4">
-                <h1 className="text-xl lg:text-2xl font-semibold text-gray-900 tracking-tight">Payment Dashboard</h1>
-                <p className="text-sm text-gray-600 mt-0.5">Process invoices and manage payments</p>
+                <h1 className="text-xl lg:text-2xl font-semibold text-amber-700 tracking-tight">Payment Dashboard</h1>
+                <p className="text-sm text-gray-600 mt-0.5">Streamline your payment workflow</p>
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
