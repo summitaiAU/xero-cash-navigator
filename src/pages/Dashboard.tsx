@@ -697,17 +697,17 @@ export const Dashboard: React.FC = () => {
       {/* Mobile/Tablet Layout */}
       <div className="lg:hidden min-h-screen bg-dashboard-bg">
         {/* Scrollable Header for Mobile/Tablet */}
-        <header className="bg-card border-b border-border shadow-soft">
+        <header className="bg-white border-b border-gray-200 shadow-soft">
           <div className="max-w-screen-2xl mx-auto px-3 md:px-4 py-2 md:py-3 flex justify-between items-center">
             <div className="flex items-center gap-3">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-6 w-auto" />
               <div>
-                <h1 className="text-lg md:text-xl font-bold text-gradient-primary">Payment Dashboard</h1>
-                <p className="text-xs text-muted-foreground">Process invoices and manage payments</p>
+                <h1 className="text-lg md:text-xl font-semibold text-amber-600">Payment Dashboard</h1>
+                <p className="text-xs text-gray-600">Streamline your payment workflow</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
                 <User className="h-3 w-3" />
                 <span className="truncate max-w-[120px]">{user?.email}</span>
               </div>
