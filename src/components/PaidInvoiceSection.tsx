@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 interface PaidInvoiceSectionProps {
   invoice: Invoice;
   onReprocess?: () => void;
-  onRemittanceSent?: (invoiceId: string) => void;
+  onRemittanceSent?: (invoiceId: string, email: string) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -130,9 +130,9 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
               description: "Successfully uploaded and forwarded remittance",
             });
             
-            // Update invoice remittance status
+            // Update invoice remittance status with email
             if (onRemittanceSent) {
-              onRemittanceSent(invoice.id);
+              onRemittanceSent(invoice.id, email);
             }
             
             setShowRemittanceSection(false);

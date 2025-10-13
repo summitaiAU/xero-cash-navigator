@@ -307,14 +307,21 @@ export const Dashboard: React.FC = () => {
     try {
       // Update invoice status in Supabase - remittance sent only if email provided
       const remittanceSent = !!paymentData.email;
-      await updateInvoicePaymentStatus(currentInvoice.id, remittanceSent);
-
-      // Update the invoice in state
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.id === currentInvoice.id ? { ...inv, status: "PAID" as const, remittance_sent: remittanceSent } : inv,
-        ),
+      await updateInvoicePaymentStatus(
+        currentInvoice.id, 
+        remittanceSent,
+        paymentData.email || undefined
       );
+
+      // Refresh invoices to get updated data
+      const refreshedInvoices = await fetchInvoices(viewState);
+      setInvoices(refreshedInvoices);
+
+      // Find the current invoice in the refreshed list
+      const updatedCurrentIndex = refreshedInvoices.findIndex(inv => inv.id === currentInvoice.id);
+      if (updatedCurrentIndex !== -1) {
+        setCurrentIndex(updatedCurrentIndex);
+      }
 
       // Mark as completed
       setCompletedInvoices((prev) => new Set([...prev, currentInvoice.id]));
@@ -377,13 +384,13 @@ export const Dashboard: React.FC = () => {
     });
   };
 
-  const handleRemittanceSent = async (invoiceId: string) => {
+  const handleRemittanceSent = async (invoiceId: string, email: string) => {
     try {
-      // Update remittance status in Supabase
-      await updateInvoiceRemittanceStatus(invoiceId);
+      // Update remittance status in Supabase with email
+      await updateInvoiceRemittanceStatus(invoiceId, email);
 
       // Update the invoice in state
-      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, remittance_sent: true } : inv)));
+      setInvoices((prev) => prev.map((inv) => (inv.id === invoiceId ? { ...inv, remittance_sent: true, remittance_email: email } : inv)));
 
       toast({
         title: "Remittance status updated",
@@ -662,6 +669,10 @@ export const Dashboard: React.FC = () => {
                         onSkip={handleSkip}
                         onFlag={handleFlagInvoice}
                         loading={loading}
+                        onPartialPaymentUpdate={async () => {
+                          const refreshedInvoices = await fetchInvoices(viewState);
+                          setInvoices(refreshedInvoices);
+                        }}
                       />
                     )}
 

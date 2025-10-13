@@ -20,6 +20,7 @@ interface PaymentSectionProps {
   onSkip: () => void;
   onFlag?: (invoiceId: string) => void;
   loading?: boolean;
+  onPartialPaymentUpdate?: () => Promise<void>;
 }
 
 export const PaymentSection: React.FC<PaymentSectionProps> = ({
@@ -27,7 +28,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   onMarkAsPaid,
   onSkip,
   onFlag,
-  loading = false
+  loading = false,
+  onPartialPaymentUpdate
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -190,7 +192,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
       // Step 2: Mark as paid (only if remittance succeeded)
       const paymentData: PaymentData = {
-        email,
+        email: selectedEmailForRemittance || email,
         message,
         payment_method: paymentMethod as any,
         image_base64: imageData
@@ -359,8 +361,12 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         description: `Payment of ${formatCurrency(amountPaid)} has been recorded.`,
       });
       
-      // Refresh the page to update the view
-      window.location.reload();
+      // Call refresh callback if provided
+      if (onPartialPaymentUpdate) {
+        await onPartialPaymentUpdate();
+      }
+      
+      setShowPartialPaymentModal(false);
     } catch (error: any) {
       toast({
         title: "Failed to record partial payment",
@@ -380,8 +386,10 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         description: "Invoice has been unmarked as partially paid.",
       });
       
-      // Refresh the page to update the view
-      window.location.reload();
+      // Call refresh callback if provided
+      if (onPartialPaymentUpdate) {
+        await onPartialPaymentUpdate();
+      }
     } catch (error: any) {
       toast({
         title: "Failed to unmark partial payment",

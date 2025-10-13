@@ -130,7 +130,13 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
   });
 };
 
-export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSent: boolean) => {
+export const updateInvoicePaymentStatus = async (
+  invoiceId: string, 
+  remittanceSent: boolean,
+  remittanceEmail?: string
+) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
     .from('invoices')
@@ -147,13 +153,25 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
     throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
   }
 
+  const updateData: any = { 
+    status: 'PAID',
+    remittance_sent: remittanceSent,
+    paid_date: new Date().toISOString(),
+    payment_made_at: new Date().toISOString(),
+    amount_paid: currentInvoice.total_amount
+  };
+
+  if (remittanceEmail) {
+    updateData.remittance_email = remittanceEmail;
+  }
+
+  if (remittanceSent) {
+    updateData.remittance_sent_at = new Date().toISOString();
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      status: 'PAID',
-      remittance_sent: remittanceSent,
-      paid_date: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
@@ -164,6 +182,23 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
       userContext: 'Mark invoice as paid'
     });
     throw new Error(`Failed to update invoice: ${error.message}`);
+  }
+
+  // Log to daily events
+  await dailyEventsService.logPaymentMade(
+    invoiceId,
+    currentInvoice.invoice_no,
+    currentInvoice.entity || 'Unknown',
+    currentInvoice.total_amount
+  );
+
+  if (remittanceSent && remittanceEmail) {
+    await dailyEventsService.logRemittanceSent(
+      invoiceId,
+      currentInvoice.invoice_no,
+      remittanceEmail,
+      currentInvoice.entity
+    );
   }
 
   // Audit log
@@ -194,7 +229,10 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
     .update({ 
       status: 'READY',
       remittance_sent: false,
-      paid_date: null
+      paid_date: null,
+      payment_made_at: null,
+      remittance_sent_at: null,
+      amount_paid: null
     })
     .eq('id', invoiceId);
 
@@ -212,7 +250,12 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
   });
 };
 
-export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
+export const updateInvoiceRemittanceStatus = async (
+  invoiceId: string,
+  remittanceEmail?: string
+) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
     .from('invoices')
@@ -224,15 +267,32 @@ export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
     throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
   }
 
+  const updateData: any = { 
+    remittance_sent: true,
+    remittance_sent_at: new Date().toISOString()
+  };
+
+  if (remittanceEmail) {
+    updateData.remittance_email = remittanceEmail;
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      remittance_sent: true
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to update invoice remittance status: ${error.message}`);
+  }
+
+  // Log to daily events
+  if (remittanceEmail) {
+    await dailyEventsService.logRemittanceSent(
+      invoiceId,
+      currentInvoice.invoice_no,
+      remittanceEmail,
+      currentInvoice.entity
+    );
   }
 
   // Audit log
@@ -252,6 +312,8 @@ export interface FlagInvoiceData {
 }
 
 export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the invoice details to extract necessary fields for webhook and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
@@ -271,6 +333,7 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
 
   if (flagData.emailAddress) {
     updateData.flag_email_address = flagData.emailAddress;
+    updateData.flag_email_sent_at = new Date().toISOString();
   }
   if (flagData.subject) {
     updateData.flag_email_subject = flagData.subject;
@@ -300,6 +363,14 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
         google_drive_id: invoice.google_drive_id || '',
         invoice_no: invoice.invoice_no || ''
       });
+
+      // Log to daily events
+      await dailyEventsService.logFlagEmailSent(
+        invoiceId,
+        invoice.invoice_no,
+        flagData.emailAddress,
+        flagData.subject
+      );
     } catch (webhookError) {
       console.error('Webhook failed but invoice was flagged:', webhookError);
       // Don't throw here - we want the flagging to succeed even if webhook fails
@@ -506,6 +577,8 @@ export const undoApproveInvoice = async (invoiceId: string) => {
 };
 
 export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get current invoice data to calculate new amounts and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
@@ -528,13 +601,23 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
       status: 'PARTIALLY PAID',
       partially_paid: true,
       amount_paid: newAmountPaid,
-      amount_due: newAmountDue
+      amount_due: newAmountDue,
+      partial_payment_made_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to mark invoice as partially paid: ${error.message}`);
   }
+
+  // Log to daily events
+  await dailyEventsService.logPartialPayment(
+    invoiceId,
+    invoice.invoice_no,
+    invoice.entity || 'Unknown',
+    amountPaid,
+    totalAmount
+  );
 
   // Audit log
   await auditService.logInvoicePartialPayment(invoiceId, {
@@ -646,7 +729,8 @@ export const unmarkPartialPayment = async (invoiceId: string) => {
       status: 'READY',
       partially_paid: false,
       amount_paid: 0,
-      amount_due: null
+      amount_due: null,
+      partial_payment_made_at: null
     })
     .eq('id', invoiceId);
 
