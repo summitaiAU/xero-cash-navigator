@@ -755,8 +755,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         <td className="px-3 py-4 text-sm text-center">{item.quantity}</td>
                         <td className="px-3 py-4 text-sm text-right">{formatCurrency(item.unitAmount)}</td>
                         <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
-                        <td className="px-3 py-4 text-xs text-center">
-                          {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : (item.taxRate === 'GST (10%)' ? 'No' : '-')}
+                        <td className="px-3 py-4 text-center">
+                          {item.lineGst !== undefined ? (
+                            item.gstIncluded ? (
+                              <div className="flex justify-center">
+                                <Check className="h-5 w-5 text-green-600" />
+                              </div>
+                            ) : (
+                              <span className="text-xs">-</span>
+                            )
+                          ) : (
+                            item.taxRate === 'GST (10%)' ? <span className="text-xs">-</span> : (
+                              <div className="flex justify-center">
+                                <Check className="h-5 w-5 text-green-600" />
+                              </div>
+                            )
+                          )}
                         </td>
                         <td className="px-3 py-4 text-sm text-right text-muted-foreground">
                           {item.lineGst !== undefined 
@@ -907,9 +921,19 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         <div className="pt-2 border-t border-border">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <Label className="text-xs text-muted-foreground">GST Included</Label>
+                              <Label className="text-xs text-muted-foreground">GST Excluded</Label>
                               <div className="text-xs">
-                                {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : (item.taxRate === 'GST (10%)' ? 'No' : '-')}
+                                {item.lineGst !== undefined ? (
+                                  item.gstIncluded ? (
+                                    <Check className="h-5 w-5 text-green-600 inline-block" />
+                                  ) : (
+                                    <span>-</span>
+                                  )
+                                ) : (
+                                  item.taxRate === 'GST (10%)' ? <span>-</span> : (
+                                    <Check className="h-5 w-5 text-green-600 inline-block" />
+                                  )
+                                )}
                               </div>
                             </div>
                             <div>
