@@ -215,14 +215,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       dueDate: invoice.due_date || '',
       currency: invoice.currency || 'AUD',
       lineItems: invoiceData.lineItems.map((item, index) => {
-        // Determine tax type
+        // Determine tax type and gstIncluded based on actual GST data
         let taxType = 'NONE';
+        let gstIncluded = false;
+        
         if (item.lineGst !== undefined) {
           // New format: use per-line GST
-          taxType = item.lineGst > 0 ? 'INPUT' : 'NONE';
+          if (item.lineGst > 0) {
+            taxType = 'INPUT';
+            gstIncluded = false; // GST applies, checkbox unchecked
+          } else {
+            taxType = 'NONE';
+            gstIncluded = true; // GST excluded, checkbox checked
+          }
         } else if (oldFormatHasGst) {
           // Old format: inherit from invoice level
           taxType = 'INPUT';
+          gstIncluded = false; // GST applies, checkbox unchecked
+        } else {
+          // Old format: no GST at invoice level
+          taxType = 'NONE';
+          gstIncluded = true; // GST excluded, checkbox checked
         }
         
         return {
@@ -232,7 +245,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           unitAmount: item.unitAmount || 0,
           accountCode: item.account?.split(' -')[0] || '429',
           taxType,
-          gstIncluded: item.gstIncluded || false
+          gstIncluded
         };
       })
     });
