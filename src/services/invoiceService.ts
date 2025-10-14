@@ -240,6 +240,18 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
     throw new Error(`Failed to unmark invoice as paid: ${error.message}`);
   }
 
+  // Delete related daily_events entries
+  const { error: deleteError } = await supabase
+    .from('daily_events')
+    .delete()
+    .eq('invoice_id', invoiceId)
+    .in('event_type', ['PAYMENT_MADE', 'REMITTANCE_SENT']);
+
+  if (deleteError) {
+    console.error('Failed to delete daily events:', deleteError);
+    // Don't throw - we want the unmark to succeed even if event cleanup fails
+  }
+
   // Audit log
   await auditService.logInvoiceUnmarkedPaid(invoiceId, {
     invoice_number: currentInvoice.invoice_no,
@@ -736,6 +748,18 @@ export const unmarkPartialPayment = async (invoiceId: string) => {
 
   if (error) {
     throw new Error(`Failed to unmark partial payment: ${error.message}`);
+  }
+
+  // Delete related daily_events entries for partial payments
+  const { error: deleteError } = await supabase
+    .from('daily_events')
+    .delete()
+    .eq('invoice_id', invoiceId)
+    .eq('event_type', 'PARTIAL_PAYMENT');
+
+  if (deleteError) {
+    console.error('Failed to delete daily events:', deleteError);
+    // Don't throw - we want the unmark to succeed even if event cleanup fails
   }
 
   // Audit log

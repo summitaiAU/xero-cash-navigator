@@ -590,7 +590,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={handleUnmarkPartialPayment}
-                className="text-orange-700 hover:text-orange-800"
+                className="text-orange-700 hover:text-orange-800 border-orange-300"
               >
                 <Undo className="h-4 w-4 mr-1" />
                 Unmark Partial
@@ -617,7 +617,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={handleMarkAsPaidWithRemittance}
               disabled={loading || !email}
-              className="w-full"
+              className="w-full font-semibold"
             >
               <Send className="h-4 w-4 mr-2" />
               {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
@@ -628,7 +628,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={handleMarkAsPaidOnly}
               disabled={loading}
-              className="w-full"
+              className="w-full font-medium border-2"
             >
               <Check className="h-4 w-4 mr-2" />
               Mark as Fully Paid
@@ -639,7 +639,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={() => setShowPartialPaymentModal(true)}
               disabled={loading}
-              className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+              className="w-full font-medium border-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:border-orange-400"
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Mark as Partially Paid
@@ -649,7 +649,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               variant="ghost"
               onClick={onSkip}
               disabled={loading}
-              className="text-muted-foreground hover:text-foreground"
+              className="w-full text-muted-foreground hover:text-foreground hover:bg-muted"
             >
               Skip to Next Invoice
             </Button>
