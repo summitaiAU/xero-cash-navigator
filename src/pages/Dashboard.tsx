@@ -428,7 +428,27 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleViewStateChange = async (state: "payable" | "paid" | "flagged") => {
+    if (state === viewState) return; // Already on this view
+    
+    setLoading(true);
     setViewState(state);
+    
+    try {
+      const fetchedInvoices = await fetchInvoices(state);
+      setInvoices(fetchedInvoices);
+      setCurrentIndex(0);
+      setCompletedInvoices(new Set());
+      scrollToTop();
+    } catch (error) {
+      console.error("Failed to load invoices for view:", state, error);
+      toast({
+        title: "Error",
+        description: "Failed to load invoices. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleFlagInvoice = async (invoiceId: string) => {
@@ -470,7 +490,7 @@ export const Dashboard: React.FC = () => {
   };
 
   // Handle invoice selection from search
-  const handleInvoiceSelect = (selectedInvoice: Invoice) => {
+  const handleInvoiceSelect = async (selectedInvoice: Invoice) => {
     // Determine which view the invoice belongs to and switch if necessary
     let targetView: "payable" | "paid" | "flagged" = "payable";
 
@@ -483,27 +503,35 @@ export const Dashboard: React.FC = () => {
       targetView = "payable";
     }
 
-    // If we need to switch views, do it first
+    // If we need to switch views, fetch and navigate
     if (targetView !== viewState) {
+      setLoading(true);
       setViewState(targetView);
-      // Use a timeout to ensure the view state change is processed
-      setTimeout(async () => {
-        try {
-          // Fetch invoices for the new view
-          const newViewInvoices = await fetchInvoices(targetView);
-          setInvoices(newViewInvoices);
+      
+      try {
+        // Fetch invoices for the new view
+        const newViewInvoices = await fetchInvoices(targetView);
+        setInvoices(newViewInvoices);
 
-          // Find the invoice in the new view
-          const invoiceIndex = newViewInvoices.findIndex((inv) => inv.id === selectedInvoice.id);
-          if (invoiceIndex !== -1) {
-            setCurrentIndex(invoiceIndex);
-            resetProcessingStatus();
-            scrollToTop();
-          }
-        } catch (error) {
-          console.error("Failed to load invoices for new view:", error);
+        // Find the invoice in the new view
+        const invoiceIndex = newViewInvoices.findIndex((inv) => inv.id === selectedInvoice.id);
+        if (invoiceIndex !== -1) {
+          setCurrentIndex(invoiceIndex);
+        } else {
+          setCurrentIndex(0);
         }
-      }, 100);
+        resetProcessingStatus();
+        scrollToTop();
+      } catch (error) {
+        console.error("Failed to load invoices for new view:", error);
+        toast({
+          title: "Error",
+          description: "Failed to switch views. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     } else {
       // Same view, just navigate to the invoice
       const invoiceIndex = invoices.findIndex((inv) => inv.id === selectedInvoice.id);
