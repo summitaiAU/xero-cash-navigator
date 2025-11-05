@@ -10,7 +10,7 @@ import { AddInvoiceButton } from "@/components/AddInvoiceButton";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 import { ConflictWarning } from "@/components/ConflictWarning";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
-import { NavigationRail } from "@/components/NavigationRail";
+import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { CompactCommandBar } from "@/components/CompactCommandBar";
 import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
 import {
@@ -43,7 +43,6 @@ export const Dashboard: React.FC = () => {
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">("payable");
-  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -131,10 +130,10 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  // Load initial invoices on mount only
+  // Load invoices whenever viewState changes
   useEffect(() => {
     loadInvoices();
-  }, []);
+  }, [viewState]);
 
   // Load all invoices for search on mount only
   useEffect(() => {
@@ -426,35 +425,9 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleViewStateChange = async (state: "payable" | "paid" | "flagged") => {
-    if (state === viewState) return; // Already on this view
-    
-    console.log('[VIEW] Switching to:', state);
-    setLoading(true);
-    setViewState(state);
-    
-    toast({
-      title: `Switching to ${state}`,
-      description: 'Loading invoices...',
-      duration: 1200,
-    });
-    
-    try {
-      const fetchedInvoices = await fetchInvoices(state);
-      console.log(`[VIEW] Loaded ${fetchedInvoices.length} invoices for ${state}`);
-      setInvoices(fetchedInvoices);
-      setCurrentIndex(0);
-      setCompletedInvoices(new Set());
-      scrollToTop();
-    } catch (error) {
-      console.error("Failed to load invoices for view:", state, error);
-      toast({
-        title: "Error",
-        description: "Failed to load invoices. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  const handleViewStateChange = (state: "payable" | "paid" | "flagged") => {
+    if (state !== viewState) {
+      setViewState(state);
     }
   };
 
@@ -628,14 +601,10 @@ export const Dashboard: React.FC = () => {
     <>
       {/* Desktop Layout */}
       <div className="hidden lg:block h-screen bg-console-bg overflow-hidden">
-        {/* Navigation Rail */}
-        <NavigationRail
+        {/* Simple Sidebar */}
+        <SimpleSidebar
           viewState={viewState}
           onViewStateChange={handleViewStateChange}
-          onSignOut={handleSignOut}
-          userName={user?.email}
-          isCollapsed={isNavCollapsed}
-          onToggleCollapse={() => setIsNavCollapsed(!isNavCollapsed)}
           payableCount={payableCount}
           paidCount={paidCount}
           flaggedCount={flaggedCount}
@@ -643,9 +612,9 @@ export const Dashboard: React.FC = () => {
 
         {/* Main Content Area */}
         <div 
-          className="fixed top-0 bottom-0 transition-all duration-300 flex flex-col"
+          className="fixed top-0 bottom-0 flex flex-col"
           style={{ 
-            left: isNavCollapsed ? '64px' : '240px',
+            left: '192px',
             right: 0
           }}
         >
