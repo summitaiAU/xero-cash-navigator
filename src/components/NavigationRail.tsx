@@ -23,6 +23,9 @@ interface NavigationRailProps {
   userName?: string;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  payableCount: number;
+  paidCount: number;
+  flaggedCount: number;
 }
 
 export const NavigationRail: React.FC<NavigationRailProps> = ({
@@ -32,6 +35,9 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
   userName,
   isCollapsed,
   onToggleCollapse,
+  payableCount,
+  paidCount,
+  flaggedCount,
 }) => {
   const NavItem = ({ 
     icon: Icon, 
@@ -58,7 +64,7 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
           >
             <Icon className="h-5 w-5" />
             {badge !== undefined && badge > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-muted text-foreground text-[10px] font-bold flex items-center justify-center border border-border">
                 {badge > 99 ? '99+' : badge}
               </span>
             )}
@@ -105,18 +111,21 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
           label="Payable Invoices"
           active={viewState === 'payable'}
           onClick={() => onViewStateChange('payable')}
+          badge={payableCount}
         />
         <NavItem
           icon={CheckCircle}
           label="Paid Invoices"
           active={viewState === 'paid'}
           onClick={() => onViewStateChange('paid')}
+          badge={paidCount}
         />
         <NavItem
           icon={Flag}
           label="Flagged Invoices"
           active={viewState === 'flagged'}
           onClick={() => onViewStateChange('flagged')}
+          badge={flaggedCount}
         />
       </div>
 

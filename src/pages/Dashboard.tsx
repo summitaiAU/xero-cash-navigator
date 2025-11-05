@@ -11,6 +11,7 @@ import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 import { ConflictWarning } from "@/components/ConflictWarning";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import { NavigationRail } from "@/components/NavigationRail";
+import { CompactCommandBar } from "@/components/CompactCommandBar";
 import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
 import {
   fetchInvoices,
@@ -414,7 +415,7 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleViewStateChange = (state: "payable" | "paid" | "flagged") => {
+  const handleViewStateChange = async (state: "payable" | "paid" | "flagged") => {
     setViewState(state);
   };
 
@@ -563,6 +564,11 @@ export const Dashboard: React.FC = () => {
   // Check if we have no invoices but still need to show the UI structure
   const hasNoInvoices = invoices.length === 0;
 
+  // Calculate counts for navigation rail
+  const payableCount = invoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED').length;
+  const paidCount = invoices.filter(inv => inv.status === 'PAID').length;
+  const flaggedCount = invoices.filter(inv => inv.status === 'FLAGGED').length;
+
   return (
     <>
       {/* Desktop Layout */}
@@ -575,97 +581,59 @@ export const Dashboard: React.FC = () => {
           userName={user?.email}
           isCollapsed={isNavCollapsed}
           onToggleCollapse={() => setIsNavCollapsed(!isNavCollapsed)}
+          payableCount={viewState === 'payable' ? invoices.length : 0}
+          paidCount={viewState === 'paid' ? invoices.length : 0}
+          flaggedCount={viewState === 'flagged' ? invoices.length : 0}
         />
 
-        {/* Fixed Header */}
+        {/* Main Content Area */}
         <div 
-          ref={headerRef} 
-          className="fixed top-0 bg-white border-b border-gray-200 z-30 transition-all duration-300"
+          className="fixed top-0 bottom-0 transition-all duration-300 flex flex-col"
           style={{ 
             left: isNavCollapsed ? '80px' : '256px',
             right: 0
           }}
         >
-          <div className="px-4 lg:px-6 py-4 lg:py-5 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <img src={SodhiLogo} alt="Sodhi Logo" className="h-10 w-auto" />
-              <div className="border-l border-gray-300 pl-4">
-                <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Invoice Console</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Payment Management</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 lg:gap-4">
-              <AddInvoiceButton onSuccess={loadInvoices} />
-            </div>
-          </div>
-        </div>
+          {/* Compact Command Bar */}
+          <CompactCommandBar
+            onRefresh={() => loadInvoices(true)}
+            allInvoices={allInvoices}
+            onInvoiceSelect={handleInvoiceSelect}
+            loading={loading}
+          />
 
-        {/* Fixed Navigation Bar */}
-        <div
-          ref={navRef}
-          className="fixed bg-console-bg z-20 pt-4 transition-all duration-300"
-          style={{ 
-            top: desktopOffset.header,
-            left: isNavCollapsed ? '80px' : '256px',
-            right: 0
-          }}
-        >
-          <div className="px-4 lg:px-6 py-3">
-            <InvoiceNavigation
-              currentIndex={currentIndex}
-              totalInvoices={invoices.length}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              completedCount={completedInvoices.size}
-              emailLink={currentInvoice?.drive_view_url}
-              invoices={invoices}
-              allInvoices={allInvoices}
-              viewState={viewState}
-              onViewStateChange={handleViewStateChange}
-              onJumpToInvoice={handleJumpToInvoice}
-              onInvoiceSelect={handleInvoiceSelect}
-            />
-          </div>
-        </div>
-
-        {/* Fixed Layout Container - Increased top spacing */}
-        <div 
-          className="fixed bottom-0 transition-all duration-300" 
-          style={{ 
-            top: desktopOffset.total,
-            left: isNavCollapsed ? '80px' : '256px',
-            right: 0
-          }}
-        >
-          <div className="px-4 lg:px-6 h-full flex gap-6">
-            {hasNoInvoices ? (
-              /* No Invoices State */
-              <div className="w-full h-full flex items-center justify-center">
-                <div className="text-center">
-                  <h2 className="text-2xl font-bold mb-4">
-                    No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
-                  </h2>
-                  <p className="text-muted-foreground mb-4">
-                    {viewState === "paid"
-                      ? "No paid invoices are available to view."
-                      : viewState === "flagged"
-                        ? "No flagged invoices are available to view."
-                        : "No invoices are available for processing."}
-                  </p>
-                  {viewState === "paid" && (
-                    <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
-                  )}
+          {/* Content Area */}
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full flex gap-6 px-4 lg:px-6 py-4">
+              {hasNoInvoices ? (
+                /* No Invoices State */
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-4">
+                      No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
+                    </h2>
+                    <p className="text-muted-foreground mb-4">
+                      {viewState === "paid"
+                        ? "No paid invoices are available to view."
+                        : viewState === "flagged"
+                          ? "No flagged invoices are available to view."
+                          : "No invoices are available for processing."}
+                    </p>
+                    {viewState === "paid" && (
+                      <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <>
+              ) : (
+                <>
                 {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
                 <div className="w-1/2 h-full flex-shrink-0">
                   <PDFViewer invoice={currentInvoice} />
                 </div>
 
+
                 {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
-                <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-dashboard-bg">
+                <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-console-bg">
                   <div className="space-y-6 pr-2 pt-0">
                     <XeroSection
                       invoice={currentInvoice}
@@ -721,8 +689,9 @@ export const Dashboard: React.FC = () => {
                     <div className="h-6"></div>
                   </div>
                 </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
