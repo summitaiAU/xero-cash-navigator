@@ -153,6 +153,18 @@ export const Dashboard: React.FC = () => {
         return; // Don't interfere with form inputs
       }
 
+      // Check for Shift+J or Shift+K
+      if (e.shiftKey && (e.key === 'J' || e.key === 'j')) {
+        e.preventDefault();
+        handlePrevious();
+        return;
+      }
+      if (e.shiftKey && (e.key === 'K' || e.key === 'k')) {
+        e.preventDefault();
+        handleNext();
+        return;
+      }
+
       switch (e.key) {
         case "ArrowLeft":
           e.preventDefault();
@@ -217,7 +229,7 @@ export const Dashboard: React.FC = () => {
   const showKeyboardShortcuts = () => {
     toast({
       title: "Keyboard Shortcuts",
-      description: "← → Navigate invoices | ? Show this help",
+      description: "Shift+J/← Previous | Shift+K/→ Next | ? Help",
     });
   };
 
@@ -564,10 +576,10 @@ export const Dashboard: React.FC = () => {
   // Check if we have no invoices but still need to show the UI structure
   const hasNoInvoices = invoices.length === 0;
 
-  // Calculate counts for navigation rail
-  const payableCount = invoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED').length;
-  const paidCount = invoices.filter(inv => inv.status === 'PAID').length;
-  const flaggedCount = invoices.filter(inv => inv.status === 'FLAGGED').length;
+  // Calculate counts for navigation rail - use allInvoices for accurate counts across all views
+  const payableCount = allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length;
+  const paidCount = allInvoices.filter(inv => inv.status === 'PAID').length;
+  const flaggedCount = allInvoices.filter(inv => inv.status === 'FLAGGED').length;
 
   return (
     <>
@@ -581,16 +593,16 @@ export const Dashboard: React.FC = () => {
           userName={user?.email}
           isCollapsed={isNavCollapsed}
           onToggleCollapse={() => setIsNavCollapsed(!isNavCollapsed)}
-          payableCount={viewState === 'payable' ? invoices.length : 0}
-          paidCount={viewState === 'paid' ? invoices.length : 0}
-          flaggedCount={viewState === 'flagged' ? invoices.length : 0}
+          payableCount={payableCount}
+          paidCount={paidCount}
+          flaggedCount={flaggedCount}
         />
 
         {/* Main Content Area */}
         <div 
           className="fixed top-0 bottom-0 transition-all duration-300 flex flex-col"
           style={{ 
-            left: isNavCollapsed ? '80px' : '256px',
+            left: isNavCollapsed ? '64px' : '240px',
             right: 0
           }}
         >
@@ -600,6 +612,12 @@ export const Dashboard: React.FC = () => {
             allInvoices={allInvoices}
             onInvoiceSelect={handleInvoiceSelect}
             loading={loading}
+            currentIndex={currentIndex}
+            totalCount={invoices.length}
+            onPrevious={handlePrevious}
+            onNext={handleNext}
+            canGoBack={currentIndex > 0}
+            canGoNext={currentIndex < invoices.length - 1}
           />
 
           {/* Content Area */}

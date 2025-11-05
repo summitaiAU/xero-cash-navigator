@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import SodhiLogo from '@/assets/sodhi-logo.svg';
 
 interface NavigationRailProps {
   viewState: 'payable' | 'paid' | 'flagged';
@@ -79,30 +80,40 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
 
   return (
     <nav className={cn(
-      'nav-rail',
-      isCollapsed ? 'w-20' : 'w-64'
+      'nav-rail transition-all duration-300',
+      isCollapsed ? 'w-16' : 'w-60'
     )}>
       {/* Toggle Button */}
       <button
         onClick={onToggleCollapse}
         className="nav-rail-item mb-4"
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
       </button>
 
-      {/* Logo/Brand Area */}
-      <div className="mb-8 px-4">
+      {/* Logo/Brand Area - Clickable to go to Payable */}
+      <button
+        onClick={() => onViewStateChange('payable')}
+        className="mb-8 px-4 w-full hover:opacity-80 transition-opacity"
+        aria-label="Go to Payable Invoices"
+      >
         {isCollapsed ? (
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <FileText className="h-6 w-6 text-primary-foreground" />
+          <div className="w-10 h-10 mx-auto">
+            <img src={SodhiLogo} alt="Sodhi Logo" className="w-full h-full object-contain" />
           </div>
         ) : (
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-nav-rail-foreground">Invoice Console</h2>
-            <p className="text-xs text-nav-rail-foreground/60 mt-1">Payment Management</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 flex-shrink-0">
+              <img src={SodhiLogo} alt="Sodhi Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-nav-rail-foreground leading-tight">Invoice Console</h2>
+              <p className="text-xs text-nav-rail-foreground/60 mt-0.5">Payment Management</p>
+            </div>
           </div>
         )}
-      </div>
+      </button>
 
       {/* Navigation Items */}
       <div className="flex-1 space-y-2">
@@ -130,21 +141,18 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
       </div>
 
       {/* Bottom Section */}
-      <div className="space-y-2 mt-auto">
-        {userName && (
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="nav-rail-item cursor-default">
-                  <User className="h-5 w-5" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="ml-2">
-                <p>{userName}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+      <div className="space-y-2 mt-auto border-t border-nav-rail-foreground/10 pt-4">
+        {userName && !isCollapsed && (
+          <div className="px-4 py-2 text-sm text-nav-rail-foreground/60">
+            {userName}
+          </div>
         )}
+        
+        <NavItem
+          icon={User}
+          label={userName || 'Profile'}
+          onClick={() => {}}
+        />
         
         <NavItem
           icon={LogOut}
