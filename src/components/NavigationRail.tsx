@@ -55,6 +55,7 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
   }) => {
     const content = (
       <button
+        type="button"
         onClick={onClick}
         className={cn(
           'relative w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
@@ -64,6 +65,7 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
           isCollapsed && 'justify-center px-0'
         )}
         aria-current={active ? "page" : undefined}
+        aria-pressed={!!active}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         {!isCollapsed && (
@@ -103,12 +105,13 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
   };
 
   return (
-    <nav className={cn(
+    <nav role="navigation" className={cn(
       'nav-rail transition-all duration-300',
       isCollapsed ? 'w-16' : 'w-60'
     )}>
       {/* Toggle Button */}
       <button
+        type="button"
         onClick={onToggleCollapse}
         className={cn(
           'w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-6 transition-all duration-200',
@@ -123,6 +126,7 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
 
       {/* Logo/Brand Area - Clickable to go to Payable */}
       <button
+        type="button"
         onClick={() => onViewStateChange('payable')}
         className="mb-8 px-4 w-full hover:opacity-80 transition-opacity"
         aria-label="Go to Payable Invoices"
