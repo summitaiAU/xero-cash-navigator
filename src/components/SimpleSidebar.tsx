@@ -1,4 +1,5 @@
 import React from "react";
+import { createPortal } from "react-dom";
 import { FileText, CheckCircle, Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -61,33 +62,44 @@ export function SimpleSidebar({
     </button>
   );
 
-  return (
+  return createPortal(
     <aside
       role="navigation"
       aria-label="Invoice categories"
-      className="fixed left-0 top-0 bottom-0 w-48 border-r bg-background p-3 space-y-2 z-40 pointer-events-auto"
+      className="hidden lg:block fixed left-0 top-0 bottom-0 w-48 border-r bg-background p-3 space-y-2 z-[9999] isolate pointer-events-auto"
     >
       <Btn
         icon={FileText}
         label="Payable"
         count={payableCount}
         active={viewState === "payable"}
-        onClick={() => onViewStateChange("payable")}
+        onClick={() => {
+          console.log("[Sidebar] click: payable");
+          onViewStateChange("payable");
+        }}
       />
       <Btn
         icon={CheckCircle}
         label="Paid"
         count={paidCount}
         active={viewState === "paid"}
-        onClick={() => onViewStateChange("paid")}
+        onClick={() => {
+          console.log("[Sidebar] click: paid");
+          onViewStateChange("paid");
+        }}
       />
       <Btn
         icon={Flag}
         label="Flagged"
         count={flaggedCount}
         active={viewState === "flagged"}
-        onClick={() => onViewStateChange("flagged")}
+        onClick={() => {
+          console.log("[Sidebar] click: flagged");
+          onViewStateChange("flagged");
+        }}
       />
-    </aside>
+    </aside>,
+    document.body
   );
 }
+
