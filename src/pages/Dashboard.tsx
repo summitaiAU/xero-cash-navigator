@@ -610,6 +610,7 @@ export const Dashboard: React.FC = () => {
           <CompactCommandBar
             onRefresh={() => loadInvoices(true)}
             allInvoices={allInvoices}
+            visibleInvoices={invoices}
             onInvoiceSelect={handleInvoiceSelect}
             currentInvoice={currentInvoice || null}
             loading={loading}
@@ -663,7 +664,7 @@ export const Dashboard: React.FC = () => {
                       loading={isXeroLoading}
                     />
 
-                    {isCompleted ? (
+                    {viewState === "paid" ? (
                       <PaidInvoiceSection
                         invoice={currentInvoice}
                         onReprocess={handleReprocessPayment}
@@ -815,7 +816,7 @@ export const Dashboard: React.FC = () => {
                 loading={isXeroLoading}
               />
 
-              {isCompleted ? (
+              {viewState === "paid" ? (
                 <PaidInvoiceSection
                   invoice={currentInvoice}
                   onReprocess={handleReprocessPayment}

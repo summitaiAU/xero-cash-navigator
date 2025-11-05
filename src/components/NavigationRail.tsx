@@ -59,10 +59,11 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
         className={cn(
           'relative w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
           active 
-            ? 'bg-nav-rail-active text-white' 
+            ? 'bg-primary text-primary-foreground shadow-[0_0_16px_rgba(139,92,246,0.35)]' 
             : 'text-nav-rail-foreground hover:bg-nav-rail-foreground/10',
           isCollapsed && 'justify-center px-0'
         )}
+        aria-current={active ? "page" : undefined}
       >
         <Icon className="h-5 w-5 flex-shrink-0" />
         {!isCollapsed && (

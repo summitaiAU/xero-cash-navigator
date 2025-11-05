@@ -16,6 +16,7 @@ import {
 interface CompactCommandBarProps {
   onRefresh: () => void;
   allInvoices: Invoice[];
+  visibleInvoices: Invoice[];
   onInvoiceSelect: (invoice: Invoice) => void;
   currentInvoice: Invoice | null;
   onAddInvoice?: () => void;
@@ -32,6 +33,7 @@ interface CompactCommandBarProps {
 export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
   onRefresh,
   allInvoices,
+  visibleInvoices,
   onInvoiceSelect,
   currentInvoice,
   loading,
@@ -165,7 +167,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
           <div className="flex items-center gap-2">
             {/* Invoice Dropdown */}
             <InvoiceDropdown
-              invoices={filteredInvoices}
+              invoices={visibleInvoices}
               currentInvoice={currentInvoice}
               onInvoiceSelect={onInvoiceSelect}
             />
