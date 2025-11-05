@@ -527,7 +527,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               variant="outline"
               onClick={sendRemittanceNow}
               disabled={sendingRemittance || !email || !imageData}
-              className="w-full border-primary/30 hover:bg-primary/5 hover:border-primary/50"
+              className="w-full"
             >
               <Send className="h-4 w-4 mr-2" />
               {sendingRemittance ? 'Sending...' : 'Send Remittance Now'}
@@ -597,7 +597,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                       });
                     }
                   }}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
                 >
                   <Undo className="h-4 w-4 mr-1" />
                   Undo
@@ -620,7 +620,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                   variant="outline"
                   size="sm"
                   onClick={handleUnmarkPartialPayment}
-                  className="border-destructive/30 text-destructive hover:bg-destructive/10"
+                  className="border-destructive text-destructive hover:bg-destructive/10"
                 >
                   <Undo className="h-4 w-4 mr-1" />
                   Undo
@@ -658,7 +658,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={handleMarkAsPaidOnly}
               disabled={loading}
-              className="w-full font-medium border-2 border-primary/30 hover:bg-primary/5 hover:border-primary/50"
+              className="w-full"
             >
               <Check className="h-4 w-4 mr-2" />
               Mark as Fully Paid
@@ -669,7 +669,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={() => setShowPartialPaymentModal(true)}
               disabled={loading}
-              className="w-full font-medium border-2 border-warning/30 text-warning hover:bg-warning/10 hover:border-warning/50"
+              className="w-full"
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Mark as Partially Paid
@@ -679,7 +679,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               variant="ghost"
               onClick={onSkip}
               disabled={loading}
-              className="w-full text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              className="w-full"
             >
               Skip to Next Invoice
             </Button>

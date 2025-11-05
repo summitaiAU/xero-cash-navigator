@@ -10,6 +10,7 @@ import { AddInvoiceButton } from "@/components/AddInvoiceButton";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 import { ConflictWarning } from "@/components/ConflictWarning";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
+import { NavigationRail } from "@/components/NavigationRail";
 import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
 import {
   fetchInvoices,
@@ -41,6 +42,7 @@ export const Dashboard: React.FC = () => {
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">("payable");
+  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -564,27 +566,36 @@ export const Dashboard: React.FC = () => {
   return (
     <>
       {/* Desktop Layout */}
-      <div className="hidden lg:block h-screen bg-dashboard-bg overflow-hidden">
+      <div className="hidden lg:block h-screen bg-console-bg overflow-hidden">
+        {/* Navigation Rail */}
+        <NavigationRail
+          viewState={viewState}
+          onViewStateChange={handleViewStateChange}
+          onSignOut={handleSignOut}
+          userName={user?.email}
+          isCollapsed={isNavCollapsed}
+          onToggleCollapse={() => setIsNavCollapsed(!isNavCollapsed)}
+        />
+
         {/* Fixed Header */}
-        <div ref={headerRef} className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-30">
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-4 lg:py-5 flex justify-between items-center">
+        <div 
+          ref={headerRef} 
+          className="fixed top-0 bg-white border-b border-gray-200 z-30 transition-all duration-300"
+          style={{ 
+            left: isNavCollapsed ? '80px' : '256px',
+            right: 0
+          }}
+        >
+          <div className="px-4 lg:px-6 py-4 lg:py-5 flex justify-between items-center">
             <div className="flex items-center gap-4">
               <img src={SodhiLogo} alt="Sodhi Logo" className="h-10 w-auto" />
               <div className="border-l border-gray-300 pl-4">
-                <h1 className="text-xl lg:text-2xl font-semibold text-amber-600 tracking-tight">Payment Dashboard</h1>
-                <p className="text-sm text-gray-600 mt-0.5">Streamline your payment workflow</p>
+                <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Invoice Console</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">Payment Management</p>
               </div>
             </div>
             <div className="flex items-center gap-2 lg:gap-4">
               <AddInvoiceButton onSuccess={loadInvoices} />
-              <div className="hidden sm:flex items-center gap-2 text-xs lg:text-sm text-gray-600">
-                <User className="h-3 w-3 lg:h-4 lg:w-4" />
-                <span className="truncate max-w-[120px] lg:max-w-none">{user?.email}</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-3 w-3 lg:h-4 lg:w-4 mr-1 lg:mr-2" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
             </div>
           </div>
         </div>
@@ -592,10 +603,14 @@ export const Dashboard: React.FC = () => {
         {/* Fixed Navigation Bar */}
         <div
           ref={navRef}
-          className="fixed left-0 right-0 bg-dashboard-bg z-20 pt-4"
-          style={{ top: desktopOffset.header }}
+          className="fixed bg-console-bg z-20 pt-4 transition-all duration-300"
+          style={{ 
+            top: desktopOffset.header,
+            left: isNavCollapsed ? '80px' : '256px',
+            right: 0
+          }}
         >
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 py-3">
+          <div className="px-4 lg:px-6 py-3">
             <InvoiceNavigation
               currentIndex={currentIndex}
               totalInvoices={invoices.length}
@@ -614,8 +629,15 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Fixed Layout Container - Increased top spacing */}
-        <div className="fixed left-0 right-0 bottom-0" style={{ top: desktopOffset.total }}>
-          <div className="max-w-screen-2xl mx-auto px-4 lg:px-6 h-full flex gap-6">
+        <div 
+          className="fixed bottom-0 transition-all duration-300" 
+          style={{ 
+            top: desktopOffset.total,
+            left: isNavCollapsed ? '80px' : '256px',
+            right: 0
+          }}
+        >
+          <div className="px-4 lg:px-6 h-full flex gap-6">
             {hasNoInvoices ? (
               /* No Invoices State */
               <div className="w-full h-full flex items-center justify-center">
