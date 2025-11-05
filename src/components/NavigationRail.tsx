@@ -157,7 +157,6 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
           label="Paid Invoices"
           active={viewState === 'paid'}
           onClick={() => onViewStateChange('paid')}
-          badge={paidCount}
         />
         <NavItem
           icon={Flag}
