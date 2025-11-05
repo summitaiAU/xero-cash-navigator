@@ -8,29 +8,29 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Microsoft-inspired corporate palette */
-    --background: 0 0% 100%;
-    --foreground: 210 11% 15%;
+    /* Modern calming palette with purple accents */
+    --background: 220 15% 97%;
+    --foreground: 220 15% 15%;
     
     --card: 0 0% 100%;
-    --card-foreground: 210 11% 15%;
+    --card-foreground: 220 15% 15%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 210 11% 15%;
+    --popover-foreground: 220 15% 15%;
     
-    --primary: 211 100% 50%;
+    --primary: 262 52% 47%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 210 17% 95%;
-    --secondary-foreground: 210 11% 15%;
+    --secondary: 262 20% 96%;
+    --secondary-foreground: 262 52% 25%;
     
-    --muted: 210 17% 95%;
-    --muted-foreground: 210 11% 46%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 50%;
     
-    --accent: 211 100% 50%;
+    --accent: 262 52% 47%;
     --accent-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     
     --success: 142 71% 45%;
@@ -39,29 +39,46 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 211 100% 50%;
+    --info: 211 96% 48%;
+    --info-foreground: 0 0% 100%;
     
-    --radius: 0.375rem;
+    --border: 220 15% 88%;
+    --input: 220 15% 90%;
+    --ring: 262 52% 47%;
     
-    /* Gradients - Microsoft inspired */
-    --gradient-primary: linear-gradient(135deg, hsl(211, 100%, 50%), hsl(211, 100%, 42%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(210, 17%, 98%));
+    --radius: 0.75rem;
+    --radius-lg: 1rem;
     
-    /* Shadows - Corporate and clean */
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.16);
+    /* Purple-themed gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 47%), hsl(262, 52%, 40%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 15%, 98%));
+    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 47%, 0.15), transparent 70%);
     
-    /* Transitions */
-    --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    /* Soft shadows for floating cards */
+    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06);
     
-    /* Dashboard specific */
-    --dashboard-bg: 210 17% 98%;
-    --pdf-bg: 0 0% 96%;
-    --section-border: 214 32% 91%;
+    /* Smooth transitions */
+    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* Navigation rail */
+    --nav-rail: 262 52% 18%;
+    --nav-rail-foreground: 262 20% 95%;
+    --nav-rail-hover: 262 52% 25%;
+    
+    /* Console workspace colors */
+    --console-bg: 220 15% 97%;
+    --pdf-bg: 220 15% 96%;
+    --section-border: 220 15% 88%;
+    
+    /* Status colors */
+    --status-paid: 142 71% 45%;
+    --status-review: 38 92% 50%;
+    --status-ready: 262 52% 47%;
+    --status-flagged: 0 72% 51%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -75,49 +92,58 @@ All colors MUST be HSL.
 
   .dark {
     --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --foreground: 220 15% 95%;
     
-    --card: 217 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 20% 15%;
+    --card-foreground: 220 15% 95%;
     
-    --popover: 217 33% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 20% 15%;
+    --popover-foreground: 220 15% 95%;
     
-    --primary: 211 100% 50%;
+    --primary: 262 52% 55%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 220 20% 18%;
+    --secondary-foreground: 220 15% 95%;
     
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 60%;
     
-    --accent: 211 100% 50%;
+    --accent: 262 52% 55%;
     --accent-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
     
-    --success: 142 71% 45%;
+    --success: 142 71% 50%;
     --success-foreground: 0 0% 100%;
     
-    --warning: 38 92% 50%;
+    --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
     
-    --border: 217 33% 23%;
-    --input: 217 33% 23%;
-    --ring: 211 100% 50%;
+    --info: 211 96% 55%;
+    --info-foreground: 0 0% 100%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(211, 100%, 50%), hsl(211, 100%, 42%));
-    --gradient-subtle: linear-gradient(180deg, hsl(222, 47%, 11%), hsl(217, 33%, 17%));
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 262 52% 55%;
     
-    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
-    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --shadow-large: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 55%), hsl(262, 52%, 48%));
+    --gradient-subtle: linear-gradient(180deg, hsl(222, 47%, 11%), hsl(220, 20%, 15%));
+    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 55%, 0.2), transparent 70%);
     
-    --dashboard-bg: 222 47% 11%;
-    --pdf-bg: 217 33% 17%;
-    --section-border: 217 33% 23%;
+    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.5);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.45);
+    
+    --nav-rail: 262 52% 15%;
+    --nav-rail-foreground: 262 20% 90%;
+    --nav-rail-hover: 262 52% 22%;
+    
+    --console-bg: 222 47% 11%;
+    --pdf-bg: 220 20% 15%;
+    --section-border: 220 20% 22%;
     
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -142,31 +168,39 @@ All colors MUST be HSL.
 
 @layer components {
   .dashboard-card {
-    @apply bg-card border border-border rounded-lg shadow-medium transition-smooth;
+    @apply bg-card border border-border rounded-[var(--radius-lg)] shadow-medium transition-smooth;
+  }
+  
+  .dashboard-card:hover {
+    box-shadow: var(--shadow-hover);
   }
 
   .section-header {
-    @apply text-xl font-semibold text-foreground mb-6 border-b border-border pb-3;
+    @apply text-lg font-semibold text-foreground mb-5 pb-2 border-b border-border/50;
   }
   
   .badge-success {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20;
   }
   
   .badge-warning {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20;
   }
   
   .badge-draft {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border;
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border;
+  }
+  
+  .badge-status {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
   }
   
   .upload-area {
-    @apply border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors;
+    @apply border-2 border-dashed border-primary/30 rounded-[var(--radius-lg)] p-8 text-center hover:border-primary/50 hover:bg-primary/5 transition-smooth cursor-pointer;
   }
   
   .upload-area.dragover {
-    @apply border-primary bg-primary/5;
+    @apply border-primary bg-primary/10;
   }
   
   .swipe-card {
@@ -174,15 +208,35 @@ All colors MUST be HSL.
   }
   
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary/20;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md focus:ring-2 focus:ring-primary/30 transition-smooth;
   }
   
   .btn-success {
-    @apply bg-success text-success-foreground hover:bg-success/90 focus:ring-2 focus:ring-success/20;
+    @apply bg-success text-success-foreground hover:bg-success/90 hover:shadow-md focus:ring-2 focus:ring-success/30 transition-smooth;
   }
   
   .btn-ghost-destructive {
-    @apply text-destructive hover:bg-destructive/10 focus:ring-2 focus:ring-destructive/20;
+    @apply text-destructive hover:bg-destructive/10 focus:ring-2 focus:ring-destructive/20 transition-smooth;
+  }
+  
+  .nav-rail {
+    @apply fixed left-0 top-0 h-screen bg-[hsl(var(--nav-rail))] text-[hsl(var(--nav-rail-foreground))] flex flex-col items-center py-6 shadow-large transition-smooth z-50;
+  }
+  
+  .nav-rail-item {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[hsl(var(--nav-rail-hover))] transition-smooth cursor-pointer relative;
+  }
+  
+  .nav-rail-item.active {
+    @apply bg-primary shadow-[0_0_20px_rgba(139,92,246,0.4)];
+  }
+  
+  .table-row-hover {
+    @apply hover:bg-muted/30 transition-smooth;
+  }
+  
+  .command-bar {
+    @apply flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-[var(--radius-lg)] shadow-soft;
   }
 }
 
