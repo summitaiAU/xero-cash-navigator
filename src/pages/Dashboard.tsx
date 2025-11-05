@@ -131,10 +131,15 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Load initial invoices on mount only
   useEffect(() => {
     loadInvoices();
-    loadAllInvoices(); // Load all invoices for search
-  }, [toast, viewState]);
+  }, []);
+
+  // Load all invoices for search on mount only
+  useEffect(() => {
+    loadAllInvoices();
+  }, []);
 
   // Load Xero data for current invoice when it changes
   useEffect(() => {
@@ -329,14 +334,8 @@ export const Dashboard: React.FC = () => {
       );
 
       // Refresh invoices to get updated data
-      const refreshedInvoices = await fetchInvoices(viewState);
-      setInvoices(refreshedInvoices);
-
-      // Find the current invoice in the refreshed list
-      const updatedCurrentIndex = refreshedInvoices.findIndex(inv => inv.id === currentInvoice.id);
-      if (updatedCurrentIndex !== -1) {
-        setCurrentIndex(updatedCurrentIndex);
-      }
+      await loadInvoices();
+      await loadAllInvoices(); // Refresh search data
 
       // Mark as completed
       setCompletedInvoices((prev) => new Set([...prev, currentInvoice.id]));
@@ -430,11 +429,19 @@ export const Dashboard: React.FC = () => {
   const handleViewStateChange = async (state: "payable" | "paid" | "flagged") => {
     if (state === viewState) return; // Already on this view
     
+    console.log('[VIEW] Switching to:', state);
     setLoading(true);
     setViewState(state);
     
+    toast({
+      title: `Switching to ${state}`,
+      description: 'Loading invoices...',
+      duration: 1200,
+    });
+    
     try {
       const fetchedInvoices = await fetchInvoices(state);
+      console.log(`[VIEW] Loaded ${fetchedInvoices.length} invoices for ${state}`);
       setInvoices(fetchedInvoices);
       setCurrentIndex(0);
       setCompletedInvoices(new Set());
@@ -454,8 +461,8 @@ export const Dashboard: React.FC = () => {
   const handleFlagInvoice = async (invoiceId: string) => {
     try {
       // Reload invoices to reflect the flagged status
-      const fetchedInvoices = await fetchInvoices(viewState);
-      setInvoices(fetchedInvoices);
+      await loadInvoices();
+      await loadAllInvoices(); // Refresh search data
 
       toast({
         title: "Invoice Flagged",
@@ -469,8 +476,11 @@ export const Dashboard: React.FC = () => {
   const handleResolveFlag = async () => {
     try {
       // Reload invoices to reflect the resolved status
-      const fetchedInvoices = await fetchInvoices(viewState);
-      setInvoices(fetchedInvoices);
+      await loadInvoices();
+      await loadAllInvoices(); // Refresh search data
+      
+      // Get the refreshed list to check length
+      const fetchedInvoices = invoices;
 
       // If this was the last invoice in flagged view, handle navigation
       if (fetchedInvoices.length === 0 && viewState === "flagged") {
@@ -503,14 +513,18 @@ export const Dashboard: React.FC = () => {
       targetView = "payable";
     }
 
+    console.log('[SEARCH] Selected invoice:', selectedInvoice.invoice_number, 'Target view:', targetView);
+
     // If we need to switch views, fetch and navigate
     if (targetView !== viewState) {
+      console.log('[SEARCH] Switching from', viewState, 'to', targetView);
       setLoading(true);
       setViewState(targetView);
       
       try {
         // Fetch invoices for the new view
         const newViewInvoices = await fetchInvoices(targetView);
+        console.log(`[SEARCH] Loaded ${newViewInvoices.length} invoices for ${targetView}`);
         setInvoices(newViewInvoices);
 
         // Find the invoice in the new view
@@ -534,6 +548,7 @@ export const Dashboard: React.FC = () => {
       }
     } else {
       // Same view, just navigate to the invoice
+      console.log('[SEARCH] Same view, jumping to invoice');
       const invoiceIndex = invoices.findIndex((inv) => inv.id === selectedInvoice.id);
       if (invoiceIndex !== -1) {
         setCurrentIndex(invoiceIndex);
@@ -718,9 +733,10 @@ export const Dashboard: React.FC = () => {
                     {viewState === "payable" && currentInvoice && (
                       <DeleteInvoiceButton
                         invoice={currentInvoice}
-                        onDeleted={() => {
+                        onDeleted={async () => {
                           // Reload invoices after deletion
-                          setInvoices((prev) => prev.filter((inv) => inv.id !== currentInvoice.id));
+                          await loadInvoices();
+                          await loadAllInvoices(); // Refresh search data
                           // If this was the last invoice or we're at the end, go to previous
                           if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
                             setCurrentIndex(currentIndex - 1);
@@ -866,9 +882,10 @@ export const Dashboard: React.FC = () => {
               {viewState === "payable" && currentInvoice && (
                 <DeleteInvoiceButton
                   invoice={currentInvoice}
-                  onDeleted={() => {
+                  onDeleted={async () => {
                     // Reload invoices after deletion
-                    setInvoices((prev) => prev.filter((inv) => inv.id !== currentInvoice.id));
+                    await loadInvoices();
+                    await loadAllInvoices(); // Refresh search data
                     // If this was the last invoice or we're at the end, go to previous
                     if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
                       setCurrentIndex(currentIndex - 1);
