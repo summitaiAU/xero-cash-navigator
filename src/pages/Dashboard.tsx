@@ -612,7 +612,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Main Content Area */}
         <div 
-          className="fixed top-0 bottom-0 flex flex-col"
+          className="fixed top-0 bottom-0 flex flex-col z-0"
           style={{ 
             left: '192px',
             right: 0
@@ -633,6 +633,9 @@ export const Dashboard: React.FC = () => {
             canGoBack={currentIndex > 0}
             canGoNext={currentIndex < invoices.length - 1}
           />
+          <div className="px-4 py-1 text-xs text-muted-foreground">
+            Showing: {viewState.charAt(0).toUpperCase() + viewState.slice(1)} • {invoices.length} invoices
+          </div>
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden">

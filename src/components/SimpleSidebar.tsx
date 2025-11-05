@@ -64,7 +64,8 @@ export function SimpleSidebar({
   return (
     <aside
       role="navigation"
-      className="fixed left-0 top-0 bottom-0 w-48 border-r bg-background p-3 space-y-2"
+      aria-label="Invoice categories"
+      className="fixed left-0 top-0 bottom-0 w-48 border-r bg-background p-3 space-y-2 z-40 pointer-events-auto"
     >
       <Btn
         icon={FileText}
