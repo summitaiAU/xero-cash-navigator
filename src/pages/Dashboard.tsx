@@ -611,6 +611,7 @@ export const Dashboard: React.FC = () => {
             onRefresh={() => loadInvoices(true)}
             allInvoices={allInvoices}
             onInvoiceSelect={handleInvoiceSelect}
+            currentInvoice={currentInvoice || null}
             loading={loading}
             currentIndex={currentIndex}
             totalCount={invoices.length}

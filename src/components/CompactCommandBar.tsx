@@ -1,10 +1,10 @@
-import React from 'react';
-import { RefreshCw, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { RefreshCw, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { AddInvoiceButton } from './AddInvoiceButton';
-import { InvoiceSearch } from './InvoiceSearch';
+import { InvoiceDropdown } from './InvoiceDropdown';
 import { Invoice } from '@/types/invoice';
 import {
   Tooltip,
@@ -17,6 +17,7 @@ interface CompactCommandBarProps {
   onRefresh: () => void;
   allInvoices: Invoice[];
   onInvoiceSelect: (invoice: Invoice) => void;
+  currentInvoice: Invoice | null;
   onAddInvoice?: () => void;
   loading?: boolean;
   // Navigation props
@@ -32,6 +33,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
   onRefresh,
   allInvoices,
   onInvoiceSelect,
+  currentInvoice,
   loading,
   currentIndex = 0,
   totalCount = 0,
@@ -40,13 +42,55 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
   canGoBack = false,
   canGoNext = false,
 }) => {
+  const [searchValue, setSearchValue] = useState('');
+  const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>(allInvoices);
+
+  // Filter invoices based on search value
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      setFilteredInvoices(allInvoices);
+      return;
+    }
+
+    const searchTerm = searchValue.toLowerCase().trim();
+    
+    const filtered = allInvoices.filter(invoice => {
+      if (invoice.status === 'DELETED') return false;
+
+      const invoiceNumber = invoice.invoice_number?.toLowerCase() || '';
+      const supplier = invoice.supplier?.toLowerCase() || '';
+      
+      const normalizeInvoiceNumber = (num: string) => {
+        return num.replace(/^inv/i, '');
+      };
+      
+      const normalizedInvoiceNumber = normalizeInvoiceNumber(invoiceNumber);
+      const normalizedSearchTerm = normalizeInvoiceNumber(searchTerm);
+      
+      const matchesInvoiceNumber = 
+        invoiceNumber.includes(searchTerm) ||
+        normalizedInvoiceNumber.includes(normalizedSearchTerm) ||
+        (`inv${normalizedInvoiceNumber}`).includes(searchTerm);
+      
+      const matchesSupplier = supplier.includes(searchTerm);
+      
+      return matchesInvoiceNumber || matchesSupplier;
+    });
+
+    setFilteredInvoices(filtered);
+  }, [searchValue, allInvoices]);
+
   return (
     <div className="sticky top-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 bg-card border-b border-border">
       {/* Search Field */}
-      <div className="flex-1 min-w-0">
-        <InvoiceSearch
-          invoices={allInvoices}
-          onInvoiceSelect={onInvoiceSelect}
+      <div className="flex-1 min-w-0 relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          placeholder="Search invoices…"
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          className="pl-10 h-9 bg-background"
         />
       </div>
 
@@ -84,6 +128,16 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
         {/* Navigation Controls */}
         {onPrevious && onNext && (
           <div className="flex items-center gap-2">
+            {/* Invoice Dropdown */}
+            <InvoiceDropdown
+              invoices={filteredInvoices}
+              currentInvoice={currentInvoice}
+              onInvoiceSelect={onInvoiceSelect}
+            />
+
+            {/* Divider */}
+            <div className="h-6 w-px bg-border" />
+
             {/* Previous Button */}
             <TooltipProvider delayDuration={300}>
               <Tooltip>
@@ -93,7 +147,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
                     size="sm"
                     onClick={onPrevious}
                     disabled={!canGoBack}
-                    className="hover:bg-muted"
+                    className="h-8 w-8 p-0 hover:bg-muted"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -118,7 +172,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
                     size="sm"
                     onClick={onNext}
                     disabled={!canGoNext}
-                    className="hover:bg-muted"
+                    className="h-8 w-8 p-0 hover:bg-muted"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>

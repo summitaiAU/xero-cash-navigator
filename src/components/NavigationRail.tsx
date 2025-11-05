@@ -52,31 +52,54 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
     active?: boolean; 
     onClick: () => void;
     badge?: number;
-  }) => (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            onClick={onClick}
-            className={cn(
-              'nav-rail-item',
-              active && 'active'
-            )}
-          >
-            <Icon className="h-5 w-5" />
+  }) => {
+    const content = (
+      <button
+        onClick={onClick}
+        className={cn(
+          'relative w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
+          active 
+            ? 'bg-nav-rail-active text-white' 
+            : 'text-nav-rail-foreground hover:bg-nav-rail-foreground/10',
+          isCollapsed && 'justify-center px-0'
+        )}
+      >
+        <Icon className="h-5 w-5 flex-shrink-0" />
+        {!isCollapsed && (
+          <>
+            <span className="flex-1 text-left text-sm font-medium">{label}</span>
             {badge !== undefined && badge > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-muted text-foreground text-[10px] font-bold flex items-center justify-center border border-border">
+              <span className="h-5 px-2 min-w-[20px] rounded-full bg-muted text-foreground text-[10px] font-bold flex items-center justify-center border border-border">
                 {badge > 99 ? '99+' : badge}
               </span>
             )}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="ml-2">
-          <p>{label}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
+          </>
+        )}
+        {isCollapsed && badge !== undefined && badge > 0 && (
+          <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-muted text-foreground text-[9px] font-bold flex items-center justify-center border border-border">
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
+      </button>
+    );
+
+    if (isCollapsed) {
+      return (
+        <TooltipProvider delayDuration={0}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {content}
+            </TooltipTrigger>
+            <TooltipContent side="right" className="ml-2">
+              <p>{label}{badge !== undefined && badge > 0 ? ` (${badge})` : ''}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
+    return content;
+  };
 
   return (
     <nav className={cn(
@@ -86,10 +109,15 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
       {/* Toggle Button */}
       <button
         onClick={onToggleCollapse}
-        className="nav-rail-item mb-4"
+        className={cn(
+          'w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-6 transition-all duration-200',
+          'text-nav-rail-foreground hover:bg-nav-rail-foreground/10',
+          isCollapsed && 'justify-center px-0'
+        )}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+        {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
       </button>
 
       {/* Logo/Brand Area - Clickable to go to Payable */}
@@ -142,12 +170,6 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
 
       {/* Bottom Section */}
       <div className="space-y-2 mt-auto border-t border-nav-rail-foreground/10 pt-4">
-        {userName && !isCollapsed && (
-          <div className="px-4 py-2 text-sm text-nav-rail-foreground/60">
-            {userName}
-          </div>
-        )}
-        
         <NavItem
           icon={User}
           label={userName || 'Profile'}
