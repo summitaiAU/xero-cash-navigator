@@ -260,71 +260,71 @@ export const AddInvoiceDrawer = ({
     if (!draftInvoice) return false;
 
     const errors: ValidationErrors = {};
+    const tolerance = 0.01;
 
     // Required fields
     if (!draftInvoice.supplier_name?.trim()) {
-      errors.supplier_name = "Supplier name is required";
+      errors.supplier_name = "Required";
     }
     if (!draftInvoice.entity?.trim()) {
-      errors.entity = "Entity is required";
+      errors.entity = "Required";
     }
     if (!draftInvoice.invoice_no?.trim()) {
-      errors.invoice_no = "Invoice number is required";
+      errors.invoice_no = "Required";
     }
     if (!draftInvoice.invoice_date) {
-      errors.invoice_date = "Invoice date is required";
+      errors.invoice_date = "Required";
     }
     if (!draftInvoice.currency?.trim()) {
-      errors.currency = "Currency is required";
+      errors.currency = "Required";
     }
 
-    // Number validations
-    if (
-      !isFinite(draftInvoice.subtotal) ||
-      isNaN(draftInvoice.subtotal) ||
-      draftInvoice.subtotal < 0
-    ) {
-      errors.subtotal = "Subtotal must be a valid positive number";
-    }
-    if (
-      !isFinite(draftInvoice.gst) ||
-      isNaN(draftInvoice.gst) ||
-      draftInvoice.gst < 0
-    ) {
-      errors.gst = "GST must be a valid positive number";
-    }
-    if (
-      !isFinite(draftInvoice.total_amount) ||
-      isNaN(draftInvoice.total_amount) ||
-      draftInvoice.total_amount < 0
-    ) {
-      errors.total_amount = "Total amount must be a valid positive number";
-    }
+    // Number validation helper
+    const checkNumber = (val: any, field: string, allowNegative = false) => {
+      const num = Number(val);
+      if (isNaN(num) || !isFinite(num)) {
+        errors[field] = "Must be a valid number";
+      } else if (num < 0 && !allowNegative) {
+        errors[field] = "Cannot be negative";
+      }
+    };
 
-    // Amount due check
-    const expectedAmountDue =
-      draftInvoice.total_amount - (draftInvoice.amount_paid || 0);
-    if (Math.abs(draftInvoice.amount_due - expectedAmountDue) > 0.01) {
-      errors.amount_due =
-        "Amount due must equal total amount minus amount paid";
+    checkNumber(draftInvoice.subtotal, "subtotal");
+    checkNumber(draftInvoice.gst, "gst");
+    checkNumber(draftInvoice.total_amount, "total_amount");
+
+    // Amount due consistency check (allow zero or negative for overpayments)
+    const totalAmount = Number(draftInvoice.total_amount) || 0;
+    const amountPaid = Number(draftInvoice.amount_paid) || 0;
+    const amountDue = Number(draftInvoice.amount_due) || 0;
+    const expectedAmountDue = totalAmount - amountPaid;
+
+    if (Math.abs(amountDue - expectedAmountDue) > tolerance) {
+      errors.amount_due = `Should be ${expectedAmountDue.toFixed(2)}`;
     }
 
     // Line items validation
-    draftInvoice.list_items.forEach((item, index) => {
+    draftInvoice.list_items.forEach((item, idx) => {
       if (!item.description?.trim()) {
-        errors[`line_${index}_description`] = "Description is required";
-      }
-      if (item.quantity < 0 || !isFinite(item.quantity)) {
-        errors[`line_${index}_quantity`] = "Quantity must be >= 0";
-      }
-      if (item.unit_price < 0 || !isFinite(item.unit_price)) {
-        errors[`line_${index}_unit_price`] = "Unit price must be >= 0";
+        errors[`line_${idx}_description`] = "Description required";
       }
 
-      // Check line totals consistency
-      const expectedTotal = item.line_total_ex_gst + item.line_gst;
-      if (Math.abs(item.line_total_inc_gst - expectedTotal) > 0.01) {
-        errors[`line_${index}_totals`] = "Line totals are inconsistent";
+      const qty = Number(item.quantity);
+      const price = Number(item.unit_price);
+      const exGst = Number(item.line_total_ex_gst);
+      const gst = Number(item.line_gst);
+      const incGst = Number(item.line_total_inc_gst);
+
+      if (isNaN(qty) || qty < 0) {
+        errors[`line_${idx}_quantity`] = "Must be >= 0";
+      }
+      if (isNaN(price) || price < 0) {
+        errors[`line_${idx}_unit_price`] = "Must be >= 0";
+      }
+
+      // Line totals consistency
+      if (Math.abs((exGst + gst) - incGst) > tolerance) {
+        errors[`line_${idx}_totals`] = "Line totals inconsistent";
       }
     });
 
@@ -336,16 +336,34 @@ export const AddInvoiceDrawer = ({
     const { data, error } = await supabase
       .from("invoices")
       .select("id")
-      .eq("invoice_no", invoiceNo)
+      .eq("invoice_no", invoiceNo.trim())
       .limit(1)
       .maybeSingle();
 
     if (error) {
       console.error("Duplicate check error:", error);
-      throw new Error("Failed to check for duplicate invoice");
+      toast({
+        title: "Error",
+        description: "Could not check for duplicates. Please try again.",
+        variant: "destructive",
+      });
+      throw error;
     }
 
-    return !!data;
+    if (data) {
+      setValidationErrors(prev => ({
+        ...prev,
+        invoice_no: "Invoice number already exists. Please choose a different invoice number."
+      }));
+      toast({
+        title: "Duplicate Invoice",
+        description: "This invoice number already exists.",
+        variant: "destructive",
+      });
+      return true;
+    }
+
+    return false;
   };
 
   const callWebhook = async (attachmentId: string): Promise<boolean> => {
@@ -371,11 +389,14 @@ export const AddInvoiceDrawer = ({
   const handleSave = async () => {
     if (!draftInvoice || !selectedAttachment) return;
 
-    // Validate
+    // Clear previous validation errors
+    setValidationErrors({});
+
+    // Validate form
     if (!validateForm()) {
       toast({
         title: "Validation Error",
-        description: "Please fix the errors before saving",
+        description: "Please fix the errors in the form before saving.",
         variant: "destructive",
       });
       return;
@@ -384,100 +405,108 @@ export const AddInvoiceDrawer = ({
     setSaving(true);
 
     try {
-      // Check for duplicate
+      // Step 1: Check duplicate
       const isDuplicate = await checkDuplicate(draftInvoice.invoice_no);
       if (isDuplicate) {
-        setValidationErrors({
-          invoice_no:
-            "Invoice number already exists. Please choose a different invoice number.",
-        });
-        toast({
-          title: "Duplicate Invoice",
-          description:
-            "This invoice number already exists. Please use a different number.",
-          variant: "destructive",
-        });
         setSaving(false);
         return;
       }
 
-      // Prepare insert payload
+      // Step 2: Prepare insert payload - map attachment_id to email_id
       const insertPayload = {
-        email_id: selectedAttachment.id, // Map attachment_id to email_id
-        supplier_name: draftInvoice.supplier_name,
-        entity: draftInvoice.entity,
-        project: draftInvoice.project || null,
-        invoice_no: draftInvoice.invoice_no,
-        invoice_date: draftInvoice.invoice_date,
+        email_id: selectedAttachment.id, // Map attachment_id to email_id column
+        supplier_name: draftInvoice.supplier_name?.trim(),
+        entity: draftInvoice.entity?.trim(),
+        project: draftInvoice.project?.trim() || null,
+        invoice_no: draftInvoice.invoice_no?.trim(),
+        invoice_date: draftInvoice.invoice_date, // Already in YYYY-MM-DD format
         due_date: draftInvoice.due_date || null,
-        currency: draftInvoice.currency,
-        subtotal: draftInvoice.subtotal,
-        gst: draftInvoice.gst,
-        total_amount: draftInvoice.total_amount,
-        amount_paid: draftInvoice.amount_paid || 0,
-        amount_due: draftInvoice.amount_due,
-        payment_ref: draftInvoice.payment_ref || null,
+        currency: draftInvoice.currency || "AUD",
+        subtotal: Number(draftInvoice.subtotal),
+        gst: Number(draftInvoice.gst),
+        total_amount: Number(draftInvoice.total_amount),
+        amount_paid: Number(draftInvoice.amount_paid) || 0,
+        amount_due: Number(draftInvoice.amount_due),
+        payment_ref: draftInvoice.payment_ref?.trim() || null,
         google_drive_link: draftInvoice.google_drive_link || null,
         sender_email: draftInvoice.sender_email || null,
         list_items: draftInvoice.list_items as any, // Cast to any for JSON compatibility
-        status: "READY",
       };
 
-      // Insert into database
-      const { data: insertedInvoice, error: insertError } = await supabase
+      // Step 3: Insert invoice
+      const { data, error } = await supabase
         .from("invoices")
         .insert([insertPayload])
         .select("id")
         .single();
 
-      if (insertError) {
-        console.error("Insert error:", insertError);
-        toast({
-          title: "Save Failed",
-          description: "Could not save invoice. Please try again.",
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
+      if (error) {
+        console.error("Insert error:", error);
+        throw new Error(error.message);
       }
 
-      // Success toast
+      const invoiceId = data.id;
+
       toast({
         title: "Invoice Saved",
         description: "Invoice has been saved successfully.",
       });
 
-      // Emit success event
-      onSaved?.(insertedInvoice.id);
+      onSaved?.(invoiceId);
 
-      // Call webhook
+      // Step 4: Call webhook
       const webhookSuccess = await callWebhook(selectedAttachment.id);
-      
+
       if (webhookSuccess) {
         toast({
           title: "Processing Started",
-          description: "Invoice processing has been initiated.",
+          description: "Processing started for this attachment.",
         });
         onWebhookResult?.(true);
       } else {
-        toast({
-          title: "Warning",
-          description:
-            "Invoice saved, but processing could not be started. Please contact support.",
+        const { dismiss } = toast({
+          title: "Processing Warning",
+          description: "Saved, but processing could not be started.",
           variant: "default",
+          action: (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                dismiss();
+                const retrySuccess = await callWebhook(selectedAttachment.id);
+                if (retrySuccess) {
+                  toast({
+                    title: "Success",
+                    description: "Processing started successfully.",
+                  });
+                  onWebhookResult?.(true);
+                } else {
+                  toast({
+                    title: "Failed",
+                    description: "Webhook retry failed.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Retry Webhook
+            </Button>
+          ),
         });
         onWebhookResult?.(false);
       }
 
-      // Close drawer after short delay
+      // Close drawer after a short delay
       setTimeout(() => {
         onClose();
       }, 1500);
+
     } catch (error: any) {
-      console.error("Save error:", error);
+      console.error("Save failed:", error);
       toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred",
+        title: "Could not save invoice",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
