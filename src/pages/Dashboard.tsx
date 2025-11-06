@@ -439,11 +439,11 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleViewStateChange = (state: "payable" | "paid" | "flagged") => {
+  const handleViewStateChange = React.useCallback((state: "payable" | "paid" | "flagged") => {
     if (state !== viewState) {
       setViewState(state);
     }
-  };
+  }, [viewState]);
 
   const handleFlagInvoice = async (invoiceId: string) => {
     try {
