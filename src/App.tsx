@@ -9,6 +9,8 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import "./App.css";
 
+import { AppLayout } from "./layouts/AppLayout";
+
 const Dashboard = lazy(() => import("./pages/Dashboard").then(module => ({ default: module.Dashboard })));
 const Review = lazy(() => import("./pages/Review"));
 const Index = lazy(() => import("./pages/Index"));
@@ -17,7 +19,6 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPasswordVerify = lazy(() => import("./pages/ResetPasswordVerify"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-const AppLayout = lazy(() => import("./layouts/AppLayout").then(module => ({ default: module.AppLayout })));
 
 // Create QueryClient outside component to prevent recreation on every render
 const queryClient = new QueryClient();
