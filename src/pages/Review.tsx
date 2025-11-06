@@ -126,7 +126,7 @@ export const Review: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-background flex">
+    <div className="min-h-screen w-full bg-[#F6F8FB] flex">
       {/* Sidebar Navigation */}
       <SimpleSidebar
         viewState={viewState}
@@ -140,65 +140,76 @@ export const Review: React.FC = () => {
         userName={user?.email}
       />
 
+      {/* Vertical Divider */}
+      <div 
+        className="fixed top-0 bottom-0 w-px bg-[#E5E7EB] z-30 transition-all duration-300"
+        style={{
+          left: sidebarCollapsed ? "64px" : "192px",
+        }}
+      />
+
       {/* Main Content Area */}
       <div
-        className="flex-1 flex flex-col transition-all duration-300"
+        className="flex-1 flex flex-col transition-all duration-300 p-6"
         style={{
           marginLeft: sidebarCollapsed ? "64px" : "192px",
         }}
       >
-        {/* Three-Column Layout */}
-        <div className="flex-1 overflow-hidden">
-          <div className="h-full flex transition-all duration-300">
-            {/* Email List (Left) - Fixed 360px */}
-            <ReviewEmailList
-              selectedEmailId={selectedEmailId}
-              onSelectEmail={handleSelectEmail}
-            />
+        {/* Framed Canvas Container */}
+        <div className="flex-1 bg-white rounded-[10px] shadow-[0_1px_2px_rgba(0,0,0,.06),0_8px_24px_rgba(0,0,0,.04)] p-4 overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
+          {/* Three-Column Layout */}
+          <div className="h-full overflow-hidden">
+            <div className="h-full flex gap-4">
+              {/* Email List (Left) - Fixed 360px */}
+              <div className="w-[360px] flex-shrink-0">
+                <ReviewEmailList
+                  selectedEmailId={selectedEmailId}
+                  onSelectEmail={handleSelectEmail}
+                />
+              </div>
 
-            {/* Conversation and Attachments (Right) */}
-            <div className="flex-1 flex">
-              <ResizablePanelGroup direction="horizontal" className="h-full">
+              {/* Vertical Divider */}
+              <div className="w-px bg-[#E5E7EB] flex-shrink-0" />
+
+              {/* Conversation and Attachments (Right) */}
+              <div className="flex-1 flex gap-4 min-w-0">
                 {/* Conversation (Middle) */}
-                <ResizablePanel defaultSize={70} minSize={50}>
-                  <div className="h-full">
-                    <EmailConversationView
-                      email={emailContent}
-                      loading={loadingContent}
-                    />
-                  </div>
-                </ResizablePanel>
+                <div className="flex-1 min-w-0">
+                  <EmailConversationView
+                    email={emailContent}
+                    loading={loadingContent}
+                  />
+                </div>
 
-                <ResizableHandle withHandle />
+                {/* Vertical Divider */}
+                <div className="w-px bg-[#E5E7EB] flex-shrink-0" />
 
                 {/* Attachments (Right) */}
-                <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-                  <div className="h-full flex flex-col border-l bg-card">
-                    <div className="px-4 py-3 border-b">
-                      <h2 className="text-sm font-semibold">Attachments</h2>
-                    </div>
-                    <div className="flex-1 overflow-hidden">
-                      <AttachmentsPanel 
-                        emailId={selectedEmailId} 
-                        onAttachmentClick={(attachment: EmailAttachment) => {
-                          setSelectedAttachmentId(attachment.id);
-                        }}
-                        onAddInvoice={(attachment: EmailAttachment) => {
-                          setInvoiceAttachment(attachment);
-                          setInvoiceDrawerOpen(true);
-                        }}
-                      />
-                    </div>
+                <div className="w-[320px] flex-shrink-0 flex flex-col">
+                  <div className="px-4 py-3 border-b border-[#E5E7EB]">
+                    <h2 className="text-sm font-semibold text-[#0F172A]">Attachments</h2>
                   </div>
-                </ResizablePanel>
-              </ResizablePanelGroup>
+                  <div className="flex-1 overflow-hidden">
+                    <AttachmentsPanel 
+                      emailId={selectedEmailId} 
+                      onAttachmentClick={(attachment: EmailAttachment) => {
+                        setSelectedAttachmentId(attachment.id);
+                      }}
+                      onAddInvoice={(attachment: EmailAttachment) => {
+                        setInvoiceAttachment(attachment);
+                        setInvoiceDrawerOpen(true);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Attachment Viewer Modal */}
-          <AttachmentViewer
+      <AttachmentViewer
             attachmentId={selectedAttachmentId}
             onClose={() => setSelectedAttachmentId(null)}
             onAddInvoice={(attachment) => {

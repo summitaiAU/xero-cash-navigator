@@ -274,7 +274,16 @@ All colors MUST be HSL.
   }
   
   .review-prose {
-    @apply max-w-[700px] mx-auto bg-card rounded-[10px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.06)];
+    font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    color: #0F172A;
+    word-break: break-word;
+  }
+  
+  .review-prose p {
+    white-space: pre-wrap;
+    margin: 0.75em 0;
+    color: #0F172A;
   }
   
   .review-prose pre {
@@ -282,15 +291,33 @@ All colors MUST be HSL.
   }
   
   .review-prose blockquote {
-    @apply border-l-[3px] border-slate-300 pl-4 text-slate-600;
+    border-left: 3px solid #E5E7EB;
+    padding-left: 1em;
+    color: #6B7280;
+    margin: 1em 0;
+    font-style: italic;
   }
   
   .review-prose a {
-    @apply text-blue-600 no-underline hover:underline;
+    color: #2563EB;
+    text-decoration: none;
+    transition: text-decoration 0.2s;
+  }
+  
+  .review-prose a:hover {
+    text-decoration: underline;
   }
   
   .review-prose img {
-    @apply max-w-full rounded-lg border border-border;
+    max-width: 100%;
+    border-radius: 8px;
+    border: 1px solid #E6E8EE;
+    margin: 0.5em 0;
+  }
+  
+  .review-prose .metadata {
+    color: #6B7280;
+    font-size: 0.875rem;
   }
   
   .status-dot {

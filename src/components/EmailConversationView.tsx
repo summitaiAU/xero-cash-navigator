@@ -157,24 +157,28 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
             )}
 
             {/* Email Body Content */}
-            <div className="prose prose-sm max-w-none [&_*]:break-words">
-              {email.body_html_safe ? (
-                <div
-                  dangerouslySetInnerHTML={{ __html: email.body_html_safe }}
-                  className="[&_*]:text-foreground [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-border [&_table]:border-collapse [&_table]:w-full [&_a]:text-blue-600 [&_a]:no-underline hover:[&_a]:underline [&_blockquote]:border-l-[3px] [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600"
-                />
-              ) : email.body_text_fallback ? (
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: email.body_text_fallback.replace(/\n/g, "<br>"),
-                  }}
-                  className="whitespace-pre-wrap break-words"
-                />
-              ) : (
-                <p className="text-muted-foreground italic text-sm">
-                  No message body found for this email.
-                </p>
-              )}
+            <div className="flex justify-center py-8">
+              <div className="w-full max-w-[700px]">
+                <div className="prose prose-sm max-w-none [&_*]:break-words review-prose bg-white rounded-[10px] p-6 shadow-[0_1px_2px_rgba(0,0,0,.06)]">
+                  {email.body_html_safe ? (
+                    <div
+                      dangerouslySetInnerHTML={{ __html: email.body_html_safe }}
+                      className="[&_*]:text-[#0F172A] [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-[#E6E8EE] [&_table]:border-collapse [&_table]:w-full [&_a]:text-[#2563EB] [&_a]:no-underline hover:[&_a]:underline [&_blockquote]:border-l-[3px] [&_blockquote]:border-[#E5E7EB] [&_blockquote]:pl-4 [&_blockquote]:text-[#6B7280] [&_blockquote]:italic"
+                    />
+                  ) : email.body_text_fallback ? (
+                    <div
+                      dangerouslySetInnerHTML={{
+                        __html: email.body_text_fallback.replace(/\n/g, "<br>"),
+                      }}
+                      className="whitespace-pre-wrap break-words"
+                    />
+                  ) : (
+                    <p className="text-[#6B7280] italic text-sm">
+                      No message body found for this email.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
