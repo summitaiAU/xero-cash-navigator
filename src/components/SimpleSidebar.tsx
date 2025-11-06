@@ -1,5 +1,5 @@
 import React from "react";
-import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight, Mail } from "lucide-react";
+import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight, Mail, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import SodhiLogo from "@/assets/sodhi-logo.svg";
@@ -20,6 +20,8 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   flaggedCount = 0,
   isCollapsed = false,
   onToggleCollapse,
+  onSignOut,
+  userName,
 }: {
   viewState: View;
   onViewStateChange: (v: View) => void;
@@ -28,6 +30,8 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   flaggedCount?: number;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onSignOut?: () => void;
+  userName?: string;
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -110,7 +114,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
         role="navigation"
         aria-label="Invoice categories"
         className={cn(
-          "hidden lg:block fixed left-0 top-0 bottom-0 border-r bg-background p-3 space-y-2 z-40 transition-all duration-300",
+          "hidden lg:block fixed left-0 top-0 bottom-0 border-r bg-background p-3 flex flex-col z-40 transition-all duration-300",
           isCollapsed ? "w-16" : "w-48"
         )}
       >
@@ -146,48 +150,74 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
         </div>
 
         {/* Navigation Buttons */}
-        <Btn
-          icon={FileText}
-          label="Payable"
-          count={payableCount}
-          active={viewState === "payable"}
-          onClick={() => onViewStateChange("payable")}
-        />
-        <Btn
-          icon={CheckCircle}
-          label="Paid"
-          count={paidCount}
-          active={viewState === "paid"}
-          onClick={() => onViewStateChange("paid")}
-        />
-        <Btn
-          icon={Flag}
-          label="Flagged"
-          count={flaggedCount}
-          active={viewState === "flagged"}
-          onClick={() => onViewStateChange("flagged")}
-        />
+        <div className="flex-1 space-y-2">
+          <Btn
+            icon={FileText}
+            label="Payable"
+            count={payableCount}
+            active={viewState === "payable"}
+            onClick={() => onViewStateChange("payable")}
+          />
+          <Btn
+            icon={CheckCircle}
+            label="Paid"
+            count={paidCount}
+            active={viewState === "paid"}
+            onClick={() => onViewStateChange("paid")}
+          />
+          <Btn
+            icon={Flag}
+            label="Flagged"
+            count={flaggedCount}
+            active={viewState === "flagged"}
+            onClick={() => onViewStateChange("flagged")}
+          />
 
-        {/* Review Page Link */}
-        <div className="pt-4 mt-4 border-t border-border">
-          <button
-            type="button"
-            onClick={() => navigate("/review")}
-            aria-current={location.pathname === "/review" ? "page" : undefined}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300",
-              location.pathname === "/review"
-                ? "bg-primary text-primary-foreground"
-                : "hover:bg-muted text-foreground",
-              isCollapsed ? "justify-center" : "justify-start"
-            )}
-          >
-            <div className={cn("flex items-center gap-3")}>
-              <Mail className="h-4 w-4 flex-shrink-0" />
-              {!isCollapsed && <span>Review</span>}
-            </div>
-          </button>
+          {/* Review Page Link */}
+          <div className="pt-4 mt-4 border-t border-border">
+            <button
+              type="button"
+              onClick={() => navigate("/review")}
+              aria-current={location.pathname === "/review" ? "page" : undefined}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300",
+                location.pathname === "/review"
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-muted text-foreground",
+                isCollapsed ? "justify-center" : "justify-start"
+              )}
+            >
+              <div className={cn("flex items-center gap-3")}>
+                <Mail className="h-4 w-4 flex-shrink-0" />
+                {!isCollapsed && <span>Review</span>}
+              </div>
+            </button>
+          </div>
         </div>
+
+        {/* Bottom Section - User & Sign Out */}
+        {(userName || onSignOut) && (
+          <div className="space-y-2 mt-auto border-t border-border pt-3">
+            {userName && (
+              <Btn
+                icon={User}
+                label={userName}
+                count={0}
+                active={false}
+                onClick={() => {}}
+              />
+            )}
+            {onSignOut && (
+              <Btn
+                icon={LogOut}
+                label="Sign Out"
+                count={0}
+                active={false}
+                onClick={onSignOut}
+              />
+            )}
+          </div>
+        )}
       </aside>
     </TooltipProvider>
   );

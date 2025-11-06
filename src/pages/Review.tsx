@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
-import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import SodhiLogo from "@/assets/sodhi-logo.svg";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -139,6 +136,8 @@ export const Review: React.FC = () => {
         flaggedCount={0}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
+        onSignOut={handleSignOut}
+        userName={user?.email}
       />
 
       {/* Main Content Area */}
@@ -148,28 +147,6 @@ export const Review: React.FC = () => {
           marginLeft: sidebarCollapsed ? "64px" : "192px",
         }}
       >
-        {/* Header */}
-        <header className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
-          <div className="flex items-center gap-4">
-            <img src={SodhiLogo} alt="Sodhi Logo" className="h-7" />
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <User className="h-3.5 w-3.5" />
-              <span>{user?.email}</span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSignOut}
-              className="gap-2 h-8"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign Out
-            </Button>
-          </div>
-        </header>
-
         {/* Three-Column Layout */}
         <div className="flex-1 overflow-hidden">
           <div className="h-full flex transition-all duration-300">
