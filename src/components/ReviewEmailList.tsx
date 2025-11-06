@@ -140,10 +140,10 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   if (loading) {
     return (
       <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
-        <div className="px-6 py-4 border-b bg-card">
+        <div className="px-4 py-3 border-b bg-card">
           <h2 className="text-lg font-semibold">Emails</h2>
         </div>
-        <div className="flex-1 px-6 py-4 space-y-3">
+        <div className="flex-1 py-4 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="review-email-row">
               <div className="flex gap-3">
@@ -164,7 +164,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   return (
     <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
       {/* Header with count */}
-      <div className="px-6 py-4 border-b bg-card space-y-3">
+      <div className="px-4 py-3 border-b bg-card space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             Emails 
@@ -210,7 +210,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
       {/* Email List */}
       <ScrollArea className="flex-1" onScrollCapture={handleScroll} ref={scrollRef}>
         {error && (
-          <Alert variant="destructive" className="mx-6 mt-4">
+          <Alert variant="destructive" className="mx-4 mt-4">
             <AlertDescription className="flex items-center justify-between">
               <span className="text-sm">Unable to load emails</span>
               <Button variant="outline" size="sm" onClick={() => fetchEmails(0, false)}>
@@ -221,7 +221,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         )}
 
         {emails.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <Mail className="h-12 w-12 mb-3 opacity-20 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-2">
               {searchQuery ? "No emails match your search" : "Nothing to review"}

@@ -114,7 +114,7 @@ export const Review: React.FC = () => {
 
         {/* Attachments (Right) */}
         <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
-          <div className="px-4 py-3 border-b border-border">
+          <div className="py-3 px-3 border-b border-border">
             <h2 className="text-sm font-semibold">Attachments</h2>
           </div>
           <div className="flex-1 overflow-hidden">

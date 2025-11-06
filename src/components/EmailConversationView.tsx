@@ -39,13 +39,13 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="px-6 py-4 border-b bg-card">
+        <div className="px-4 py-3 border-b bg-card">
           <div className="mb-2">
             <Skeleton className="h-3 w-20 mb-1" />
             <Skeleton className="h-6 w-3/4" />
           </div>
         </div>
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4">
           <div className="review-prose">
             <div className="space-y-2 pb-4 border-b mb-4">
               <Skeleton className="h-4 w-2/3" />
@@ -66,11 +66,11 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   if (!email) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="px-6 py-4 border-b bg-card">
+        <div className="px-4 py-3 border-b bg-card">
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Review</p>
           <h2 className="text-lg font-semibold">Email Conversation</h2>
         </div>
-        <div className="flex-1 flex items-center justify-center text-center px-6">
+        <div className="flex-1 flex items-center justify-center text-center px-4">
           <div>
             <p className="text-sm text-muted-foreground mb-2">Select an email to view its content</p>
           </div>
@@ -82,7 +82,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Compact Header */}
-      <div className="px-6 py-3 border-b bg-card">
+      <div className="px-4 py-3 border-b bg-card">
         <div className="flex items-start justify-between gap-4 mb-1">
           <h2 className="text-lg font-bold text-foreground line-clamp-1 flex-1">
             {email.subject || "(No Subject)"}
@@ -119,7 +119,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
 
       {/* Email Body */}
       <ScrollArea className="flex-1">
-        <div className="p-6">
+        <div className="p-4">
           <div className="review-prose">
             {/* Additional Metadata (Collapsible) */}
             {(email.reply_to || (email.headers_slim && Object.keys(email.headers_slim).length > 0)) && (
