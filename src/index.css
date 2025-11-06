@@ -18,16 +18,16 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 15%;
     
-    --primary: 262 52% 47%;
+    --primary: 25 85% 50%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 262 20% 96%;
-    --secondary-foreground: 262 52% 25%;
+    --secondary: 25 20% 96%;
+    --secondary-foreground: 25 85% 25%;
     
     --muted: 220 15% 95%;
     --muted-foreground: 220 10% 50%;
     
-    --accent: 262 52% 47%;
+    --accent: 25 85% 50%;
     --accent-foreground: 0 0% 100%;
     
     --destructive: 0 72% 51%;
@@ -44,15 +44,15 @@ All colors MUST be HSL.
     
     --border: 220 15% 88%;
     --input: 220 15% 90%;
-    --ring: 262 52% 47%;
+    --ring: 25 85% 50%;
     
     --radius: 0.75rem;
     --radius-lg: 1rem;
     
-    /* Purple-themed gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 47%), hsl(262, 52%, 40%));
+    /* Orange-themed gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(25, 85%, 50%), hsl(25, 85%, 40%));
     --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 15%, 98%));
-    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 47%, 0.15), transparent 70%);
+    --gradient-orange-glow: radial-gradient(circle at center, hsl(25, 85%, 50%, 0.15), transparent 70%);
     
     /* Soft shadows for floating cards */
     --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
@@ -65,9 +65,9 @@ All colors MUST be HSL.
     --transition-bounce: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
     /* Navigation rail */
-    --nav-rail: 262 52% 18%;
-    --nav-rail-foreground: 262 20% 95%;
-    --nav-rail-hover: 262 52% 25%;
+    --nav-rail: 25 85% 35%;
+    --nav-rail-foreground: 25 20% 95%;
+    --nav-rail-hover: 25 85% 45%;
     
     /* Console workspace colors */
     --console-bg: 220 15% 97%;
@@ -77,7 +77,7 @@ All colors MUST be HSL.
     /* Status colors */
     --status-paid: 142 71% 45%;
     --status-review: 38 92% 50%;
-    --status-ready: 262 52% 47%;
+    --status-ready: 25 85% 50%;
     --status-flagged: 0 72% 51%;
 
     --sidebar-background: 0 0% 98%;
@@ -100,7 +100,7 @@ All colors MUST be HSL.
     --popover: 220 20% 15%;
     --popover-foreground: 220 15% 95%;
     
-    --primary: 262 52% 55%;
+    --primary: 25 85% 55%;
     --primary-foreground: 0 0% 100%;
     
     --secondary: 220 20% 18%;
@@ -109,7 +109,7 @@ All colors MUST be HSL.
     --muted: 220 20% 18%;
     --muted-foreground: 220 10% 60%;
     
-    --accent: 262 52% 55%;
+    --accent: 25 85% 55%;
     --accent-foreground: 0 0% 100%;
     
     --destructive: 0 72% 55%;
@@ -126,20 +126,20 @@ All colors MUST be HSL.
     
     --border: 220 20% 22%;
     --input: 220 20% 22%;
-    --ring: 262 52% 55%;
+    --ring: 25 85% 55%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 55%), hsl(262, 52%, 48%));
+    --gradient-primary: linear-gradient(135deg, hsl(25, 85%, 55%), hsl(25, 85%, 48%));
     --gradient-subtle: linear-gradient(180deg, hsl(222, 47%, 11%), hsl(220, 20%, 15%));
-    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 55%, 0.2), transparent 70%);
+    --gradient-orange-glow: radial-gradient(circle at center, hsl(25, 85%, 55%, 0.2), transparent 70%);
     
     --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3);
     --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.5);
     --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.45);
     
-    --nav-rail: 262 52% 15%;
-    --nav-rail-foreground: 262 20% 90%;
-    --nav-rail-hover: 262 52% 22%;
+    --nav-rail: 25 85% 25%;
+    --nav-rail-foreground: 25 20% 90%;
+    --nav-rail-hover: 25 85% 35%;
     
     --console-bg: 222 47% 11%;
     --pdf-bg: 220 20% 15%;

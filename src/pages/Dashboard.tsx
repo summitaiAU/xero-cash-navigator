@@ -43,6 +43,10 @@ export const Dashboard: React.FC = () => {
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">("payable");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => 
+    localStorage.getItem('sidebar-collapsed') === 'true'
+  );
+  const [isViewLoading, setIsViewLoading] = useState(false);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -146,7 +150,7 @@ export const Dashboard: React.FC = () => {
 
   // Load invoices whenever viewState changes
   useEffect(() => {
-    loadInvoices();
+    loadInvoices().finally(() => setIsViewLoading(false));
   }, [viewState]);
 
   // Load all invoices for search on mount only
@@ -441,9 +445,19 @@ export const Dashboard: React.FC = () => {
 
   const handleViewStateChange = React.useCallback((state: "payable" | "paid" | "flagged") => {
     if (state !== viewState) {
+      setIsViewLoading(true);
       setViewState(state);
+      // Loading state will be cleared when invoices are loaded in the useEffect
     }
   }, [viewState]);
+
+  const handleToggleSidebar = React.useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const newValue = !prev;
+      localStorage.setItem('sidebar-collapsed', String(newValue));
+      return newValue;
+    });
+  }, []);
 
   const handleFlagInvoice = async (invoiceId: string) => {
     try {
@@ -617,13 +631,15 @@ export const Dashboard: React.FC = () => {
           payableCount={payableCount}
           paidCount={paidCount}
           flaggedCount={flaggedCount}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={handleToggleSidebar}
         />
 
         {/* Main Content Area */}
         <div 
-          className="fixed top-0 bottom-0 flex flex-col z-0"
+          className="fixed top-0 bottom-0 flex flex-col z-0 transition-all duration-300"
           style={{ 
-            left: '192px',
+            left: sidebarCollapsed ? '64px' : '192px',
             right: 0
           }}
         >
@@ -647,7 +663,17 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden relative">
+            {/* Loading Overlay */}
+            {isViewLoading && (
+              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="text-center">
+                  <div className="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <p className="text-sm text-muted-foreground">Loading {viewState} invoices...</p>
+                </div>
+              </div>
+            )}
+            
             <div className="h-full flex gap-6 px-4 lg:px-6 py-4">
               {hasNoInvoices ? (
                 /* No Invoices State */
