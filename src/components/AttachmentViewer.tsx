@@ -15,6 +15,18 @@ interface AttachmentViewerProps {
   onClose: () => void;
 }
 
+// Whitelist of supported attachment types
+const SUPPORTED_TYPES = {
+  pdf: ["application/pdf"],
+  image: ["image/jpeg", "image/png", "image/gif"],
+  eml: ["message/rfc822"],
+};
+
+const isSupportedType = (mimeType: string): boolean => {
+  const allTypes = [...SUPPORTED_TYPES.pdf, ...SUPPORTED_TYPES.image, ...SUPPORTED_TYPES.eml];
+  return allTypes.includes(mimeType);
+};
+
 const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -107,17 +119,17 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [attachmentId, onClose]);
 
-  const getViewerKind = () => {
-    if (!attachment) return "";
-    if (attachment.viewer_kind) return attachment.viewer_kind;
-
-    const mime = attachment.mime_type;
+  const getViewerKind = (): string => {
+    if (!attachment) return "unsupported";
+    
+    const mime = attachment.mime_type.toLowerCase();
+    
+    // Check whitelist first
     if (mime === "application/pdf") return "pdf";
-    if (mime.startsWith("image/")) return "image";
-    if (mime === "text/html") return "html";
-    if (mime.startsWith("text/")) return "text";
+    if (mime === "image/jpeg" || mime === "image/png" || mime === "image/gif") return "image";
     if (mime === "message/rfc822") return "eml";
-    return "unknown";
+    
+    return "unsupported";
   };
 
   const handleDownload = () => {
@@ -154,14 +166,18 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
 
     const kind = getViewerKind();
 
-    // Non-previewable state
-    if (attachment.previewable === false) {
+    // Handle unsupported file types
+    if (kind === "unsupported" || attachment.previewable === false) {
       return (
-        <div className="flex flex-col items-center justify-center h-96 gap-4">
-          <h3 className="text-lg font-semibold text-muted-foreground">Preview not available</h3>
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 bg-muted/20 rounded-lg">
+          <h3 className="text-lg font-semibold text-muted-foreground">Preview not available for this file type</h3>
           <p className="text-sm text-muted-foreground max-w-md text-center">
-            {attachment.unsupported_reason || attachment.error_message || "This file type cannot be previewed in the browser."}
+            {attachment.unsupported_reason || attachment.error_message || `Unsupported file type (${attachment.mime_type})`}
           </p>
+          <div className="text-xs text-muted-foreground space-y-1 text-center">
+            <div>{attachment.filename}</div>
+            <div>{attachment.mime_type} • {formatFileSize(attachment.size_bytes)}</div>
+          </div>
           {attachment.data_base64url && (
             <Button onClick={handleDownload}>
               <Download className="w-4 h-4 mr-2" />
@@ -175,14 +191,12 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     // No data available
     if (!attachment.data_base64url && !attachment.safe_html) {
       return (
-        <div className="flex flex-col items-center justify-center h-96 gap-4 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-muted-foreground">
           <p>No preview available. Try Download.</p>
-          {attachment.data_base64url && (
-            <Button onClick={handleDownload} variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </Button>
-          )}
+          <Button onClick={handleDownload} variant="outline" disabled={!attachment.data_base64url}>
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
         </div>
       );
     }
@@ -191,29 +205,37 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     if (kind === "pdf") {
       if (!attachment.data_base64url) {
         return (
-          <div className="flex items-center justify-center h-96 text-muted-foreground">
-            No binary data available for preview
+          <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+            No PDF data available for preview
           </div>
         );
       }
 
       // Create blob URL if not already created
       if (!blobUrl && attachment.data_base64url) {
-        const url = createBlobUrl(attachment.data_base64url, "application/pdf");
-        setBlobUrl(url);
+        try {
+          const url = createBlobUrl(attachment.data_base64url, "application/pdf");
+          setBlobUrl(url);
+        } catch (error) {
+          console.error("Failed to create PDF Blob URL:", error);
+          toast({
+            title: "Error",
+            description: "Failed to render PDF. Please download the file instead.",
+            variant: "destructive",
+          });
+        }
       }
 
       return (
-        <div className="w-full h-[600px] overflow-auto">
-          {blobUrl && (
+        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh" }}>
+          {blobUrl ? (
             <iframe
               src={blobUrl}
-              className="w-full h-full border-0"
+              className="w-full border-0 rounded-lg"
               style={{ 
+                minHeight: "70vh",
                 transform: `scale(${zoom / 100})`, 
-                transformOrigin: "top left",
-                width: `${(100 / zoom) * 100}%`,
-                height: `${(100 / zoom) * 100}%`
+                transformOrigin: "top center",
               }}
               title={attachment.filename}
               onError={() => {
@@ -224,6 +246,10 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
                 });
               }}
             />
+          ) : (
+            <div className="flex items-center justify-center" style={{ minHeight: "70vh" }}>
+              <Skeleton className="w-full h-full" />
+            </div>
           )}
         </div>
       );
@@ -233,7 +259,7 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     if (kind === "image") {
       if (!attachment.data_base64url) {
         return (
-          <div className="flex items-center justify-center h-96 text-muted-foreground">
+          <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
             No image data available
           </div>
         );
@@ -241,19 +267,29 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
 
       // Create blob URL if not already created
       if (!blobUrl && attachment.data_base64url) {
-        const url = createBlobUrl(attachment.data_base64url, attachment.mime_type);
-        setBlobUrl(url);
+        try {
+          const url = createBlobUrl(attachment.data_base64url, attachment.mime_type);
+          setBlobUrl(url);
+        } catch (error) {
+          console.error("Failed to create image Blob URL:", error);
+          toast({
+            title: "Error",
+            description: "Failed to render image. Please download the file instead.",
+            variant: "destructive",
+          });
+        }
       }
 
       return (
-        <div className="flex items-center justify-center min-h-96 p-4 overflow-auto">
-          {blobUrl && (
+        <div className="flex items-center justify-center min-h-[400px] p-8 bg-muted/10 rounded-lg overflow-auto">
+          {blobUrl ? (
             <img
               src={blobUrl}
               alt={attachment.filename}
-              className="max-w-full h-auto"
+              className="max-w-full h-auto rounded shadow-sm"
               style={{
                 transform: `scale(${zoom / 100})`,
+                transformOrigin: "center",
                 transition: "transform 0.2s ease",
               }}
               onError={() => {
@@ -264,6 +300,8 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
                 });
               }}
             />
+          ) : (
+            <Skeleton className="w-96 h-96" />
           )}
         </div>
       );
@@ -275,65 +313,38 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
         <Tabs defaultValue="preview" className="w-full">
           <TabsList>
             <TabsTrigger value="preview">Preview</TabsTrigger>
-            <TabsTrigger value="headers">Headers</TabsTrigger>
+            <TabsTrigger value="raw">Raw Text</TabsTrigger>
           </TabsList>
           <TabsContent value="preview" className="mt-4">
             {attachment.safe_html ? (
               <div
-                className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px] border rounded-lg"
+                className="prose prose-sm max-w-none p-6 overflow-auto bg-white rounded-lg shadow-sm border"
+                style={{ minHeight: "400px", maxHeight: "70vh" }}
                 dangerouslySetInnerHTML={{ __html: attachment.safe_html }}
               />
             ) : attachment.text_excerpt ? (
-              <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-sm font-mono whitespace-pre-wrap">
+              <pre className="p-6 bg-muted rounded-lg overflow-auto text-sm font-mono whitespace-pre-wrap border" style={{ minHeight: "400px", maxHeight: "70vh" }}>
                 {attachment.text_excerpt}
               </pre>
             ) : (
-              <div className="p-4 text-muted-foreground">No preview available</div>
+              <div className="flex items-center justify-center min-h-[400px] text-muted-foreground">
+                No EML preview available
+              </div>
             )}
           </TabsContent>
-          <TabsContent value="headers" className="mt-4">
-            <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-xs font-mono">
-              {attachment.eml_headers ? JSON.stringify(attachment.eml_headers, null, 2) : "No headers available"}
+          <TabsContent value="raw" className="mt-4">
+            <pre className="p-6 bg-muted rounded-lg overflow-auto text-xs font-mono border" style={{ minHeight: "400px", maxHeight: "70vh" }}>
+              {attachment.text_excerpt || "No raw text available"}
             </pre>
           </TabsContent>
         </Tabs>
       );
     }
 
-    // HTML viewer
-    if (kind === "html") {
-      const htmlContent = attachment.safe_html;
-
-      if (!htmlContent) {
-        return (
-          <div className="p-4 text-muted-foreground">
-            {attachment.text_excerpt || "No HTML content available"}
-          </div>
-        );
-      }
-
-      return (
-        <div
-          className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px] border rounded-lg"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
-      );
-    }
-
-    // Plain text viewer
-    if (kind === "text") {
-      const textContent = attachment.text_excerpt || "";
-
-      return (
-        <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-sm font-mono whitespace-pre-wrap">
-          {textContent}
-        </pre>
-      );
-    }
-
+    // Fallback for any edge case
     return (
-      <div className="flex flex-col items-center justify-center h-96 gap-4 text-muted-foreground">
-        <p>Unsupported file type</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-muted-foreground">
+        <p>Unable to display this attachment</p>
         {attachment.data_base64url && (
           <Button onClick={handleDownload} variant="outline">
             <Download className="w-4 h-4 mr-2" />
@@ -353,16 +364,16 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
 
   return (
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg font-semibold truncate">
-                {loading ? <Skeleton className="h-6 w-64" /> : attachment?.filename || "Attachment"}
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex-1 min-w-0 text-center">
+              <DialogTitle className="text-base font-semibold truncate">
+                {loading ? <Skeleton className="h-5 w-64 mx-auto" /> : attachment?.filename || "Attachment"}
               </DialogTitle>
               {!loading && attachment && (
-                <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <Badge variant={getStatusColor()}>{attachment.status}</Badge>
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-1 text-xs text-muted-foreground">
+                  <Badge variant={getStatusColor()} className="text-xs">{attachment.status}</Badge>
                   <span>•</span>
                   <span>{attachment.mime_type}</span>
                   <span>•</span>
@@ -372,47 +383,54 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
                 </div>
               )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+          </div>
+          
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              {!loading && attachment && (getViewerKind() === "pdf" || getViewerKind() === "image") && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setZoom((prev) => Math.max(prev - 25, 50))}
+                    disabled={zoom <= 50}
+                  >
+                    <ZoomOut className="w-3 h-3" />
+                  </Button>
+                  <span className="text-xs text-muted-foreground w-12 text-center">{zoom}%</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setZoom((prev) => Math.min(prev + 25, 200))}
+                    disabled={zoom >= 200}
+                  >
+                    <ZoomIn className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setZoom(100)}
+                    disabled={zoom === 100}
+                    className="text-xs"
+                  >
+                    100%
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            <div className="flex items-center gap-2">
               {attachment?.data_base64url && (
                 <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3 h-3 mr-1" />
+                  <span className="text-xs">Download</span>
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={loadAttachment}>
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3 h-3" />
               </Button>
             </div>
           </div>
-
-          {!loading && attachment && (getViewerKind() === "pdf" || getViewerKind() === "image") && (
-            <div className="flex items-center gap-2 mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setZoom((prev) => Math.max(prev - 25, 50))}
-                disabled={zoom <= 50}
-              >
-                <ZoomOut className="w-4 h-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground w-16 text-center">{zoom}%</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setZoom((prev) => Math.min(prev + 25, 200))}
-                disabled={zoom >= 200}
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setZoom(100)}
-                disabled={zoom === 100}
-              >
-                100%
-              </Button>
-            </div>
-          )}
 
           {!loading && attachment && (attachment.error_code || attachment.error_message) && (
             <Collapsible className="mt-2">
