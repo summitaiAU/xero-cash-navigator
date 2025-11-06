@@ -61,6 +61,20 @@ export const Dashboard: React.FC = () => {
   const rightScrollRef = React.useRef<HTMLDivElement | null>(null);
   const desktopOffset = useSafeOffsets(headerRef.current, navRef.current, { headerFallback: 64, navFallback: 56 });
 
+  // Calculate counts for navigation rail - MUST be before any conditional returns
+  const payableCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length,
+    [allInvoices]
+  );
+  const paidCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status === 'PAID').length,
+    [allInvoices]
+  );
+  const flaggedCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status === 'FLAGGED').length,
+    [allInvoices]
+  );
+
   const handleSignOut = async () => {
     try {
       // Log the sign out action before actually signing out
@@ -591,20 +605,6 @@ export const Dashboard: React.FC = () => {
 
   // Check if we have no invoices but still need to show the UI structure
   const hasNoInvoices = invoices.length === 0;
-
-  // Calculate counts for navigation rail - use allInvoices for accurate counts across all views
-  const payableCount = React.useMemo(() => 
-    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length,
-    [allInvoices]
-  );
-  const paidCount = React.useMemo(() => 
-    allInvoices.filter(inv => inv.status === 'PAID').length,
-    [allInvoices]
-  );
-  const flaggedCount = React.useMemo(() => 
-    allInvoices.filter(inv => inv.status === 'FLAGGED').length,
-    [allInvoices]
-  );
 
   return (
     <>
