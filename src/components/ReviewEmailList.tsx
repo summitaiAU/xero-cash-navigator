@@ -87,7 +87,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   useEffect(() => {
     setCurrentPage(0);
     fetchEmails(0, false);
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, fetchEmails]);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {

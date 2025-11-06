@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, ZoomIn, ZoomOut, RotateCw, Copy, Download, RefreshCw } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,34 +21,34 @@ const formatFileSize = (bytes: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const downloadBase64 = (filename: string, mime: string, b64: string) => {
-  try {
-    const byteChars = atob(b64);
-    const byteNums = new Array(byteChars.length);
-    for (let i = 0; i < byteChars.length; i++) byteNums[i] = byteChars.charCodeAt(i);
-    const byteArray = new Uint8Array(byteNums);
-    const blob = new Blob([byteArray], { type: mime || "application/octet-stream" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename || "attachment";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch (error) {
-    console.error("Download failed:", error);
-    toast({
-      title: "Download Failed",
-      description: "Unable to download the file. Please try again.",
-      variant: "destructive",
-    });
+// Convert base64url to base64
+const base64urlToBase64 = (base64url: string): string => {
+  let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = base64.length % 4;
+  if (padding) {
+    base64 += '='.repeat(4 - padding);
   }
+  return base64;
+};
+
+// Create a Blob URL from base64url data
+const createBlobUrl = (base64url: string, mimeType: string): string => {
+  const base64 = base64urlToBase64(base64url);
+  const byteChars = atob(base64);
+  const byteNums = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) {
+    byteNums[i] = byteChars.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNums);
+  const blob = new Blob([byteArray], { type: mimeType });
+  return URL.createObjectURL(blob);
 };
 
 export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProps) => {
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(100);
-  const [rotation, setRotation] = useState(0);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
 
   const loadAttachment = async () => {
     if (!attachmentId) return;
@@ -70,13 +70,23 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     setLoading(false);
   };
 
+  // Cleanup blob URL when attachment changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
+
   useEffect(() => {
     if (attachmentId) {
       loadAttachment();
       setZoom(100);
-      setRotation(0);
+      setBlobUrl(null);
     } else {
       setAttachment(null);
+      setBlobUrl(null);
     }
   }, [attachmentId]);
 
@@ -90,8 +100,6 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
         setZoom((prev) => Math.min(prev + 25, 200));
       } else if (e.key === "-") {
         setZoom((prev) => Math.max(prev - 25, 50));
-      } else if (e.key === "r" || e.key === "R") {
-        setRotation((prev) => (prev + 90) % 360);
       }
     };
 
@@ -99,17 +107,12 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [attachmentId, onClose]);
 
-  const getEffectiveMime = () => {
-    if (!attachment) return "";
-    return attachment.mime_detected || attachment.mime_type;
-  };
-
   const getViewerKind = () => {
     if (!attachment) return "";
     if (attachment.viewer_kind) return attachment.viewer_kind;
 
-    const mime = getEffectiveMime();
-    if (mime.startsWith("application/pdf")) return "pdf";
+    const mime = attachment.mime_type;
+    if (mime === "application/pdf") return "pdf";
     if (mime.startsWith("image/")) return "image";
     if (mime === "text/html") return "html";
     if (mime.startsWith("text/")) return "text";
@@ -117,11 +120,39 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     return "unknown";
   };
 
+  const handleDownload = () => {
+    if (!attachment || !attachment.data_base64url) return;
+
+    try {
+      const base64 = base64urlToBase64(attachment.data_base64url);
+      const byteChars = atob(base64);
+      const byteNums = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteNums[i] = byteChars.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNums);
+      const blob = new Blob([byteArray], { type: attachment.mime_type });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = attachment.filename || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to download the file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const renderViewer = () => {
     if (!attachment) return null;
 
     const kind = getViewerKind();
-    const effectiveMime = getEffectiveMime();
 
     // Non-previewable state
     if (attachment.previewable === false) {
@@ -129,16 +160,27 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
         <div className="flex flex-col items-center justify-center h-96 gap-4">
           <h3 className="text-lg font-semibold text-muted-foreground">Preview not available</h3>
           <p className="text-sm text-muted-foreground max-w-md text-center">
-            {attachment.unsupported_reason || "This file type cannot be previewed in the browser."}
+            {attachment.unsupported_reason || attachment.error_message || "This file type cannot be previewed in the browser."}
           </p>
           {attachment.data_base64url && (
-            <Button
-              onClick={() =>
-                downloadBase64(attachment.filename, effectiveMime, attachment.data_base64url!)
-              }
-            >
+            <Button onClick={handleDownload}>
               <Download className="w-4 h-4 mr-2" />
               Download File
+            </Button>
+          )}
+        </div>
+      );
+    }
+
+    // No data available
+    if (!attachment.data_base64url && !attachment.safe_html) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 gap-4 text-muted-foreground">
+          <p>No preview available. Try Download.</p>
+          {attachment.data_base64url && (
+            <Button onClick={handleDownload} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Download
             </Button>
           )}
         </div>
@@ -155,14 +197,34 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
         );
       }
 
+      // Create blob URL if not already created
+      if (!blobUrl && attachment.data_base64url) {
+        const url = createBlobUrl(attachment.data_base64url, "application/pdf");
+        setBlobUrl(url);
+      }
+
       return (
-        <div className="w-full h-[600px]">
-          <iframe
-            src={`data:application/pdf;base64,${attachment.data_base64url}`}
-            className="w-full h-full border-0"
-            style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top left" }}
-            title={attachment.filename}
-          />
+        <div className="w-full h-[600px] overflow-auto">
+          {blobUrl && (
+            <iframe
+              src={blobUrl}
+              className="w-full h-full border-0"
+              style={{ 
+                transform: `scale(${zoom / 100})`, 
+                transformOrigin: "top left",
+                width: `${(100 / zoom) * 100}%`,
+                height: `${(100 / zoom) * 100}%`
+              }}
+              title={attachment.filename}
+              onError={() => {
+                toast({
+                  title: "Error",
+                  description: "Failed to load PDF. Try Download.",
+                  variant: "destructive",
+                });
+              }}
+            />
+          )}
         </div>
       );
     }
@@ -177,63 +239,32 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
         );
       }
 
-      return (
-        <div className="flex items-center justify-center min-h-96 p-4">
-          <img
-            src={`data:${effectiveMime};base64,${attachment.data_base64url}`}
-            alt={attachment.filename}
-            className="max-w-full h-auto"
-            style={{
-              transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-              transition: "transform 0.2s ease",
-            }}
-          />
-        </div>
-      );
-    }
-
-    // HTML viewer
-    if (kind === "html") {
-      const htmlContent = attachment.safe_html || (attachment.data_base64url ? atob(attachment.data_base64url) : "");
-
-      if (!htmlContent) {
-        return (
-          <div className="p-4 text-muted-foreground">
-            {attachment.text_excerpt || "No HTML content available"}
-          </div>
-        );
+      // Create blob URL if not already created
+      if (!blobUrl && attachment.data_base64url) {
+        const url = createBlobUrl(attachment.data_base64url, attachment.mime_type);
+        setBlobUrl(url);
       }
 
       return (
-        <div
-          className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px]"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
-      );
-    }
-
-    // Plain text viewer
-    if (kind === "text") {
-      const textContent = attachment.data_base64url ? atob(attachment.data_base64url) : attachment.text_excerpt || "";
-
-      return (
-        <div className="relative">
-          <div className="absolute top-2 right-2 z-10">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(textContent);
-                toast({ title: "Copied", description: "Text copied to clipboard" });
+        <div className="flex items-center justify-center min-h-96 p-4 overflow-auto">
+          {blobUrl && (
+            <img
+              src={blobUrl}
+              alt={attachment.filename}
+              className="max-w-full h-auto"
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transition: "transform 0.2s ease",
               }}
-            >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy
-            </Button>
-          </div>
-          <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-sm font-mono whitespace-pre-wrap">
-            {textContent}
-          </pre>
+              onError={() => {
+                toast({
+                  title: "Error",
+                  description: "Failed to load image. Try Download.",
+                  variant: "destructive",
+                });
+              }}
+            />
+          )}
         </div>
       );
     }
@@ -249,7 +280,7 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
           <TabsContent value="preview" className="mt-4">
             {attachment.safe_html ? (
               <div
-                className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px]"
+                className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px] border rounded-lg"
                 dangerouslySetInnerHTML={{ __html: attachment.safe_html }}
               />
             ) : attachment.text_excerpt ? (
@@ -262,16 +293,53 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
           </TabsContent>
           <TabsContent value="headers" className="mt-4">
             <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-xs font-mono">
-              {JSON.stringify(attachment.eml_headers, null, 2)}
+              {attachment.eml_headers ? JSON.stringify(attachment.eml_headers, null, 2) : "No headers available"}
             </pre>
           </TabsContent>
         </Tabs>
       );
     }
 
+    // HTML viewer
+    if (kind === "html") {
+      const htmlContent = attachment.safe_html;
+
+      if (!htmlContent) {
+        return (
+          <div className="p-4 text-muted-foreground">
+            {attachment.text_excerpt || "No HTML content available"}
+          </div>
+        );
+      }
+
+      return (
+        <div
+          className="prose prose-sm max-w-none p-4 overflow-auto max-h-[600px] border rounded-lg"
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
+      );
+    }
+
+    // Plain text viewer
+    if (kind === "text") {
+      const textContent = attachment.text_excerpt || "";
+
+      return (
+        <pre className="p-4 bg-muted rounded-lg overflow-auto max-h-[600px] text-sm font-mono whitespace-pre-wrap">
+          {textContent}
+        </pre>
+      );
+    }
+
     return (
-      <div className="flex items-center justify-center h-96 text-muted-foreground">
-        Unsupported file type
+      <div className="flex flex-col items-center justify-center h-96 gap-4 text-muted-foreground">
+        <p>Unsupported file type</p>
+        {attachment.data_base64url && (
+          <Button onClick={handleDownload} variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Download
+          </Button>
+        )}
       </div>
     );
   };
@@ -296,7 +364,7 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
                 <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <Badge variant={getStatusColor()}>{attachment.status}</Badge>
                   <span>•</span>
-                  <span>{getEffectiveMime()}</span>
+                  <span>{attachment.mime_type}</span>
                   <span>•</span>
                   <span>{formatFileSize(attachment.size_bytes)}</span>
                   <span>•</span>
@@ -306,25 +374,12 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {attachment?.data_base64url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    downloadBase64(
-                      attachment.filename,
-                      getEffectiveMime(),
-                      attachment.data_base64url!
-                    )
-                  }
-                >
+                <Button variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-4 h-4" />
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={loadAttachment}>
                 <RefreshCw className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -348,17 +403,14 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
               >
                 <ZoomIn className="w-4 h-4" />
               </Button>
-              {getViewerKind() === "image" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRotation((prev) => (prev + 90) % 360)}
-                  className="ml-2"
-                >
-                  <RotateCw className="w-4 h-4 mr-2" />
-                  Rotate
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setZoom(100)}
+                disabled={zoom === 100}
+              >
+                100%
+              </Button>
             </div>
           )}
 
