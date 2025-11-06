@@ -261,6 +261,30 @@ All colors MUST be HSL.
     padding-left: calc(1.5rem - 4px);
   }
   
+  .text-fade {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .text-fade::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 30px;
+    background: linear-gradient(to right, transparent, hsl(var(--card)));
+    pointer-events: none;
+  }
+  
+  .review-email-row:hover .text-fade::after {
+    background: linear-gradient(to right, transparent, hsl(var(--accent) / 0.5));
+  }
+  
+  .review-email-row.active .text-fade::after {
+    background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.05));
+  }
+  
   .review-chip {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600;
   }

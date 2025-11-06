@@ -63,9 +63,9 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
           isCollapsed ? "justify-center" : "justify-between"
         )}
       >
-        <div className={cn("flex items-center gap-3", isCollapsed && "relative")}>
+        <div className={cn("flex items-center gap-3 min-w-0 flex-1", isCollapsed && "relative")}>
           <Icon className="h-4 w-4 flex-shrink-0" />
-          {!isCollapsed && <span>{label}</span>}
+          {!isCollapsed && <span className="truncate">{label}</span>}
           {isCollapsed && count > 0 && (
             <span
               className={cn(

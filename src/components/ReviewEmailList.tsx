@@ -268,13 +268,13 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
                       </div>
 
                       {/* Second Line: Subject */}
-                      <div className="text-sm truncate text-foreground">
+                      <div className="text-sm text-foreground line-clamp-1 text-fade">
                         {email.subject || "(no subject)"}
                       </div>
 
                       {/* Third Line: Snippet */}
                       {email.snippet_text && (
-                        <div className="text-xs text-muted-foreground truncate">
+                        <div className="text-xs text-muted-foreground line-clamp-1 text-fade">
                           {email.snippet_text}
                         </div>
                       )}
