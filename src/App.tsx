@@ -17,6 +17,7 @@ const ResetPasswordVerify = lazy(() => import("./pages/ResetPasswordVerify"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
+// Create QueryClient outside component to prevent recreation on every render
 const queryClient = new QueryClient();
 
 function App() {
