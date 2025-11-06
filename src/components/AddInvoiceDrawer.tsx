@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, RefreshCw, Download, Plus, Trash2 } from "lucide-react";
+import { X, RefreshCw, Download, Plus, Trash2, AlertCircle } from "lucide-react";
 import {
   Sheet,
   SheetClose,
@@ -36,11 +36,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { EmailAttachment } from "@/services/emailReviewService";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface AddInvoiceDrawerProps {
   open: boolean;
   onClose: () => void;
   selectedAttachment: EmailAttachment | null;
+  onSaved?: (invoiceId: string) => void;
+  onWebhookResult?: (ok: boolean) => void;
 }
 
 interface LineItem {
@@ -123,13 +127,21 @@ const calculateLineItem = (item: Partial<LineItem>): LineItem => {
   };
 };
 
+interface ValidationErrors {
+  [key: string]: string;
+}
+
 export const AddInvoiceDrawer = ({
   open,
   onClose,
   selectedAttachment,
+  onSaved,
+  onWebhookResult,
 }: AddInvoiceDrawerProps) => {
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draftInvoice, setDraftInvoice] = useState<DraftInvoice | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   // Initialize draft invoice from selected attachment
   useEffect(() => {
@@ -243,6 +255,253 @@ export const AddInvoiceDrawer = ({
     const diff = Math.abs(totalFromLineItems - draftInvoice.total_amount);
     return diff > 0.01; // Allow 1 cent tolerance
   }, [totalFromLineItems, draftInvoice?.total_amount]);
+
+  const validateForm = (): boolean => {
+    if (!draftInvoice) return false;
+
+    const errors: ValidationErrors = {};
+
+    // Required fields
+    if (!draftInvoice.supplier_name?.trim()) {
+      errors.supplier_name = "Supplier name is required";
+    }
+    if (!draftInvoice.entity?.trim()) {
+      errors.entity = "Entity is required";
+    }
+    if (!draftInvoice.invoice_no?.trim()) {
+      errors.invoice_no = "Invoice number is required";
+    }
+    if (!draftInvoice.invoice_date) {
+      errors.invoice_date = "Invoice date is required";
+    }
+    if (!draftInvoice.currency?.trim()) {
+      errors.currency = "Currency is required";
+    }
+
+    // Number validations
+    if (
+      !isFinite(draftInvoice.subtotal) ||
+      isNaN(draftInvoice.subtotal) ||
+      draftInvoice.subtotal < 0
+    ) {
+      errors.subtotal = "Subtotal must be a valid positive number";
+    }
+    if (
+      !isFinite(draftInvoice.gst) ||
+      isNaN(draftInvoice.gst) ||
+      draftInvoice.gst < 0
+    ) {
+      errors.gst = "GST must be a valid positive number";
+    }
+    if (
+      !isFinite(draftInvoice.total_amount) ||
+      isNaN(draftInvoice.total_amount) ||
+      draftInvoice.total_amount < 0
+    ) {
+      errors.total_amount = "Total amount must be a valid positive number";
+    }
+
+    // Amount due check
+    const expectedAmountDue =
+      draftInvoice.total_amount - (draftInvoice.amount_paid || 0);
+    if (Math.abs(draftInvoice.amount_due - expectedAmountDue) > 0.01) {
+      errors.amount_due =
+        "Amount due must equal total amount minus amount paid";
+    }
+
+    // Line items validation
+    draftInvoice.list_items.forEach((item, index) => {
+      if (!item.description?.trim()) {
+        errors[`line_${index}_description`] = "Description is required";
+      }
+      if (item.quantity < 0 || !isFinite(item.quantity)) {
+        errors[`line_${index}_quantity`] = "Quantity must be >= 0";
+      }
+      if (item.unit_price < 0 || !isFinite(item.unit_price)) {
+        errors[`line_${index}_unit_price`] = "Unit price must be >= 0";
+      }
+
+      // Check line totals consistency
+      const expectedTotal = item.line_total_ex_gst + item.line_gst;
+      if (Math.abs(item.line_total_inc_gst - expectedTotal) > 0.01) {
+        errors[`line_${index}_totals`] = "Line totals are inconsistent";
+      }
+    });
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const checkDuplicate = async (invoiceNo: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("invoice_no", invoiceNo)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Duplicate check error:", error);
+      throw new Error("Failed to check for duplicate invoice");
+    }
+
+    return !!data;
+  };
+
+  const callWebhook = async (attachmentId: string): Promise<boolean> => {
+    try {
+      const response = await fetch(
+        "https://sodhipg.app.n8n.cloud/webhook/4175ced6-167b-4180-9aeb-00fba65c9350",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: attachmentId }),
+        }
+      );
+
+      return response.ok;
+    } catch (error) {
+      console.error("Webhook error:", error);
+      return false;
+    }
+  };
+
+  const handleSave = async () => {
+    if (!draftInvoice || !selectedAttachment) return;
+
+    // Validate
+    if (!validateForm()) {
+      toast({
+        title: "Validation Error",
+        description: "Please fix the errors before saving",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      // Check for duplicate
+      const isDuplicate = await checkDuplicate(draftInvoice.invoice_no);
+      if (isDuplicate) {
+        setValidationErrors({
+          invoice_no:
+            "Invoice number already exists. Please choose a different invoice number.",
+        });
+        toast({
+          title: "Duplicate Invoice",
+          description:
+            "This invoice number already exists. Please use a different number.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
+      // Prepare insert payload
+      const insertPayload = {
+        email_id: selectedAttachment.id, // Map attachment_id to email_id
+        supplier_name: draftInvoice.supplier_name,
+        entity: draftInvoice.entity,
+        project: draftInvoice.project || null,
+        invoice_no: draftInvoice.invoice_no,
+        invoice_date: draftInvoice.invoice_date,
+        due_date: draftInvoice.due_date || null,
+        currency: draftInvoice.currency,
+        subtotal: draftInvoice.subtotal,
+        gst: draftInvoice.gst,
+        total_amount: draftInvoice.total_amount,
+        amount_paid: draftInvoice.amount_paid || 0,
+        amount_due: draftInvoice.amount_due,
+        payment_ref: draftInvoice.payment_ref || null,
+        google_drive_link: draftInvoice.google_drive_link || null,
+        sender_email: draftInvoice.sender_email || null,
+        list_items: draftInvoice.list_items as any, // Cast to any for JSON compatibility
+        status: "READY",
+      };
+
+      // Insert into database
+      const { data: insertedInvoice, error: insertError } = await supabase
+        .from("invoices")
+        .insert([insertPayload])
+        .select("id")
+        .single();
+
+      if (insertError) {
+        console.error("Insert error:", insertError);
+        toast({
+          title: "Save Failed",
+          description: "Could not save invoice. Please try again.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        return;
+      }
+
+      // Success toast
+      toast({
+        title: "Invoice Saved",
+        description: "Invoice has been saved successfully.",
+      });
+
+      // Emit success event
+      onSaved?.(insertedInvoice.id);
+
+      // Call webhook
+      const webhookSuccess = await callWebhook(selectedAttachment.id);
+      
+      if (webhookSuccess) {
+        toast({
+          title: "Processing Started",
+          description: "Invoice processing has been initiated.",
+        });
+        onWebhookResult?.(true);
+      } else {
+        toast({
+          title: "Warning",
+          description:
+            "Invoice saved, but processing could not be started. Please contact support.",
+          variant: "default",
+        });
+        onWebhookResult?.(false);
+      }
+
+      // Close drawer after short delay
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (error: any) {
+      console.error("Save error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isFormValid = useMemo(() => {
+    if (!draftInvoice) return false;
+
+    return (
+      draftInvoice.supplier_name?.trim() &&
+      draftInvoice.entity?.trim() &&
+      draftInvoice.invoice_no?.trim() &&
+      draftInvoice.invoice_date &&
+      draftInvoice.currency?.trim() &&
+      isFinite(draftInvoice.subtotal) &&
+      draftInvoice.subtotal >= 0 &&
+      isFinite(draftInvoice.gst) &&
+      draftInvoice.gst >= 0 &&
+      isFinite(draftInvoice.total_amount) &&
+      draftInvoice.total_amount >= 0
+    );
+  }, [draftInvoice]);
 
   const renderAttachmentPreview = () => {
     if (!selectedAttachment) return null;
@@ -383,22 +642,52 @@ export const AddInvoiceDrawer = ({
                               <Input
                                 id="supplier_name"
                                 value={draftInvoice.supplier_name}
-                                onChange={(e) =>
-                                  updateField("supplier_name", e.target.value)
-                                }
+                                onChange={(e) => {
+                                  updateField("supplier_name", e.target.value);
+                                  setValidationErrors((prev) => {
+                                    const { supplier_name, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
                                 placeholder="Enter supplier name"
+                                className={
+                                  validationErrors.supplier_name
+                                    ? "border-destructive"
+                                    : ""
+                                }
                               />
+                              {validationErrors.supplier_name && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.supplier_name}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="entity">Entity *</Label>
                               <Input
                                 id="entity"
                                 value={draftInvoice.entity}
-                                onChange={(e) =>
-                                  updateField("entity", e.target.value)
-                                }
+                                onChange={(e) => {
+                                  updateField("entity", e.target.value);
+                                  setValidationErrors((prev) => {
+                                    const { entity, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
                                 placeholder="Enter entity"
+                                className={
+                                  validationErrors.entity
+                                    ? "border-destructive"
+                                    : ""
+                                }
                               />
+                              {validationErrors.entity && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.entity}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="project">Project</Label>
@@ -416,11 +705,26 @@ export const AddInvoiceDrawer = ({
                               <Input
                                 id="invoice_no"
                                 value={draftInvoice.invoice_no}
-                                onChange={(e) =>
-                                  updateField("invoice_no", e.target.value)
-                                }
+                                onChange={(e) => {
+                                  updateField("invoice_no", e.target.value);
+                                  setValidationErrors((prev) => {
+                                    const { invoice_no, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
                                 placeholder="Enter invoice number"
+                                className={
+                                  validationErrors.invoice_no
+                                    ? "border-destructive"
+                                    : ""
+                                }
                               />
+                              {validationErrors.invoice_no && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.invoice_no}
+                                </p>
+                              )}
                             </div>
                           </div>
 
@@ -433,10 +737,25 @@ export const AddInvoiceDrawer = ({
                                 id="invoice_date"
                                 type="date"
                                 value={draftInvoice.invoice_date}
-                                onChange={(e) =>
-                                  updateField("invoice_date", e.target.value)
+                                onChange={(e) => {
+                                  updateField("invoice_date", e.target.value);
+                                  setValidationErrors((prev) => {
+                                    const { invoice_date, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
+                                className={
+                                  validationErrors.invoice_date
+                                    ? "border-destructive"
+                                    : ""
                                 }
                               />
+                              {validationErrors.invoice_date && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.invoice_date}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="due_date">Due Date</Label>
@@ -453,11 +772,22 @@ export const AddInvoiceDrawer = ({
                               <Label htmlFor="currency">Currency</Label>
                               <Select
                                 value={draftInvoice.currency}
-                                onValueChange={(value) =>
-                                  updateField("currency", value)
-                                }
+                                onValueChange={(value) => {
+                                  updateField("currency", value);
+                                  setValidationErrors((prev) => {
+                                    const { currency, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
                               >
-                                <SelectTrigger id="currency">
+                                <SelectTrigger
+                                  id="currency"
+                                  className={
+                                    validationErrors.currency
+                                      ? "border-destructive"
+                                      : ""
+                                  }
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -467,6 +797,12 @@ export const AddInvoiceDrawer = ({
                                   <SelectItem value="GBP">GBP</SelectItem>
                                 </SelectContent>
                               </Select>
+                              {validationErrors.currency && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.currency}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -484,13 +820,28 @@ export const AddInvoiceDrawer = ({
                                 type="number"
                                 step="0.01"
                                 value={draftInvoice.subtotal}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   updateField(
                                     "subtotal",
                                     parseFloat(e.target.value) || 0
-                                  )
+                                  );
+                                  setValidationErrors((prev) => {
+                                    const { subtotal, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
+                                className={
+                                  validationErrors.subtotal
+                                    ? "border-destructive"
+                                    : ""
                                 }
                               />
+                              {validationErrors.subtotal && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.subtotal}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="gst">GST *</Label>
@@ -499,13 +850,26 @@ export const AddInvoiceDrawer = ({
                                 type="number"
                                 step="0.01"
                                 value={draftInvoice.gst}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   updateField(
                                     "gst",
                                     parseFloat(e.target.value) || 0
-                                  )
+                                  );
+                                  setValidationErrors((prev) => {
+                                    const { gst, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
+                                className={
+                                  validationErrors.gst ? "border-destructive" : ""
                                 }
                               />
+                              {validationErrors.gst && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.gst}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="total_amount">
@@ -516,13 +880,28 @@ export const AddInvoiceDrawer = ({
                                 type="number"
                                 step="0.01"
                                 value={draftInvoice.total_amount}
-                                onChange={(e) =>
+                                onChange={(e) => {
                                   updateField(
                                     "total_amount",
                                     parseFloat(e.target.value) || 0
-                                  )
+                                  );
+                                  setValidationErrors((prev) => {
+                                    const { total_amount, ...rest } = prev;
+                                    return rest;
+                                  });
+                                }}
+                                className={
+                                  validationErrors.total_amount
+                                    ? "border-destructive"
+                                    : ""
                                 }
                               />
+                              {validationErrors.total_amount && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {validationErrors.total_amount}
+                                </p>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="amount_paid">Amount Paid</Label>
@@ -783,10 +1162,15 @@ export const AddInvoiceDrawer = ({
 
             {/* Action Bar */}
             <div className="border-t px-6 py-4 flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={onClose}>
+              <Button variant="outline" onClick={onClose} disabled={saving}>
                 Cancel
               </Button>
-              <Button disabled>Save Invoice</Button>
+              <Button
+                onClick={handleSave}
+                disabled={!isFormValid || saving}
+              >
+                {saving ? "Saving..." : "Save Invoice"}
+              </Button>
             </div>
           </>
         )}

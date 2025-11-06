@@ -207,6 +207,13 @@ export const Review: React.FC = () => {
           setInvoiceAttachment(null);
         }}
         selectedAttachment={invoiceAttachment}
+        onSaved={(invoiceId) => {
+          console.log("Invoice saved:", invoiceId);
+          // Optionally refresh email list or show updated state
+        }}
+        onWebhookResult={(ok) => {
+          console.log("Webhook result:", ok);
+        }}
       />
     </div>
   );
