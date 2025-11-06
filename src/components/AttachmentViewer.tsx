@@ -455,16 +455,12 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
               <Button variant="outline" size="sm" onClick={loadAttachment} title="Refresh">
                 <RefreshCw className="w-3 h-3" />
               </Button>
-              {attachment && getViewerKind() !== "unsupported" && !attachment.error_code && onAddInvoice && (
+              {attachment && onAddInvoice && (attachment.status === "review" || (attachment.status === "completed" && attachment.error_code)) && (
                 <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)} title="Add Invoice">
                   <Plus className="w-3 h-3 mr-1" />
                   <span className="text-xs">Add Invoice</span>
                 </Button>
               )}
-              <div className="w-4" />
-              <Button variant="ghost" size="sm" onClick={onClose} title="Close (ESC)">
-                <X className="w-4 h-4" />
-              </Button>
             </div>
           </div>
 

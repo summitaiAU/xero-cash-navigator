@@ -272,7 +272,7 @@ All colors MUST be HSL.
   }
   
   .review-attachment-card {
-    @apply bg-card border border-border rounded-[10px] p-2.5 transition-smooth hover:shadow-[0_1px_2px_rgba(0,0,0,0.06)] cursor-pointer;
+    @apply bg-card border border-border p-2.5 transition-smooth hover:shadow-[0_1px_2px_rgba(0,0,0,0.06)] cursor-pointer;
   }
   
   .review-attachment-card:hover {

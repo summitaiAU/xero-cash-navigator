@@ -180,7 +180,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
     <div className="h-full overflow-y-auto py-3 space-y-4">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide px-3">
               Flagged · {categorized.flagged.length}
             </h3>
             <div className="space-y-2">
@@ -191,7 +191,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
 
         {categorized.added.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-success uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-success uppercase tracking-wide px-3">
               Added · {categorized.added.length}
             </h3>
             <div className="space-y-2">
@@ -202,7 +202,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
 
         {categorized.neutral.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3">
               Neutral · {categorized.neutral.length}
             </h3>
             <div className="space-y-2">
