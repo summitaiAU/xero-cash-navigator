@@ -44,6 +44,8 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
           setLoading(true);
         }
 
+        console.log("[ReviewEmailList] Fetching emails:", { page, append, searchQuery, sortBy });
+
         const filters: EmailListFilters = {
           searchQuery: searchQuery || undefined,
           sortBy,
@@ -51,7 +53,17 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
         const { data, error: fetchError, count } = await fetchReviewEmailList(page, filters);
 
-        if (fetchError) throw fetchError;
+        console.log("[ReviewEmailList] Fetch result:", { 
+          dataCount: data.length, 
+          totalCount: count, 
+          error: fetchError,
+          firstEmail: data[0]
+        });
+
+        if (fetchError) {
+          console.error("[ReviewEmailList] Fetch error:", fetchError);
+          throw fetchError;
+        }
 
         if (append) {
           setEmails((prev) => [...prev, ...data]);
@@ -63,7 +75,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         setHasMore(data.length === 30);
         setError(null);
       } catch (err) {
-        console.error("Failed to fetch emails:", err);
+        console.error("[ReviewEmailList] Failed to fetch emails:", err);
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
         setLoading(false);

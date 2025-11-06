@@ -140,15 +140,15 @@ export const Review: React.FC = () => {
         userName={user?.email}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area - Flush against sidebar */}
       <div
         className="flex-1 flex flex-col transition-all duration-300"
         style={{
-          marginLeft: sidebarCollapsed ? "64px" : "192px",
+          paddingLeft: sidebarCollapsed ? "64px" : "192px",
         }}
       >
         {/* Three-Column Layout */}
-        <div className="h-full overflow-hidden border-l border-border">
+        <div className="h-full overflow-hidden">
           <div className="h-full flex">
             {/* Email List (Left) - Fixed 360px */}
             <div className="w-[360px] flex-shrink-0 border-r border-border">

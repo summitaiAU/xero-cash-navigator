@@ -66,6 +66,8 @@ export async function fetchReviewEmailList(
   filters: EmailListFilters = {}
 ): Promise<{ data: EmailListItem[]; error: Error | null; count: number }> {
   try {
+    console.log("[emailReviewService] Starting fetch:", { page, filters });
+    
     const offset = page * PAGE_SIZE;
     
     const baseSelect = `id,
@@ -85,9 +87,12 @@ export async function fetchReviewEmailList(
       .eq("status", "review")
       .eq("review_status_processed", true);
 
+    console.log("[emailReviewService] Base query configured");
+
     // Apply text search if provided
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const searchTerm = `%${filters.searchQuery.trim()}%`;
+      console.log("[emailReviewService] Applying search filter:", searchTerm);
       // @ts-ignore
       query = query.or(
         `subject.ilike.${searchTerm},from_name.ilike.${searchTerm},from_email.ilike.${searchTerm},snippet_text.ilike.${searchTerm}`
@@ -103,11 +108,20 @@ export async function fetchReviewEmailList(
     // @ts-ignore
     query = query.range(offset, offset + PAGE_SIZE - 1);
 
+    console.log("[emailReviewService] Executing query...");
+    
     // @ts-ignore
     const { data, error, count } = await query;
 
+    console.log("[emailReviewService] Query result:", { 
+      dataLength: data?.length, 
+      count, 
+      error,
+      sampleData: data?.[0]
+    });
+
     if (error) {
-      console.error("Error fetching review email list:", error);
+      console.error("[emailReviewService] Query error:", error);
       return { data: [], error, count: 0 };
     }
 
@@ -122,9 +136,11 @@ export async function fetchReviewEmailList(
       date_received: item.date_received,
     }));
 
+    console.log("[emailReviewService] Successfully mapped data:", mappedData.length, "emails");
+
     return { data: mappedData, error: null, count: count || 0 };
   } catch (error) {
-    console.error("Unexpected error in fetchReviewEmailList:", error);
+    console.error("[emailReviewService] Unexpected error:", error);
     return {
       data: [],
       error: error instanceof Error ? error : new Error(String(error)),
