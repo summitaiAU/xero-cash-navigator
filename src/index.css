@@ -8,143 +8,133 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Modern calming palette with purple accents */
-    --background: 220 15% 97%;
-    --foreground: 220 15% 15%;
-    
+    /* Professional light theme with brand colors */
+    --background: 220 14% 96%;
+    --foreground: 224 18% 20%;
+
     --card: 0 0% 100%;
-    --card-foreground: 220 15% 15%;
-    
+    --card-foreground: 224 18% 20%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 15%;
-    
-    --primary: 262 52% 47%;
+    --popover-foreground: 224 18% 20%;
+
+    --primary: 23 92% 50%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 262 20% 96%;
-    --secondary-foreground: 262 52% 25%;
-    
-    --muted: 220 15% 95%;
-    --muted-foreground: 220 10% 50%;
-    
-    --accent: 262 52% 47%;
-    --accent-foreground: 0 0% 100%;
-    
+
+    --secondary: 220 14% 95%;
+    --secondary-foreground: 224 18% 20%;
+
+    --muted: 220 14% 94%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 33 100% 70%;
+    --accent-foreground: 26 83% 14%;
+
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    
+
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+
+    --warning: 33 100% 70%;
+    --warning-foreground: 26 83% 14%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 23 92% 50%;
+
+    /* Dashboard specific tokens - Professional theme */
+    --dashboard-bg: 220 14% 96%;
+    --pdf-bg: 0 0% 98%;
+    --section-border: 220 13% 91%;
     
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    /* Professional gradients with brand colors */
+    --gradient-primary: linear-gradient(135deg, hsl(23 92% 50%), hsl(33 100% 70%));
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 55%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 14% 98%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 14% 96%), hsl(220 14% 98%));
     
-    --info: 211 96% 48%;
-    --info-foreground: 0 0% 100%;
-    
-    --border: 220 15% 88%;
-    --input: 220 15% 90%;
-    --ring: 262 52% 47%;
-    
-    --radius: 0.75rem;
-    --radius-lg: 1rem;
-    
-    /* Purple-themed gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 47%), hsl(262, 52%, 40%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 15%, 98%));
-    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 47%, 0.15), transparent 70%);
-    
-    /* Soft shadows for floating cards */
-    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
-    --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06);
+    /* Professional shadows with subtle brand accent */
+    --shadow-soft: 0 2px 8px -2px hsl(220 20% 20% / 0.08), 0 1px 3px -1px hsl(23 92% 50% / 0.02);
+    --shadow-medium: 0 4px 16px -4px hsl(220 20% 20% / 0.12), 0 2px 6px -2px hsl(23 92% 50% / 0.04);
+    --shadow-large: 0 8px 32px -8px hsl(220 20% 20% / 0.16), 0 4px 12px -4px hsl(23 92% 50% / 0.06);
+    --shadow-glow: 0 0 24px hsl(23 92% 50% / 0.15);
     
     /* Smooth transitions */
-    --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-bounce: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    
-    /* Navigation rail */
-    --nav-rail: 262 52% 18%;
-    --nav-rail-foreground: 262 20% 95%;
-    --nav-rail-hover: 262 52% 25%;
-    
-    /* Console workspace colors */
-    --console-bg: 220 15% 97%;
-    --pdf-bg: 220 15% 96%;
-    --section-border: 220 15% 88%;
-    
-    /* Status colors */
-    --status-paid: 142 71% 45%;
-    --status-review: 38 92% 50%;
-    --status-ready: 262 52% 47%;
-    --status-flagged: 0 72% 51%;
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
+
     --sidebar-foreground: 240 5.3% 26.1%;
+
     --sidebar-primary: 240 5.9% 10%;
+
     --sidebar-primary-foreground: 0 0% 98%;
+
     --sidebar-accent: 240 4.8% 95.9%;
+
     --sidebar-accent-foreground: 240 5.9% 10%;
+
     --sidebar-border: 220 13% 91%;
+
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 220 15% 95%;
-    
-    --card: 220 20% 15%;
-    --card-foreground: 220 15% 95%;
-    
-    --popover: 220 20% 15%;
-    --popover-foreground: 220 15% 95%;
-    
-    --primary: 262 52% 55%;
+    /* Professional dark theme with brand colors */
+    --background: 220 27% 8%;
+    --foreground: 220 9% 96%;
+
+    --card: 220 27% 12%;
+    --card-foreground: 220 9% 96%;
+
+    --popover: 220 27% 12%;
+    --popover-foreground: 220 9% 96%;
+
+    --primary: 23 92% 50%;
     --primary-foreground: 0 0% 100%;
-    
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 220 15% 95%;
-    
-    --muted: 220 20% 18%;
-    --muted-foreground: 220 10% 60%;
-    
-    --accent: 262 52% 55%;
-    --accent-foreground: 0 0% 100%;
-    
-    --destructive: 0 72% 55%;
+
+    --secondary: 220 20% 20%;
+    --secondary-foreground: 220 9% 96%;
+
+    --muted: 220 20% 20%;
+    --muted-foreground: 220 9% 60%;
+
+    --accent: 33 100% 70%;
+    --accent-foreground: 26 83% 14%;
+
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    
-    --success: 142 71% 50%;
+
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+
+    --warning: 33 100% 70%;
+    --warning-foreground: 26 83% 14%;
+
+    --border: 220 20% 20%;
+    --input: 220 20% 20%;
+    --ring: 23 92% 50%;
+
+    /* Dashboard specific tokens - Professional dark theme */
+    --dashboard-bg: 220 27% 8%;
+    --pdf-bg: 220 27% 10%;
+    --section-border: 220 20% 20%;
     
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 100%;
+    /* Professional gradients with brand colors */
+    --gradient-primary: linear-gradient(135deg, hsl(23 92% 50%), hsl(33 100% 70%));
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 35%), hsl(142 71% 45%));
+    --gradient-card: linear-gradient(145deg, hsl(220 27% 12%), hsl(220 20% 20%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 27% 8%), hsl(220 20% 18%));
     
-    --info: 211 96% 55%;
-    --info-foreground: 0 0% 100%;
-    
-    --border: 220 20% 22%;
-    --input: 220 20% 22%;
-    --ring: 262 52% 55%;
-    
-    --gradient-primary: linear-gradient(135deg, hsl(262, 52%, 55%), hsl(262, 52%, 48%));
-    --gradient-subtle: linear-gradient(180deg, hsl(222, 47%, 11%), hsl(220, 20%, 15%));
-    --gradient-purple-glow: radial-gradient(circle at center, hsl(262, 52%, 55%, 0.2), transparent 70%);
-    
-    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.3);
-    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.5);
-    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.45);
-    
-    --nav-rail: 262 52% 15%;
-    --nav-rail-foreground: 262 20% 90%;
-    --nav-rail-hover: 262 52% 22%;
-    
-    --console-bg: 222 47% 11%;
-    --pdf-bg: 220 20% 15%;
-    --section-border: 220 20% 22%;
-    
+    /* Professional shadows with subtle brand accent */
+    --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.25), 0 1px 3px -1px hsl(23 92% 50% / 0.05);
+    --shadow-medium: 0 4px 16px -4px hsl(0 0% 0% / 0.35), 0 2px 6px -2px hsl(23 92% 50% / 0.08);
+    --shadow-large: 0 8px 32px -8px hsl(0 0% 0% / 0.45), 0 4px 12px -4px hsl(23 92% 50% / 0.1);
+    --shadow-glow: 0 0 24px hsl(23 92% 50% / 0.25);
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -167,40 +157,34 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Dashboard specific classes - Enhanced professional styling */
   .dashboard-card {
-    @apply bg-card border border-border rounded-[var(--radius-lg)] shadow-medium transition-smooth;
+    @apply bg-card rounded-xl border border-border shadow-soft transition-smooth hover:shadow-medium;
+    background: var(--gradient-card);
   }
   
-  .dashboard-card:hover {
-    box-shadow: var(--shadow-hover);
-  }
-
   .section-header {
-    @apply text-lg font-semibold text-foreground mb-5 pb-2 border-b border-border/50;
+    @apply text-lg font-semibold text-foreground mb-4;
   }
   
   .badge-success {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/10 text-success border border-success/20;
   }
   
   .badge-warning {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20;
   }
   
   .badge-draft {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border;
-  }
-  
-  .badge-status {
-    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-muted-foreground border border-border;
   }
   
   .upload-area {
-    @apply border-2 border-dashed border-primary/30 rounded-[var(--radius-lg)] p-8 text-center hover:border-primary/50 hover:bg-primary/5 transition-smooth cursor-pointer;
+    @apply border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors;
   }
   
   .upload-area.dragover {
-    @apply border-primary bg-primary/10;
+    @apply border-primary bg-primary/5;
   }
   
   .swipe-card {
@@ -208,35 +192,15 @@ All colors MUST be HSL.
   }
   
   .btn-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md focus:ring-2 focus:ring-primary/30 transition-smooth;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-2 focus:ring-primary/20;
   }
   
   .btn-success {
-    @apply bg-success text-success-foreground hover:bg-success/90 hover:shadow-md focus:ring-2 focus:ring-success/30 transition-smooth;
+    @apply bg-success text-success-foreground hover:bg-success/90 focus:ring-2 focus:ring-success/20;
   }
   
   .btn-ghost-destructive {
-    @apply text-destructive hover:bg-destructive/10 focus:ring-2 focus:ring-destructive/20 transition-smooth;
-  }
-  
-  .nav-rail {
-    @apply fixed left-0 top-0 h-screen bg-[hsl(var(--nav-rail))] text-[hsl(var(--nav-rail-foreground))] flex flex-col items-center py-6 shadow-large transition-smooth z-50;
-  }
-  
-  .nav-rail-item {
-    @apply w-12 h-12 rounded-xl flex items-center justify-center hover:bg-[hsl(var(--nav-rail-hover))] transition-smooth cursor-pointer relative;
-  }
-  
-  .nav-rail-item.active {
-    @apply bg-primary shadow-[0_0_20px_rgba(139,92,246,0.4)];
-  }
-  
-  .table-row-hover {
-    @apply hover:bg-muted/30 transition-smooth;
-  }
-  
-  .command-bar {
-    @apply flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-[var(--radius-lg)] shadow-soft;
+    @apply text-destructive hover:bg-destructive/10 focus:ring-2 focus:ring-destructive/20;
   }
 }
 

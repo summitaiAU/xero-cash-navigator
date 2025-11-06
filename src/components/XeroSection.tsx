@@ -48,15 +48,6 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     parsedItems = invoice.list_items;
   }
 
-  // Step 1: Check if ANY line item has per-line GST data (new format)
-  const hasPerLineGstData = parsedItems.some(item => 
-    'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
-  );
-  
-  // Step 2: For old format, check if invoice-level GST exists
-  const invoiceLevelGst = Number(invoice.gst) || 0;
-  const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
-
   return {
     // Header fields
     invoiceNumber: invoice.invoice_no || invoice.invoice_number || 'No number',
@@ -71,41 +62,16 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     bsb: 'N/A',
     accountNumber: 'N/A',
     
-    // Line items - support both old and new formats
-    lineItems: parsedItems.map((item: any, index: number) => {
-      let displayAmount: number;
-      let taxRate: string;
-      let lineGstValue: number | undefined = undefined;
-      let gstIncludedValue = false;
-      
-      if (hasPerLineGstData) {
-        // NEW FORMAT: Has per-line GST data
-        displayAmount = item?.line_total_ex_gst || item?.total || 0;
-        lineGstValue = item?.line_gst !== undefined ? Number(item.line_gst) : undefined;
-        gstIncludedValue = item?.gst_included || false;
-        taxRate = (lineGstValue !== undefined && lineGstValue > 0) ? 'GST (10%)' : 'No Tax';
-      } else {
-        // OLD FORMAT: Use invoice-level GST
-        displayAmount = item?.total || item?.amount || 0;
-        taxRate = oldFormatHasGst ? 'GST (10%)' : 'No Tax';
-        // Don't set lineGstValue - will be calculated in display logic
-      }
-      
-      return {
-        itemNumber: index + 1,
-        description: item?.description || '',
-        quantity: item?.quantity || 1,
-        unitAmount: item?.unit_price || item?.unitAmount || 0,
-        account: `${item?.account_code || '429'} - Expenses`,
-        taxRate,
-        amount: displayAmount,
-        // New fields for per-line GST tracking
-        gstIncluded: gstIncludedValue,
-        lineGst: lineGstValue,
-        lineTotalExGst: item?.line_total_ex_gst || displayAmount,
-        lineTotalIncGst: item?.line_total_inc_gst || displayAmount
-      };
-    }),
+    // Line items
+    lineItems: parsedItems.map((item: any, index: number) => ({
+      itemNumber: index + 1,
+      description: item?.description || '',
+      quantity: item?.quantity || 1,
+      unitAmount: item?.unit_price || item?.unitAmount || 0,
+      account: `${item?.account_code || '429'} - Expenses`,
+      taxRate: 'GST (10%)',
+      amount: item?.total || item?.amount || 0
+    })),
     
     // Financial totals
     subtotal: Number(invoice.subtotal) || 0,
@@ -185,27 +151,6 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       return;
     }
     
-    // Parse list_items to check format
-    let parsedItems: any[] = [];
-    if (typeof invoice.list_items === 'string') {
-      try {
-        parsedItems = JSON.parse(invoice.list_items);
-      } catch (error) {
-        parsedItems = [];
-      }
-    } else if (Array.isArray(invoice.list_items)) {
-      parsedItems = invoice.list_items;
-    }
-    
-    // Check if line items have per-line GST data (new format)
-    const hasPerLineGstData = parsedItems.some(item => 
-      'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
-    );
-    
-    // For old format, check invoice-level GST
-    const invoiceLevelGst = Number(invoice.gst) || 0;
-    const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
-    
     setEditableData({
       entity: invoice.entity || '',
       project: invoice.project || '',
@@ -214,40 +159,14 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       invoiceDate: invoice.invoice_date || '',
       dueDate: invoice.due_date || '',
       currency: invoice.currency || 'AUD',
-      lineItems: invoiceData.lineItems.map((item, index) => {
-        // Determine tax type and gstIncluded based on actual GST data
-        let taxType = 'NONE';
-        let gstIncluded = false;
-        
-        if (item.lineGst !== undefined) {
-          // New format: use per-line GST
-          if (item.lineGst > 0) {
-            taxType = 'INPUT';
-            gstIncluded = false; // GST applies, checkbox unchecked
-          } else {
-            taxType = 'NONE';
-            gstIncluded = true; // GST excluded, checkbox checked
-          }
-        } else if (oldFormatHasGst) {
-          // Old format: inherit from invoice level
-          taxType = 'INPUT';
-          gstIncluded = false; // GST applies, checkbox unchecked
-        } else {
-          // Old format: no GST at invoice level
-          taxType = 'NONE';
-          gstIncluded = true; // GST excluded, checkbox checked
-        }
-        
-        return {
-          id: `item_${Date.now()}_${index}`,
-          description: item.description || '',
-          quantity: item.quantity || 1,
-          unitAmount: item.unitAmount || 0,
-          accountCode: item.account?.split(' -')[0] || '429',
-          taxType,
-          gstIncluded
-        };
-      })
+      lineItems: invoiceData.lineItems.map((item, index) => ({
+        id: `item_${Date.now()}_${index}`,
+        description: item.description || '',
+        quantity: item.quantity || 1,
+        unitAmount: item.unitAmount || 0,
+        accountCode: item.account?.split(' -')[0] || '429',
+        taxType: 'INPUT'
+      }))
     });
     setIsEditing(true);
     setSaveError(null);
@@ -301,35 +220,23 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   // Real-time calculation functions
-  const calculateLineItemSubtotal = (quantity: number, unitAmount: number, gstIncluded: boolean = false) => {
-    const baseAmount = (quantity || 0) * (unitAmount || 0);
-    // If GST is included in the unit price, return the base amount as-is
-    // If GST is not included, return the base amount (GST will be added separately)
-    return baseAmount;
+  const calculateLineItemSubtotal = (quantity: number, unitAmount: number) => {
+    return (quantity || 0) * (unitAmount || 0);
   };
 
-  const calculateTaxAmount = (subtotal: number, taxType: string, gstIncluded: boolean = false) => {
-    // If gstIncluded is true, GST is excluded (no GST applies)
-    if (gstIncluded) return 0;
-    
-    // If taxType is not INPUT, no GST
-    if (taxType !== 'INPUT') return 0;
-    
-    // GST is 10% of the subtotal
-    return subtotal * 0.1;
+  const calculateTaxAmount = (subtotal: number, taxType: string) => {
+    return taxType === 'INPUT' ? subtotal * 0.1 : 0;
   };
 
   const calculateInvoiceTotals = (lineItems: any[]) => {
-    let subtotal = 0;
-    let totalTax = 0;
+    const subtotal = lineItems.reduce((sum, item) => {
+      return sum + calculateLineItemSubtotal(item.quantity, item.unitAmount);
+    }, 0);
     
-    lineItems.forEach(item => {
-      const lineAmount = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-      const lineTax = calculateTaxAmount(lineAmount, item.taxType, item.gstIncluded);
-      
-      subtotal += lineAmount;
-      totalTax += lineTax;
-    });
+    const totalTax = lineItems.reduce((sum, item) => {
+      const itemSubtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
+      return sum + calculateTaxAmount(itemSubtotal, item.taxType);
+    }, 0);
     
     return { subtotal, totalTax, total: subtotal + totalTax };
   };
@@ -341,13 +248,6 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       ...updatedLineItems[index],
       [field]: field === 'quantity' || field === 'unitAmount' ? parseFloat(value) || 0 : value
     };
-    
-    // If gstIncluded is changed, update taxType accordingly
-    const item = updatedLineItems[index];
-    if (field === 'gstIncluded') {
-      item.taxType = value ? 'NONE' : 'INPUT';
-    }
-    
     setEditableData({ ...editableData, lineItems: updatedLineItems });
   };
 
@@ -361,8 +261,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         quantity: 0, 
         unitAmount: 0,
         accountCode: '429', 
-        taxType: 'INPUT',
-        gstIncluded: false
+        taxType: 'INPUT'
       }]
     });
   };
@@ -386,26 +285,14 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       // Calculate totals from line items
       const totals = calculateInvoiceTotals(editableData.lineItems);
       
-      // Format line items for Supabase with per-line GST tracking
-      const formattedLineItems = editableData.lineItems.map((item: any) => {
-        const lineAmount = item.quantity * item.unitAmount;
-        const hasGst = !item.gstIncluded; // If gstIncluded is false (checkbox unchecked), GST applies
-        const lineGst = hasGst ? lineAmount * 0.1 : 0;
-        const lineTotalExGst = lineAmount;
-        const lineTotalIncGst = lineAmount + lineGst;
-        
-        return {
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unitAmount,
-          account_code: item.accountCode,
-          total: lineAmount,
-          gst_included: item.gstIncluded || false,
-          line_gst: lineGst,
-          line_total_ex_gst: lineTotalExGst,
-          line_total_inc_gst: lineTotalIncGst
-        };
-      });
+      // Format line items for Supabase
+      const formattedLineItems = editableData.lineItems.map((item: any) => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unitAmount,
+        account_code: item.accountCode,
+        total: item.quantity * item.unitAmount
+      }));
 
       // Import and call the update function
       const { updateInvoiceData } = await import('@/services/invoiceService');
@@ -641,16 +528,14 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">Account</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST Excl</th>
-                      <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Tax</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
                       <th className="px-2 py-3 w-16">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-background divide-y divide-border">
                     {editableData?.lineItems?.map((item: any, index: number) => {
-                      const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-                      const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded);
+                      const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
                       return (
                         <tr key={item.id} className="hover:bg-muted/20">
                           <td className="px-2 py-4 text-sm text-center font-medium">{index + 1}</td>
@@ -690,16 +575,15 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                               className="text-sm text-center"
                             />
                           </td>
-                          <td className="px-2 py-4 text-center">
-                            <input
-                              type="checkbox"
-                              checked={item.gstIncluded || false}
-                              onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                          </td>
-                          <td className="px-2 py-4 text-sm text-right text-muted-foreground">
-                            {!item.gstIncluded ? formatCurrency(gstAmount) : '-'}
+                          <td className="px-2 py-4 relative">
+                            <select
+                              value={item.taxType}
+                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-input bg-background rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
+                            >
+                              <option value="INPUT">INPUT</option>
+                              <option value="NONE">NONE</option>
+                            </select>
                           </td>
                           <td className="px-2 py-4 text-sm font-medium text-right">{formatCurrency(subtotal)}</td>
                           <td className="px-2 py-4 text-center">
@@ -718,7 +602,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   </tbody>
                   <tfoot>
                     <tr>
-                      <td colSpan={9} className="px-2 py-3 bg-muted/20">
+                      <td colSpan={8} className="px-2 py-3 bg-muted/20">
                         <Button
                           variant="outline"
                           onClick={addLineItem}
@@ -733,55 +617,48 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 </table>
               </div>
             ) : (
-              <div className="hidden lg:block border border-border rounded-lg overflow-x-auto">
-                <table className="min-w-full table-auto">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase w-16">Item</th>
-                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase min-w-[280px]">Description</th>
-                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty.</th>
-                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
-                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Account</th>
-                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">GST Excl</th>
-                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
-                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-background divide-y divide-border">
-                    {invoiceData.lineItems.map((item, index) => (
-                      <tr key={index} className="hover:bg-muted/20">
-                        <td className="px-3 py-4 text-sm text-center font-medium">{item.itemNumber}</td>
-                        <td className="px-3 py-4 text-sm break-words leading-relaxed">{item.description || 'No description'}</td>
-                        <td className="px-3 py-4 text-sm text-center">{item.quantity}</td>
-                        <td className="px-3 py-4 text-sm text-right">{formatCurrency(item.unitAmount)}</td>
-                        <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
-                        <td className="px-3 py-4 text-center">
-                          {item.lineGst !== undefined ? (
-                            item.gstIncluded ? (
-                              <div className="flex justify-center">
-                                <Check className="h-5 w-5 text-green-600" />
-                              </div>
-                            ) : (
-                              <span className="text-xs">-</span>
-                            )
-                          ) : (
-                            item.taxRate === 'GST (10%)' ? <span className="text-xs">-</span> : (
-                              <div className="flex justify-center">
-                                <Check className="h-5 w-5 text-green-600" />
-                              </div>
-                            )
-                          )}
-                        </td>
-                        <td className="px-3 py-4 text-sm text-right text-muted-foreground">
-                          {item.lineGst !== undefined 
-                            ? (item.gstIncluded ? '-' : formatCurrency(item.lineGst)) 
-                            : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
-                        </td>
-                        <td className="px-3 py-4 text-sm font-medium text-right">{formatCurrency(item.amount)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
+                <div className="grid grid-cols-12 gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
+                  <div className="col-span-1 p-4 text-center">Item</div>
+                  <div className="col-span-3 p-4 border-l border-border">Description</div>
+                  <div className="col-span-1 p-4 border-l border-border text-center">Qty.</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Unit Price</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Account</div>
+                  <div className="col-span-1 p-4 border-l border-border text-center">Tax</div>
+                  <div className="col-span-2 p-4 border-l border-border text-center">Amount</div>
+                </div>
+
+                {invoiceData.lineItems.map((item, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
+                    <div className="col-span-1 p-4 flex items-center justify-center">
+                      <div className="text-sm">{item.itemNumber}</div>
+                    </div>
+                    
+                   <div className="col-span-3 p-4 border-l border-border">
+                      <div className="text-sm break-words pr-2 leading-relaxed">{item.description || 'No description'}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-4 border-l border-border text-center">
+                      <div className="text-sm">{item.quantity}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-4 border-l border-border text-center">
+                      <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-4 border-l border-border">
+                      <div className="text-xs break-words leading-relaxed">{item.account}</div>
+                    </div>
+                    
+                    <div className="col-span-1 p-4 border-l border-border text-center">
+                      <div className="text-xs break-words">{item.taxRate}</div>
+                    </div>
+                    
+                    <div className="col-span-2 p-4 border-l border-border text-right">
+                      <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -789,8 +666,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="lg:hidden space-y-3">
               {isEditing ? (
                 editableData?.lineItems?.map((item: any, index: number) => {
-                  const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-                  const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded);
+                  const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount);
                   return (
                     <div key={item.id} className="border border-border rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
@@ -843,7 +719,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                           </div>
                         </div>
                         
-                         <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                           <div>
                             <Label className="text-xs text-muted-foreground">Account</Label>
                             <Input
@@ -854,29 +730,17 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                             />
                           </div>
                           <div>
-                            <Label className="text-xs text-muted-foreground">GST Excluded</Label>
-                            <div className="flex items-center mt-3">
-                              <input
-                                type="checkbox"
-                                checked={item.gstIncluded || false}
-                                onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                {item.gstIncluded ? 'No GST' : 'GST Applies'}
-                              </span>
-                            </div>
+                            <Label className="text-xs text-muted-foreground">Tax Rate</Label>
+                            <select
+                              value={item.taxType}
+                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
+                              className="mt-1 relative z-10 flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                            >
+                              <option value="INPUT">INPUT</option>
+                              <option value="NONE">NONE</option>
+                            </select>
                           </div>
                         </div>
-                        
-                        {!item.gstIncluded && (
-                          <div className="p-3 bg-muted/30 rounded-lg">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">GST Amount:</span>
-                              <span className="font-medium">{formatCurrency(gstAmount)}</span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
@@ -916,35 +780,6 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                           <div className="text-xs">{item.taxRate}</div>
                         </div>
                       </div>
-                      
-                      {(item.lineGst !== undefined || item.taxRate === 'GST (10%)') && (
-                        <div className="pt-2 border-t border-border">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label className="text-xs text-muted-foreground">GST Excluded</Label>
-                              <div className="text-xs">
-                                {item.lineGst !== undefined ? (
-                                  item.gstIncluded ? (
-                                    <Check className="h-5 w-5 text-green-600 inline-block" />
-                                  ) : (
-                                    <span>-</span>
-                                  )
-                                ) : (
-                                  item.taxRate === 'GST (10%)' ? <span>-</span> : (
-                                    <Check className="h-5 w-5 text-green-600 inline-block" />
-                                  )
-                                )}
-                              </div>
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">GST Amount</Label>
-                              <div className="text-xs font-medium">
-                                {item.lineGst !== undefined ? formatCurrency(item.lineGst) : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))

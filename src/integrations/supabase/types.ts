@@ -83,56 +83,6 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_events: {
-        Row: {
-          amount: number | null
-          created_at: string
-          details: Json | null
-          email_address: string | null
-          entity: string | null
-          event_type: string
-          id: string
-          invoice_id: string | null
-          invoice_number: string | null
-          user_email: string | null
-          user_id: string | null
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string
-          details?: Json | null
-          email_address?: string | null
-          entity?: string | null
-          event_type: string
-          id?: string
-          invoice_id?: string | null
-          invoice_number?: string | null
-          user_email?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string
-          details?: Json | null
-          email_address?: string | null
-          entity?: string | null
-          event_type?: string
-          id?: string
-          invoice_id?: string | null
-          invoice_number?: string | null
-          user_email?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "daily_events_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       email_queue: {
         Row: {
           attempt_count: number
@@ -265,7 +215,6 @@ export type Database = {
           entity: string | null
           flag_email_address: string | null
           flag_email_body: string | null
-          flag_email_sent_at: string | null
           flag_email_subject: string | null
           flag_type: string | null
           google_drive_embed_link: string | null
@@ -278,9 +227,7 @@ export type Database = {
           link_to_invoice: string | null
           list_items: Json[] | null
           paid_date: string | null
-          partial_payment_made_at: string | null
           partially_paid: boolean | null
-          payment_made_at: string | null
           payment_ref: string | null
           processing_completed_at: string | null
           processing_error: string | null
@@ -289,7 +236,6 @@ export type Database = {
           project: string | null
           remittance_email: string | null
           remittance_sent: boolean | null
-          remittance_sent_at: string | null
           saved_emails: string[] | null
           sender_email: string | null
           status: string | null
@@ -301,8 +247,6 @@ export type Database = {
           supplier_name: string | null
           total_amount: number | null
           upload_tracking_id: string | null
-          uploaded_to_xero: boolean | null
-          uploaded_to_xero_at: string | null
           xero_contact_id: string | null
           xero_invoice_id: string | null
           xero_invoice_link: string | null
@@ -318,7 +262,6 @@ export type Database = {
           entity?: string | null
           flag_email_address?: string | null
           flag_email_body?: string | null
-          flag_email_sent_at?: string | null
           flag_email_subject?: string | null
           flag_type?: string | null
           google_drive_embed_link?: string | null
@@ -331,9 +274,7 @@ export type Database = {
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
-          partial_payment_made_at?: string | null
           partially_paid?: boolean | null
-          payment_made_at?: string | null
           payment_ref?: string | null
           processing_completed_at?: string | null
           processing_error?: string | null
@@ -342,7 +283,6 @@ export type Database = {
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
-          remittance_sent_at?: string | null
           saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
@@ -354,8 +294,6 @@ export type Database = {
           supplier_name?: string | null
           total_amount?: number | null
           upload_tracking_id?: string | null
-          uploaded_to_xero?: boolean | null
-          uploaded_to_xero_at?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
@@ -371,7 +309,6 @@ export type Database = {
           entity?: string | null
           flag_email_address?: string | null
           flag_email_body?: string | null
-          flag_email_sent_at?: string | null
           flag_email_subject?: string | null
           flag_type?: string | null
           google_drive_embed_link?: string | null
@@ -384,9 +321,7 @@ export type Database = {
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
-          partial_payment_made_at?: string | null
           partially_paid?: boolean | null
-          payment_made_at?: string | null
           payment_ref?: string | null
           processing_completed_at?: string | null
           processing_error?: string | null
@@ -395,7 +330,6 @@ export type Database = {
           project?: string | null
           remittance_email?: string | null
           remittance_sent?: boolean | null
-          remittance_sent_at?: string | null
           saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
@@ -407,8 +341,6 @@ export type Database = {
           supplier_name?: string | null
           total_amount?: number | null
           upload_tracking_id?: string | null
-          uploaded_to_xero?: boolean | null
-          uploaded_to_xero_at?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
@@ -460,27 +392,6 @@ export type Database = {
           missing_in_db?: string[]
           start_history_id?: number
           status?: string
-        }
-        Relationships: []
-      }
-      weekly_google_drive: {
-        Row: {
-          "Google Drive Name": string | null
-          id: number
-          ID: string | null
-          updated_at: string
-        }
-        Insert: {
-          "Google Drive Name"?: string | null
-          id?: number
-          ID?: string | null
-          updated_at?: string
-        }
-        Update: {
-          "Google Drive Name"?: string | null
-          id?: number
-          ID?: string | null
-          updated_at?: string
         }
         Relationships: []
       }
