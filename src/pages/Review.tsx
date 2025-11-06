@@ -140,51 +140,50 @@ export const Review: React.FC = () => {
         userName={user?.email}
       />
 
-      {/* Main Content Area - Flush against sidebar */}
+      {/* Main Content Area - Fixed positioning like Paid page */}
       <div
-        className="flex-1 flex flex-col transition-all duration-300"
+        className="fixed top-0 bottom-0 flex flex-col z-0 transition-all duration-300"
         style={{
-          paddingLeft: sidebarCollapsed ? "64px" : "192px",
+          left: sidebarCollapsed ? "64px" : "192px",
+          right: 0,
         }}
       >
         {/* Three-Column Layout */}
-        <div className="h-full overflow-hidden">
-          <div className="h-full flex">
-            {/* Email List (Left) - Fixed 360px */}
-            <div className="w-[360px] flex-shrink-0 border-r border-border">
-              <ReviewEmailList
-                selectedEmailId={selectedEmailId}
-                onSelectEmail={handleSelectEmail}
+        <div className="h-full overflow-hidden flex">
+          {/* Email List (Left) - Fixed 360px */}
+          <div className="w-[360px] flex-shrink-0 border-r border-border">
+            <ReviewEmailList
+              selectedEmailId={selectedEmailId}
+              onSelectEmail={handleSelectEmail}
+            />
+          </div>
+
+          {/* Conversation and Attachments (Right) */}
+          <div className="flex-1 flex min-w-0">
+            {/* Conversation (Middle) */}
+            <div className="flex-1 min-w-0 border-r border-border">
+              <EmailConversationView
+                email={emailContent}
+                loading={loadingContent}
               />
             </div>
 
-            {/* Conversation and Attachments (Right) */}
-            <div className="flex-1 flex min-w-0">
-              {/* Conversation (Middle) */}
-              <div className="flex-1 min-w-0 border-r border-border">
-                <EmailConversationView
-                  email={emailContent}
-                  loading={loadingContent}
-                />
+            {/* Attachments (Right) */}
+            <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
+              <div className="px-4 py-3 border-b border-border">
+                <h2 className="text-sm font-semibold">Attachments</h2>
               </div>
-
-              {/* Attachments (Right) */}
-              <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
-                <div className="px-4 py-3 border-b border-border">
-                  <h2 className="text-sm font-semibold">Attachments</h2>
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <AttachmentsPanel 
-                    emailId={selectedEmailId} 
-                    onAttachmentClick={(attachment: EmailAttachment) => {
-                      setSelectedAttachmentId(attachment.id);
-                    }}
-                    onAddInvoice={(attachment: EmailAttachment) => {
-                      setInvoiceAttachment(attachment);
-                      setInvoiceDrawerOpen(true);
-                    }}
-                  />
-                </div>
+              <div className="flex-1 overflow-hidden">
+                <AttachmentsPanel 
+                  emailId={selectedEmailId} 
+                  onAttachmentClick={(attachment: EmailAttachment) => {
+                    setSelectedAttachmentId(attachment.id);
+                  }}
+                  onAddInvoice={(attachment: EmailAttachment) => {
+                    setInvoiceAttachment(attachment);
+                    setInvoiceDrawerOpen(true);
+                  }}
+                />
               </div>
             </div>
           </div>
