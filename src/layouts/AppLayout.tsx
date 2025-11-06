@@ -74,7 +74,7 @@ export const AppLayout: React.FC = () => {
         onSignOut={handleSignOut}
         userName={user?.email}
       />
-      <main className="flex-1 min-w-0 relative">
+      <main className="flex-1 min-w-0 h-full relative">
         <React.Suspense
           fallback={
             <div className="absolute inset-0 grid place-items-center">

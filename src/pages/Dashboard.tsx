@@ -621,7 +621,7 @@ export const Dashboard: React.FC = () => {
   const hasNoInvoices = invoices.length === 0;
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Compact Command Bar */}
       <CompactCommandBar
             onRefresh={() => loadInvoices(true)}

@@ -95,7 +95,7 @@ export const Review: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-full flex">
       <div className="w-[360px] border-r border-border bg-card flex flex-col">
         <ReviewEmailList
           selectedEmailId={selectedEmailId}
