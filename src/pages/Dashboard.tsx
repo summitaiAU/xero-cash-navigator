@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { PaymentSection } from "@/components/PaymentSection";
@@ -743,150 +743,20 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Mobile/Tablet Layout */}
-      <div className="lg:hidden min-h-screen bg-dashboard-bg">
-        {/* Scrollable Header for Mobile/Tablet */}
-        <header className="bg-white border-b border-gray-200 shadow-soft">
-          <div className="max-w-screen-2xl mx-auto px-3 md:px-4 py-2 md:py-3 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <img src={SodhiLogo} alt="Sodhi Logo" className="h-6 w-auto" />
-              <div>
-                <h1 className="text-lg md:text-xl font-semibold text-amber-600">Payment Dashboard</h1>
-                <p className="text-xs text-gray-600">Streamline your payment workflow</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
-                <User className="h-3 w-3" />
-                <span className="truncate max-w-[120px]">{user?.email}</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline text-xs">Sign Out</span>
-              </Button>
-            </div>
-          </div>
-        </header>
+      {/* User Presence */}
+      <UserPresenceIndicator invoiceId={currentInvoice?.id} />
 
-        {/* Main Content */}
-        <main className="p-3 md:p-4 space-y-4 md:space-y-6">
-          {/* Navigation - Will become floating on scroll */}
-          <InvoiceNavigation
-            currentIndex={currentIndex}
-            totalInvoices={invoices.length}
-            onPrevious={handlePrevious}
-            onNext={handleNext}
-            completedCount={completedInvoices.size}
-            emailLink={currentInvoice?.drive_view_url}
-            invoices={invoices}
-            allInvoices={allInvoices}
-            viewState={viewState}
-            onViewStateChange={handleViewStateChange}
-            onJumpToInvoice={handleJumpToInvoice}
-            onInvoiceSelect={handleInvoiceSelect}
-          />
+      {/* Real-time notifications */}
+      <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
 
-          {hasNoInvoices ? (
-            /* Mobile No Invoices State */
-            <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="text-center">
-                <h2 className="text-xl font-bold mb-4">
-                  No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
-                </h2>
-                <p className="text-muted-foreground mb-4">
-                  {viewState === "paid"
-                    ? "No paid invoices are available to view."
-                    : viewState === "flagged"
-                      ? "No flagged invoices are available to view."
-                      : "No invoices are available for processing."}
-                </p>
-                {viewState === "paid" && (
-                  <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* PDF Viewer with increased height */}
-              <div className="h-[60vh] md:h-[75vh]">
-                <PDFViewer invoice={currentInvoice} />
-              </div>
-
-              {/* Real-time notifications component */}
-              <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
-
-              {/* Conflict warning for multi-user scenarios */}
-              {currentInvoice && (
-                <ConflictWarning
-                  invoiceId={currentInvoice.id}
-                  isEditing={false} // This would be updated based on actual editing state
-                />
-              )}
-
-              {/* Real-time notifications component */}
-              <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
-
-              {/* Conflict warning for multi-user scenarios */}
-              {currentInvoice && (
-                <ConflictWarning
-                  invoiceId={currentInvoice.id}
-                  isEditing={false} // This would be updated based on actual editing state
-                />
-              )}
-
-              <XeroSection
-                invoice={currentInvoice}
-                onUpdate={handleXeroUpdate}
-                onSync={() =>
-                  currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
-                }
-                loading={isXeroLoading}
-              />
-
-              {viewState === "paid" ? (
-                <PaidInvoiceSection
-                  invoice={currentInvoice}
-                  onReprocess={handleReprocessPayment}
-                  onRemittanceSent={handleRemittanceSent}
-                />
-              ) : viewState === "flagged" ? (
-                <FlaggedInvoiceSection invoice={currentInvoice} onResolve={handleResolveFlag} />
-              ) : (
-                <PaymentSection
-                  invoice={currentInvoice}
-                  onMarkAsPaid={handleMarkAsPaid}
-                  onSkip={handleSkip}
-                  onFlag={handleFlagInvoice}
-                  loading={loading}
-                />
-              )}
-
-              {/* Delete Invoice Button - Only for payable invoices (Mobile) */}
-              {viewState === "payable" && currentInvoice && (
-                <DeleteInvoiceButton
-                  invoice={currentInvoice}
-                  onDeleted={async () => {
-                    // Reload invoices after deletion
-                    await loadInvoices();
-                    await loadAllInvoices(); // Refresh search data
-                    // If this was the last invoice or we're at the end, go to previous
-                    if (currentIndex >= invoices.length - 1 && currentIndex > 0) {
-                      setCurrentIndex(currentIndex - 1);
-                    }
-                    toast({
-                      title: "Invoice deleted",
-                      description: "Invoice has been removed successfully.",
-                    });
-                  }}
-                />
-              )}
-            </>
-          )}
-        </main>
-      </div>
+      {/* Conflict warning if another user is editing */}
+      {currentInvoice && (
+        <ConflictWarning
+          invoiceId={currentInvoice.id}
+          isEditing={false}
+        />
+      )}
 
       {/* Global Success Overlay - Only show temporarily after payment */}
       {showSuccessOverlay && (
