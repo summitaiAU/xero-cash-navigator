@@ -29,7 +29,6 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   const [currentPage, setCurrentPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
-  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Simplified filters - only search and sort
@@ -43,7 +42,6 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
           setLoadingMore(true);
         } else {
           setLoading(true);
-          setSeenIds(new Set());
         }
 
         const filters: EmailListFilters = {
@@ -55,23 +53,14 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
         if (fetchError) throw fetchError;
 
-        const newEmails = data.filter((email) => !seenIds.has(email.id));
-        const newSeenIds = new Set(seenIds);
-        newEmails.forEach((email) => newSeenIds.add(email.id));
-        setSeenIds(newSeenIds);
-
         if (append) {
-          setEmails((prev) => [...prev, ...newEmails]);
+          setEmails((prev) => [...prev, ...data]);
         } else {
-          setEmails(newEmails);
-          // Auto-select first email if none selected
-          if (newEmails.length > 0 && !selectedEmailId) {
-            onSelectEmail(newEmails[0]);
-          }
+          setEmails(data);
         }
 
         setTotalCount(count);
-        setHasMore(newEmails.length === 30);
+        setHasMore(data.length === 30);
         setError(null);
       } catch (err) {
         console.error("Failed to fetch emails:", err);
@@ -81,13 +70,21 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         setLoadingMore(false);
       }
     },
-    [searchQuery, sortBy, seenIds, selectedEmailId, onSelectEmail]
+    [searchQuery, sortBy]
   );
 
+  // Fetch emails when search or sort changes
   useEffect(() => {
     setCurrentPage(0);
     fetchEmails(0, false);
-  }, [searchQuery, sortBy, fetchEmails]);
+  }, [searchQuery, sortBy]);
+
+  // Auto-select first email when list loads and nothing is selected
+  useEffect(() => {
+    if (emails.length > 0 && !selectedEmailId) {
+      onSelectEmail(emails[0]);
+    }
+  }, [emails, selectedEmailId, onSelectEmail]);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
@@ -100,7 +97,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         fetchEmails(nextPage, true);
       }
     },
-    [hasMore, loadingMore, loading, currentPage, fetchEmails]
+    [hasMore, loadingMore, loading, currentPage]
   );
 
   const formatDate = (email: EmailListItem) => {
