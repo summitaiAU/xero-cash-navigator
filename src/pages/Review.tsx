@@ -20,6 +20,7 @@ import { ReviewEmailList } from "@/components/ReviewEmailList";
 import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { AttachmentViewer } from "@/components/AttachmentViewer";
+import { AddInvoiceDrawer } from "@/components/AddInvoiceDrawer";
 
 type View = "payable" | "paid" | "flagged";
 
@@ -32,6 +33,8 @@ export const Review: React.FC = () => {
   const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string | null>(null);
+  const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
+  const [invoiceAttachment, setInvoiceAttachment] = useState<EmailAttachment | null>(null);
 
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -176,6 +179,10 @@ export const Review: React.FC = () => {
                         onAttachmentClick={(attachment: EmailAttachment) => {
                           setSelectedAttachmentId(attachment.id);
                         }}
+                        onAddInvoice={(attachment: EmailAttachment) => {
+                          setInvoiceAttachment(attachment);
+                          setInvoiceDrawerOpen(true);
+                        }}
                       />
                     </div>
                   </div>
@@ -190,6 +197,16 @@ export const Review: React.FC = () => {
       <AttachmentViewer
         attachmentId={selectedAttachmentId}
         onClose={() => setSelectedAttachmentId(null)}
+      />
+
+      {/* Add Invoice Drawer */}
+      <AddInvoiceDrawer
+        open={invoiceDrawerOpen}
+        onClose={() => {
+          setInvoiceDrawerOpen(false);
+          setInvoiceAttachment(null);
+        }}
+        selectedAttachment={invoiceAttachment}
       />
     </div>
   );

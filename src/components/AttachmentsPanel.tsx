@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { FileIcon, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { FileIcon, AlertCircle, CheckCircle, Clock, Plus } from "lucide-react";
 import { fetchEmailAttachments, EmailAttachment } from "@/services/emailReviewService";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
 interface AttachmentsPanelProps {
   emailId: string | null;
   onAttachmentClick?: (attachment: EmailAttachment) => void;
+  onAddInvoice?: (attachment: EmailAttachment) => void;
 }
 
 const getFileIcon = (mimeType: string) => {
@@ -49,9 +51,10 @@ const categorizeAttachments = (attachments: EmailAttachment[]): CategorizedAttac
   return { flagged, added, neutral };
 };
 
-export const AttachmentsPanel = ({ emailId, onAttachmentClick }: AttachmentsPanelProps) => {
+export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: AttachmentsPanelProps) => {
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedAttachment, setSelectedAttachment] = useState<EmailAttachment | null>(null);
 
   useEffect(() => {
     if (!emailId) {
@@ -133,11 +136,18 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick }: AttachmentsPane
       neutral: "text-gray-400",
     }[category];
 
+    const isSelected = selectedAttachment?.id === attachment.id;
+
     return (
       <button
         key={attachment.id}
-        onClick={() => onAttachmentClick?.(attachment)}
-        className={`w-full flex items-center gap-3 p-3 border ${borderColor} border-l-4 rounded-lg hover:bg-accent transition-colors text-left group`}
+        onClick={() => {
+          setSelectedAttachment(attachment);
+          onAttachmentClick?.(attachment);
+        }}
+        className={`w-full flex items-center gap-3 p-3 border ${borderColor} border-l-4 rounded-lg hover:bg-accent transition-colors text-left group ${
+          isSelected ? "bg-accent ring-2 ring-primary" : ""
+        }`}
         title={attachment.unsupported_reason || undefined}
       >
         <div className="text-2xl flex-shrink-0">
@@ -164,8 +174,20 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick }: AttachmentsPane
   };
 
   return (
-    <div className="h-full overflow-y-auto">
-      <div className="p-4 space-y-6">
+    <div className="h-full overflow-y-auto flex flex-col">
+      {selectedAttachment && onAddInvoice && (
+        <div className="p-4 border-b bg-muted/30">
+          <Button
+            onClick={() => onAddInvoice(selectedAttachment)}
+            className="w-full gap-2"
+            variant="default"
+          >
+            <Plus className="h-4 w-4" />
+            Add Invoice
+          </Button>
+        </div>
+      )}
+      <div className="flex-1 p-4 space-y-6">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
