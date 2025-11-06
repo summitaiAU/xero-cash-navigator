@@ -2,16 +2,30 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface EmailListItem {
   id: string;
-  from_avatar_initials: string | null;
+  status: string;
+  priority: number;
+  attempt_count: number;
+  max_attempts: number;
   from_name: string | null;
   from_email: string | null;
   subject: string | null;
   snippet_text: string | null;
-  date_received: string | null;
-  display_date_local: string | null;
   no_of_attachments: number;
-  priority: number;
+  display_date_local: string | null;
+  date_received: string | null;
   created_at: string;
+  error_message: string | null;
+}
+
+export interface EmailListFilters {
+  statuses?: string[];
+  hasAttachments?: boolean | null;
+  hasErrors?: boolean | null;
+  reviewProcessed?: boolean | null;
+  startDate?: string;
+  endDate?: string;
+  searchQuery?: string;
+  sortBy?: 'newest' | 'oldest' | 'priority' | 'attempts';
 }
 
 export interface EmailAttachment {
@@ -56,46 +70,137 @@ export interface NormalizedEmail {
 const PAGE_SIZE = 30;
 
 /**
- * Fetch review email list items (for left sidebar)
+ * Fetch email list items with filters (for left sidebar)
  */
 export async function fetchReviewEmailList(
-  page = 0
+  page = 0,
+  filters: EmailListFilters = {}
 ): Promise<{ data: EmailListItem[]; error: Error | null; count: number }> {
   try {
     const offset = page * PAGE_SIZE;
     
-    // @ts-ignore - Supabase type inference has issues with complex queries
-    const { data, error, count } = await supabase
-      .from("email_queue")
-      .select(
-        `id,
-        from_name,
-        from_email,
-        subject,
-        snippet_text,
-        date_received,
-        display_date_local,
-        no_of_attachments,
-        priority,
-        created_at`,
-        { count: "exact" }
-      )
-      .eq("status", "review")
-      .order("priority", { ascending: false })
-      .order("display_date_local", { ascending: false, nullsFirst: false })
-      .order("date_received", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + PAGE_SIZE - 1);
+    // Build base query
+    const baseSelect = `id,
+      status,
+      priority,
+      attempt_count,
+      max_attempts,
+      from_name,
+      from_email,
+      subject,
+      snippet_text,
+      no_of_attachments,
+      display_date_local,
+      date_received,
+      created_at,
+      error_message`;
+
+    // Start with base query
+    // @ts-ignore
+    let query = supabase.from("email_queue").select(baseSelect, { count: "exact" });
+
+    // Apply status filter
+    if (filters.statuses && filters.statuses.length > 0) {
+      // @ts-ignore
+      query = query.in("status", filters.statuses);
+    }
+
+    // Apply attachment filter
+    if (filters.hasAttachments === true) {
+      // @ts-ignore
+      query = query.gt("no_of_attachments", 0);
+    } else if (filters.hasAttachments === false) {
+      // @ts-ignore
+      query = query.or("no_of_attachments.eq.0,no_of_attachments.is.null");
+    }
+
+    // Apply error filter
+    if (filters.hasErrors === true) {
+      // @ts-ignore
+      query = query.not("error_message", "is", null).neq("error_message", "");
+    }
+
+    // Apply review processed filter
+    if (filters.reviewProcessed !== null && filters.reviewProcessed !== undefined) {
+      // @ts-ignore
+      query = query.eq("review_status_processed", filters.reviewProcessed);
+    }
+
+    // Apply date range filters
+    if (filters.startDate) {
+      // @ts-ignore
+      query = query.gte("date_received", filters.startDate);
+    }
+    if (filters.endDate) {
+      // @ts-ignore
+      query = query.lt("date_received", filters.endDate);
+    }
+
+    // Apply text search
+    if (filters.searchQuery && filters.searchQuery.trim()) {
+      const searchTerm = `%${filters.searchQuery.trim()}%`;
+      // @ts-ignore
+      query = query.or(
+        `subject.ilike.${searchTerm},from_name.ilike.${searchTerm},from_email.ilike.${searchTerm},snippet_text.ilike.${searchTerm}`
+      );
+    }
+
+    // Apply sorting
+    switch (filters.sortBy) {
+      case 'oldest':
+        // @ts-ignore
+        query = query.order("date_received", { ascending: true, nullsFirst: false });
+        break;
+      case 'priority':
+        // @ts-ignore
+        query = query
+          .order("priority", { ascending: false })
+          .order("date_received", { ascending: false, nullsFirst: false });
+        break;
+      case 'attempts':
+        // @ts-ignore
+        query = query
+          .order("attempt_count", { ascending: false })
+          .order("date_received", { ascending: false, nullsFirst: false });
+        break;
+      case 'newest':
+      default:
+        // @ts-ignore
+        query = query.order("date_received", { ascending: false, nullsFirst: false });
+        break;
+    }
+
+    // Add fallback ordering
+    // @ts-ignore
+    query = query.order("created_at", { ascending: false });
+
+    // Apply pagination
+    // @ts-ignore
+    query = query.range(offset, offset + PAGE_SIZE - 1);
+
+    // @ts-ignore
+    const { data, error, count } = await query;
 
     if (error) {
-      console.error("Error fetching review email list:", error);
+      console.error("Error fetching email list:", error);
       return { data: [], error, count: 0 };
     }
 
-    // Map data to include null from_avatar_initials since it's not in DB
     const mappedData: EmailListItem[] = (data || []).map((item: any) => ({
-      ...item,
-      from_avatar_initials: null,
+      id: item.id,
+      status: item.status,
+      priority: item.priority,
+      attempt_count: item.attempt_count,
+      max_attempts: item.max_attempts,
+      from_name: item.from_name,
+      from_email: item.from_email,
+      subject: item.subject,
+      snippet_text: item.snippet_text,
+      no_of_attachments: item.no_of_attachments || 0,
+      display_date_local: item.display_date_local,
+      date_received: item.date_received,
+      created_at: item.created_at,
+      error_message: item.error_message,
     }));
 
     return { data: mappedData, error: null, count: count || 0 };
