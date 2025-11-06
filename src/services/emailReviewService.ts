@@ -1,5 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface EmailListItem {
+  id: string;
+  from_avatar_initials: string | null;
+  from_name: string | null;
+  from_email: string | null;
+  subject: string | null;
+  snippet_text: string | null;
+  date_received: string | null;
+  display_date_local: string | null;
+  no_of_attachments: number;
+  priority: number;
+  created_at: string;
+}
+
 export interface EmailAttachment {
   id: string;
   filename: string;
@@ -29,6 +43,62 @@ export interface NormalizedEmail {
     neutral: EmailAttachment[];
   };
   no_of_attachments: number;
+}
+
+const PAGE_SIZE = 30;
+
+/**
+ * Fetch review email list items (for left sidebar)
+ */
+export async function fetchReviewEmailList(
+  page = 0
+): Promise<{ data: EmailListItem[]; error: Error | null; count: number }> {
+  try {
+    const offset = page * PAGE_SIZE;
+    
+    // @ts-ignore - Supabase type inference has issues with complex queries
+    const { data, error, count } = await supabase
+      .from("email_queue")
+      .select(
+        `id,
+        from_name,
+        from_email,
+        subject,
+        snippet_text,
+        date_received,
+        display_date_local,
+        no_of_attachments,
+        priority,
+        created_at`,
+        { count: "exact" }
+      )
+      .eq("status", "review")
+      .order("priority", { ascending: false })
+      .order("display_date_local", { ascending: false, nullsFirst: false })
+      .order("date_received", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + PAGE_SIZE - 1);
+
+    if (error) {
+      console.error("Error fetching review email list:", error);
+      return { data: [], error, count: 0 };
+    }
+
+    // Map data to include null from_avatar_initials since it's not in DB
+    const mappedData: EmailListItem[] = (data || []).map((item: any) => ({
+      ...item,
+      from_avatar_initials: null,
+    }));
+
+    return { data: mappedData, error: null, count: count || 0 };
+  } catch (error) {
+    console.error("Unexpected error in fetchReviewEmailList:", error);
+    return {
+      data: [],
+      error: error instanceof Error ? error : new Error(String(error)),
+      count: 0,
+    };
+  }
 }
 
 
