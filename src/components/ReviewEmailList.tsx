@@ -239,7 +239,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         )}
 
         {emails.length > 0 && (
-          <div className="px-6 py-4 space-y-3">
+          <div>
             {emails.map((email) => {
               const isSelected = selectedEmailId === email.id;
 

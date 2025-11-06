@@ -247,17 +247,18 @@ All colors MUST be HSL.
   
   /* Review page styles */
   .review-email-row {
-    @apply bg-card border border-border rounded-[10px] p-3 transition-smooth hover:shadow-[0_1px_2px_rgba(0,0,0,0.06)] cursor-pointer;
+    @apply w-full px-6 py-4 border-b border-border transition-smooth cursor-pointer text-left;
+    background: transparent;
   }
   
   .review-email-row:hover {
-    border-color: hsl(220 15% 84%);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    background: hsl(var(--accent) / 0.5);
   }
   
   .review-email-row.active {
-    border-left: 3px solid hsl(var(--primary));
-    background: hsl(25 85% 50% / 0.04);
+    border-left: 4px solid hsl(var(--primary));
+    background: hsl(var(--primary) / 0.05);
+    padding-left: calc(1.5rem - 4px);
   }
   
   .review-chip {
