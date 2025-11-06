@@ -4,6 +4,7 @@ import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Invoice } from "@/types/invoice";
+import { cn } from "@/lib/utils";
 
 export const AppLayout: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -74,7 +75,10 @@ export const AppLayout: React.FC = () => {
         onSignOut={handleSignOut}
         userName={user?.email}
       />
-      <main className="flex-1 min-w-0 h-full relative">
+      <main className={cn(
+        "flex-1 min-w-0 h-full relative transition-all duration-300",
+        sidebarCollapsed ? "pl-16" : "pl-48"
+      )}>
         <React.Suspense
           fallback={
             <div className="absolute inset-0 grid place-items-center">

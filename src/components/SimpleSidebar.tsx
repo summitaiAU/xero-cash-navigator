@@ -114,7 +114,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
         role="navigation"
         aria-label="Invoice categories"
         className={cn(
-          "relative h-full border-r bg-background p-3 flex flex-col transition-all duration-300",
+          "fixed left-0 top-0 bottom-0 z-40 border-r bg-background p-3 flex flex-col transition-all duration-300",
           isCollapsed ? "w-16" : "w-48"
         )}
       >
