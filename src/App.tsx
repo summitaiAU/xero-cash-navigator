@@ -17,6 +17,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPasswordVerify = lazy(() => import("./pages/ResetPasswordVerify"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const AppLayout = lazy(() => import("./layouts/AppLayout").then(module => ({ default: module.AppLayout })));
 
 // Create QueryClient outside component to prevent recreation on every render
 const queryClient = new QueryClient();
@@ -29,31 +30,22 @@ function App() {
           <TooltipProvider>
             <BrowserRouter>
               <Routes>
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPasswordVerify />} />
                 <Route path="/update-password" element={<UpdatePassword />} />
                 <Route
-                  path="/dashboard"
+                  path="/"
                   element={
                     <ProtectedRoute>
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <Dashboard />
-                      </Suspense>
+                      <AppLayout />
                     </ProtectedRoute>
                   }
-                />
-                <Route
-                  path="/review"
-                  element={
-                    <ProtectedRoute>
-                      <Suspense fallback={<div>Loading...</div>}>
-                        <Review />
-                      </Suspense>
-                    </ProtectedRoute>
-                  }
-                />
+                >
+                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route path="dashboard" element={<Dashboard />} />
+                  <Route path="review" element={<Review />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

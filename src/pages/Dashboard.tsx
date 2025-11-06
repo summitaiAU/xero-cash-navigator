@@ -32,6 +32,8 @@ import { useSafeOffsets } from "@/hooks/useSafeOffsets";
 
 export const Dashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const initialView = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -47,15 +49,20 @@ export const Dashboard: React.FC = () => {
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">(initialView);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => 
-    localStorage.getItem('sidebar-collapsed') === 'true'
-  );
   const [isViewLoading, setIsViewLoading] = useState(false);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
 
   // Current invoice for easy access
   const currentInvoice = invoices[currentIndex];
+
+  // Sync viewState with URL search params
+  useEffect(() => {
+    const next = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
+    if (next !== viewState) {
+      setIsViewLoading(true);
+      setViewState(next);
+    }
+  }, [searchParams]);
 
   // Multi-user presence tracking
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
@@ -448,20 +455,9 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleViewStateChange = React.useCallback((state: "payable" | "paid" | "flagged") => {
-    if (state !== viewState) {
-      setIsViewLoading(true);
-      setViewState(state);
-      // Loading state will be cleared when invoices are loaded in the useEffect
-    }
-  }, [viewState]);
-
-  const handleToggleSidebar = React.useCallback(() => {
-    setSidebarCollapsed(prev => {
-      const newValue = !prev;
-      localStorage.setItem('sidebar-collapsed', String(newValue));
-      return newValue;
-    });
-  }, []);
+    navigate(`/dashboard?view=${state}`);
+    setCurrentIndex(0);
+  }, [navigate]);
 
   const handleFlagInvoice = async (invoiceId: string) => {
     try {
@@ -625,30 +621,9 @@ export const Dashboard: React.FC = () => {
   const hasNoInvoices = invoices.length === 0;
 
   return (
-    <>
-      {/* Desktop Layout */}
-      <div className="hidden lg:block h-screen bg-console-bg overflow-hidden">
-        {/* Simple Sidebar */}
-        <SimpleSidebar
-          viewState={viewState}
-          onViewStateChange={handleViewStateChange}
-          payableCount={payableCount}
-          paidCount={paidCount}
-          flaggedCount={flaggedCount}
-          isCollapsed={sidebarCollapsed}
-          onToggleCollapse={handleToggleSidebar}
-        />
-
-        {/* Main Content Area */}
-        <div 
-          className="fixed top-0 bottom-0 flex flex-col z-0 transition-all duration-300"
-          style={{ 
-            left: sidebarCollapsed ? '64px' : '192px',
-            right: 0
-          }}
-        >
-          {/* Compact Command Bar */}
-          <CompactCommandBar
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Compact Command Bar */}
+      <CompactCommandBar
             onRefresh={() => loadInvoices(true)}
             allInvoices={allInvoices}
             visibleInvoices={invoices}
@@ -932,6 +907,6 @@ export const Dashboard: React.FC = () => {
       <div className="fixed bottom-4 right-4 text-xs text-muted-foreground bg-card px-3 py-2 rounded-lg shadow-soft border border-border">
         Press ? for keyboard shortcuts
       </div>
-    </>
+    </div>
   );
 };

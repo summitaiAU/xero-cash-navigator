@@ -24,10 +24,6 @@ type View = "payable" | "paid" | "flagged";
 
 export const Review: React.FC = () => {
   const navigate = useNavigate();
-  const [viewState, setViewState] = useState<View>("payable");
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
-    localStorage.getItem("sidebar-collapsed") === "true"
-  );
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
@@ -37,7 +33,6 @@ export const Review: React.FC = () => {
   const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
   const conversationScrollRef = React.useRef<number>(0);
 
-  const { user, signOut } = useAuth();
   const { toast } = useToast();
 
   // Keyboard handlers for Review page
@@ -99,108 +94,53 @@ export const Review: React.FC = () => {
     setSelectedAttachmentId(null); // Clear attachment selection on new email
   };
 
-  const handleToggleSidebar = React.useCallback(() => {
-    setSidebarCollapsed((prev) => {
-      const newValue = !prev;
-      localStorage.setItem("sidebar-collapsed", String(newValue));
-      return newValue;
-    });
-  }, []);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed out",
-        description: "You've been successfully signed out.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Sign out failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleViewStateChange = (newView: View) => {
-    navigate(`/dashboard?view=${newView}`);
-  };
-
   return (
-    <div className="min-h-screen w-full bg-background flex">
-      {/* Sidebar Navigation */}
-      <SimpleSidebar
-        viewState={viewState}
-        onViewStateChange={handleViewStateChange}
-        payableCount={0}
-        paidCount={0}
-        flaggedCount={0}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={handleToggleSidebar}
-        onSignOut={handleSignOut}
-        userName={user?.email}
-      />
+    <div className="h-screen flex">
+      <div className="w-[360px] border-r border-border bg-card flex flex-col">
+        <ReviewEmailList
+          selectedEmailId={selectedEmailId}
+          onSelectEmail={handleSelectEmail}
+        />
+      </div>
 
-      {/* Main Content Area - Fixed positioning like Paid page */}
-      <div
-        className="fixed top-0 bottom-0 flex flex-col z-0 transition-all duration-300"
-        style={{
-          left: sidebarCollapsed ? "64px" : "192px",
-          right: 0,
-        }}
-      >
-        {/* Three-Column Layout */}
-        <div className="h-full overflow-hidden flex">
-          {/* Email List (Left) - Fixed 360px */}
-          <div className="w-[360px] flex-shrink-0 border-r border-border">
-            <ReviewEmailList
-              selectedEmailId={selectedEmailId}
-              onSelectEmail={handleSelectEmail}
-            />
+      {/* Right side - Conversation and Attachments */}
+      <div className="flex-1 min-w-0 flex">
+        <div className="flex-1 min-w-0 border-r border-border">
+          <EmailConversationView
+            email={emailContent}
+            loading={loadingContent}
+          />
+        </div>
+
+        {/* Attachments (Right) */}
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
+          <div className="px-4 py-3 border-b border-border">
+            <h2 className="text-sm font-semibold">Attachments</h2>
           </div>
-
-          {/* Conversation and Attachments (Right) */}
-          <div className="flex-1 flex min-w-0">
-            {/* Conversation (Middle) */}
-            <div className="flex-1 min-w-0 border-r border-border">
-              <EmailConversationView
-                email={emailContent}
-                loading={loadingContent}
-              />
-            </div>
-
-            {/* Attachments (Right) */}
-            <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
-              <div className="px-4 py-3 border-b border-border">
-                <h2 className="text-sm font-semibold">Attachments</h2>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <AttachmentsPanel 
-                  emailId={selectedEmailId} 
-                  onAttachmentClick={(attachment: EmailAttachment) => {
-                    setSelectedAttachmentId(attachment.id);
-                  }}
-                  onAddInvoice={(attachment: EmailAttachment) => {
-                    setInvoiceAttachment(attachment);
-                    setInvoiceDrawerOpen(true);
-                  }}
-                />
-              </div>
-            </div>
+          <div className="flex-1 overflow-hidden">
+            <AttachmentsPanel 
+              emailId={selectedEmailId} 
+              onAttachmentClick={(attachment: EmailAttachment) => {
+                setSelectedAttachmentId(attachment.id);
+              }}
+              onAddInvoice={(attachment: EmailAttachment) => {
+                setInvoiceAttachment(attachment);
+                setInvoiceDrawerOpen(true);
+              }}
+            />
           </div>
         </div>
       </div>
 
       {/* Attachment Viewer Modal */}
       <AttachmentViewer
-            attachmentId={selectedAttachmentId}
-            onClose={() => setSelectedAttachmentId(null)}
-            onAddInvoice={(attachment) => {
-              setInvoiceAttachment(attachment);
-              setInvoiceDrawerOpen(true);
-            }}
-          />
+        attachmentId={selectedAttachmentId}
+        onClose={() => setSelectedAttachmentId(null)}
+        onAddInvoice={(attachment) => {
+          setInvoiceAttachment(attachment);
+          setInvoiceDrawerOpen(true);
+        }}
+      />
 
       {/* Add Invoice Drawer */}
       <AddInvoiceDrawer

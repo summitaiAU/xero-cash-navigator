@@ -263,26 +263,8 @@ All colors MUST be HSL.
   
   .text-fade {
     position: relative;
-    overflow: hidden;
-  }
-  
-  .text-fade::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    width: 40px;
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--card)));
-    pointer-events: none;
-  }
-  
-  .review-email-row:hover .text-fade::after {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--accent) / 0.5));
-  }
-  
-  .review-email-row.active .text-fade::after {
-    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--primary) / 0.05));
+    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
+    mask-image: linear-gradient(to right, rgba(0,0,0,1) 70%, rgba(0,0,0,0));
   }
   
   .review-chip {
