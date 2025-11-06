@@ -1,6 +1,7 @@
 import React from "react";
-import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate, useLocation } from "react-router-dom";
 import SodhiLogo from "@/assets/sodhi-logo.svg";
 import {
   Tooltip,
@@ -28,6 +29,9 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const Btn = ({
     icon: Icon,
     label,
@@ -163,6 +167,27 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
           active={viewState === "flagged"}
           onClick={() => onViewStateChange("flagged")}
         />
+
+        {/* Review Page Link */}
+        <div className="pt-4 mt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={() => navigate("/review")}
+            aria-current={location.pathname === "/review" ? "page" : undefined}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300",
+              location.pathname === "/review"
+                ? "bg-primary text-primary-foreground"
+                : "hover:bg-muted text-foreground",
+              isCollapsed ? "justify-center" : "justify-start"
+            )}
+          >
+            <div className={cn("flex items-center gap-3")}>
+              <Mail className="h-4 w-4 flex-shrink-0" />
+              {!isCollapsed && <span>Review</span>}
+            </div>
+          </button>
+        </div>
       </aside>
     </TooltipProvider>
   );
