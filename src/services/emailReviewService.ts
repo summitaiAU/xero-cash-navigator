@@ -25,6 +25,10 @@ export interface EmailAttachment {
   previewable: boolean | null;
   viewer_kind: string | null;
   unsupported_reason: string | null;
+  text_excerpt: string | null;
+  data_base64url: string | null;
+  safe_html: string | null;
+  created_at: string;
 }
 
 export interface NormalizedEmail {
@@ -126,6 +130,10 @@ function groupAttachments(attachments: any[]): {
       previewable: att.previewable,
       viewer_kind: att.viewer_kind,
       unsupported_reason: att.unsupported_reason,
+      text_excerpt: att.text_excerpt || null,
+      data_base64url: att.data_base64url || null,
+      safe_html: att.safe_html || null,
+      created_at: att.created_at || new Date().toISOString(),
     };
 
     if (att.status === "review" && att.error_code) {
@@ -302,6 +310,38 @@ export async function fetchEmailContent(
     console.error("Unexpected error in fetchEmailContent:", error);
     return {
       data: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
+/**
+ * Fetch attachments for a specific email
+ */
+export async function fetchEmailAttachments(
+  emailId: string
+): Promise<{ data: EmailAttachment[]; error: Error | null }> {
+  try {
+    // @ts-ignore - Supabase type inference has issues with complex queries
+    const { data, error } = await (supabase as any)
+      .from("email_attachments")
+      .select(
+        "id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, created_at"
+      )
+      .eq("email_id", emailId)
+      .order("status", { ascending: true }) // review first, then completed
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching email attachments:", error);
+      return { data: [], error };
+    }
+
+    return { data: (data as any[]) || [], error: null };
+  } catch (error) {
+    console.error("Unexpected error in fetchEmailAttachments:", error);
+    return {
+      data: [],
       error: error instanceof Error ? error : new Error(String(error)),
     };
   }
