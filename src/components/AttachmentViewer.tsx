@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ZoomIn, ZoomOut, Download, RefreshCw } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, RefreshCw, Plus, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { format } from "date-fns";
 interface AttachmentViewerProps {
   attachmentId: string | null;
   onClose: () => void;
+  onAddInvoice?: (attachment: EmailAttachment) => void;
 }
 
 // Whitelist of supported attachment types
@@ -56,7 +57,7 @@ const createBlobUrl = (base64url: string, mimeType: string): string => {
   return URL.createObjectURL(blob);
 };
 
-export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProps) => {
+export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: AttachmentViewerProps) => {
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(100);
@@ -425,10 +426,20 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
               <Button variant="outline" size="sm" onClick={loadAttachment}>
                 <RefreshCw className="w-3 h-3" />
               </Button>
+              {attachment && getViewerKind() !== "unsupported" && onAddInvoice && (
+                <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
+                  <Plus className="w-3 h-3 mr-1" />
+                  <span className="text-xs">Add Invoice</span>
+                </Button>
+              )}
+              <div className="w-4" />
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
 
-          {!loading && attachment && (attachment.error_code || attachment.error_message) && (
+          {!loading && attachment && (attachment.error_code || attachment.error_message) && attachment.status === "review" && (
             <Collapsible className="mt-2">
               <CollapsibleTrigger className="text-sm text-destructive hover:underline">
                 View Errors

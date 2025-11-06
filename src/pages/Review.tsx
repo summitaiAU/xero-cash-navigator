@@ -194,10 +194,14 @@ export const Review: React.FC = () => {
       </div>
 
       {/* Attachment Viewer Modal */}
-      <AttachmentViewer
-        attachmentId={selectedAttachmentId}
-        onClose={() => setSelectedAttachmentId(null)}
-      />
+          <AttachmentViewer
+            attachmentId={selectedAttachmentId}
+            onClose={() => setSelectedAttachmentId(null)}
+            onAddInvoice={(attachment) => {
+              setInvoiceAttachment(attachment);
+              setInvoiceDrawerOpen(true);
+            }}
+          />
 
       {/* Add Invoice Drawer */}
       <AddInvoiceDrawer

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, RefreshCw, Download, Plus, Trash2, AlertCircle } from "lucide-react";
+import { X, RefreshCw, Download, Plus, Trash2, AlertCircle, ZoomIn, ZoomOut } from "lucide-react";
 import {
   Sheet,
   SheetClose,
@@ -142,11 +142,24 @@ export const AddInvoiceDrawer = ({
   const [saving, setSaving] = useState(false);
   const [draftInvoice, setDraftInvoice] = useState<DraftInvoice | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [zoom, setZoom] = useState(100);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  // Cleanup blob URL
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
 
   // Initialize draft invoice from selected attachment
   useEffect(() => {
     if (open && selectedAttachment) {
       setLoading(true);
+      setBlobUrl(null);
+      setZoom(100);
       
       // Simulate loading time for prefill
       setTimeout(() => {
@@ -447,6 +460,24 @@ export const AddInvoiceDrawer = ({
 
       const invoiceId = data.id;
 
+      // Step 3: Update attachment status to completed
+      const { error: updateError } = await supabase
+        .from('email_attachments' as any)
+        .update({
+          status: 'completed',
+          attachment_added_at: new Date().toISOString(),
+        })
+        .eq('id', selectedAttachment.id);
+
+      if (updateError) {
+        console.error("Failed to update attachment status:", updateError);
+        toast({
+          title: "Warning",
+          description: "Invoice saved but attachment status not updated.",
+          variant: "default",
+        });
+      }
+
       toast({
         title: "Invoice Saved",
         description: "Invoice has been saved successfully.",
@@ -532,62 +563,138 @@ export const AddInvoiceDrawer = ({
     );
   }, [draftInvoice]);
 
-  const renderAttachmentPreview = () => {
-    if (!selectedAttachment) return null;
+  const handleDownload = () => {
+    if (!selectedAttachment?.data_base64url) return;
 
-    const mimeType = selectedAttachment.mime_type;
-    const data = selectedAttachment.data_base64url;
-
-    if (mimeType.startsWith("image/") && data) {
-      const base64 = base64urlToBase64(data);
-      return (
-        <div className="flex items-center justify-center p-4 bg-muted/20 rounded-lg">
-          <img
-            src={`data:${mimeType};base64,${base64}`}
-            alt={selectedAttachment.filename}
-            className="max-w-full max-h-[70vh] object-contain"
-          />
-        </div>
-      );
-    }
-
-    if (mimeType === "application/pdf" && data) {
-      const base64 = base64urlToBase64(data);
+    try {
+      const base64 = base64urlToBase64(selectedAttachment.data_base64url);
       const byteChars = atob(base64);
       const byteNums = new Array(byteChars.length);
       for (let i = 0; i < byteChars.length; i++) {
         byteNums[i] = byteChars.charCodeAt(i);
       }
       const byteArray = new Uint8Array(byteNums);
-      const blob = new Blob([byteArray], { type: "application/pdf" });
-      const blobUrl = URL.createObjectURL(blob);
+      const blob = new Blob([byteArray], { type: selectedAttachment.mime_type });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = selectedAttachment.filename || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to download the file.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const createBlobUrl = (data: string, mimeType: string): string => {
+    const base64 = base64urlToBase64(data);
+    const byteChars = atob(base64);
+    const byteNums = new Array(byteChars.length);
+    for (let i = 0; i < byteChars.length; i++) {
+      byteNums[i] = byteChars.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNums);
+    const blob = new Blob([byteArray], { type: mimeType });
+    return URL.createObjectURL(blob);
+  };
+
+  const renderAttachmentPreview = () => {
+    if (!selectedAttachment) return null;
+
+    const mimeType = selectedAttachment.mime_type.toLowerCase();
+    const data = selectedAttachment.data_base64url;
+
+    // Image preview
+    if (mimeType.startsWith("image/") && data) {
+      if (!blobUrl) {
+        try {
+          const url = createBlobUrl(data, selectedAttachment.mime_type);
+          setBlobUrl(url);
+        } catch (error) {
+          console.error("Failed to create image Blob URL:", error);
+        }
+      }
 
       return (
-        <iframe
-          src={blobUrl}
-          className="w-full border-0 rounded-lg"
-          style={{ minHeight: "70vh" }}
-          title={selectedAttachment.filename}
-        />
+        <div className="flex items-center justify-center min-h-[400px] p-4 bg-muted/10 rounded-lg overflow-auto">
+          {blobUrl ? (
+            <img
+              src={blobUrl}
+              alt={selectedAttachment.filename}
+              className="max-w-full h-auto rounded shadow-sm"
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "center",
+                transition: "transform 0.2s ease",
+              }}
+            />
+          ) : (
+            <Skeleton className="w-96 h-96" />
+          )}
+        </div>
       );
     }
 
+    // PDF preview
+    if (mimeType === "application/pdf" && data) {
+      if (!blobUrl) {
+        try {
+          const url = createBlobUrl(data, "application/pdf");
+          setBlobUrl(url);
+        } catch (error) {
+          console.error("Failed to create PDF Blob URL:", error);
+          toast({
+            title: "Error",
+            description: "Failed to render PDF.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      return (
+        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "600px", overflow: "auto" }}>
+          {blobUrl ? (
+            <embed
+              src={`${blobUrl}#zoom=${zoom}`}
+              type="application/pdf"
+              className="w-full border-0 rounded-lg"
+              style={{ minHeight: "600px" }}
+              title={selectedAttachment.filename}
+            />
+          ) : (
+            <div className="flex items-center justify-center" style={{ minHeight: "600px" }}>
+              <Skeleton className="w-full h-full" />
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // HTML preview
     if (selectedAttachment.safe_html) {
       return (
         <div
-          className="p-4 prose max-w-none"
+          className="p-4 prose prose-sm max-w-none bg-white rounded-lg border overflow-auto"
+          style={{ maxHeight: "600px" }}
           dangerouslySetInnerHTML={{ __html: selectedAttachment.safe_html }}
         />
       );
     }
 
+    // Unsupported
     return (
       <div className="flex flex-col items-center justify-center p-8 text-center">
         <div className="bg-muted rounded-lg p-6 mb-4">
           <div className="text-4xl mb-2">📄</div>
           <p className="text-sm font-medium">{selectedAttachment.filename}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {mimeType} • {formatFileSize(selectedAttachment.size_bytes)}
+            {selectedAttachment.mime_type} • {formatFileSize(selectedAttachment.size_bytes)}
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -633,28 +740,8 @@ export const AddInvoiceDrawer = ({
           <>
             <div className="flex-1 overflow-hidden">
               <ResizablePanelGroup direction="horizontal" className="h-full">
-                {/* Left: Attachment Preview */}
-                <ResizablePanel defaultSize={40} minSize={30}>
-                  <div className="h-full overflow-auto p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-sm font-semibold">Preview</h3>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="icon" disabled>
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" disabled>
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {renderAttachmentPreview()}
-                  </div>
-                </ResizablePanel>
-
-                <ResizableHandle withHandle />
-
-                {/* Right: Invoice Form */}
-                <ResizablePanel defaultSize={60} minSize={50}>
+                {/* Left: Invoice Form */}
+                <ResizablePanel defaultSize={45} minSize={35}>
                   <div className="h-full overflow-auto p-6">
                     {draftInvoice && (
                       <div className="space-y-6">
@@ -1184,6 +1271,43 @@ export const AddInvoiceDrawer = ({
                         </div>
                       </div>
                     )}
+                  </div>
+                </ResizablePanel>
+
+                <ResizableHandle withHandle />
+
+                {/* Right: Attachment Preview */}
+                <ResizablePanel defaultSize={55} minSize={40}>
+                  <div className="h-full overflow-auto p-6 bg-muted/20">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-sm font-semibold">Attachment Preview</h3>
+                      <div className="flex items-center gap-1">
+                        {(selectedAttachment?.mime_type.toLowerCase().startsWith("image/") || selectedAttachment?.mime_type === "application/pdf") && (
+                          <>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(Math.max(zoom - 25, 50))} disabled={zoom <= 50}>
+                              <ZoomOut className="h-3 w-3" />
+                            </Button>
+                            <span className="text-xs text-muted-foreground w-12 text-center">{zoom}%</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(Math.min(zoom + 25, 200))} disabled={zoom >= 200}>
+                              <ZoomIn className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(100)} disabled={zoom === 100}>
+                              <span className="text-xs">100%</span>
+                            </Button>
+                          </>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDownload} disabled={!selectedAttachment?.data_base64url}>
+                          <Download className="h-3 w-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => {
+                          setBlobUrl(null);
+                          setZoom(100);
+                        }}>
+                          <RefreshCw className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    {renderAttachmentPreview()}
                   </div>
                 </ResizablePanel>
               </ResizablePanelGroup>

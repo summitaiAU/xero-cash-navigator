@@ -174,20 +174,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
   };
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
-      {selectedAttachment && onAddInvoice && (
-        <div className="p-4 border-b bg-muted/30">
-          <Button
-            onClick={() => onAddInvoice(selectedAttachment)}
-            className="w-full gap-2"
-            variant="default"
-          >
-            <Plus className="h-4 w-4" />
-            Add Invoice
-          </Button>
-        </div>
-      )}
-      <div className="flex-1 p-4 space-y-6">
+    <div className="h-full overflow-y-auto p-4 space-y-6">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
@@ -224,7 +211,6 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
           </div>
         )}
       </div>
-    </div>
   );
 };
 
