@@ -39,22 +39,24 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   if (loading) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="p-6 border-b bg-card">
-          <Skeleton className="h-6 w-3/4 mb-2" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-        <div className="flex-1 p-6 space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-1/3" />
-            <Skeleton className="h-4 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
+        <div className="px-6 py-4 border-b bg-card">
+          <div className="mb-2">
+            <Skeleton className="h-3 w-20 mb-1" />
+            <Skeleton className="h-6 w-3/4" />
           </div>
-          <div className="space-y-2 pt-4">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-4/5" />
+        </div>
+        <div className="flex-1 p-6">
+          <div className="review-prose">
+            <div className="space-y-2 pb-4 border-b mb-4">
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-5/6" />
+              <Skeleton className="h-4 w-full" />
+            </div>
           </div>
         </div>
       </div>
@@ -64,14 +66,14 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   if (!email) {
     return (
       <div className="h-full flex flex-col bg-background">
-        <div className="p-6 border-b bg-card">
-          <h2 className="text-lg font-semibold">Conversation</h2>
-          <p className="text-sm text-muted-foreground">
-            Select an email to view
-          </p>
+        <div className="px-6 py-4 border-b bg-card">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Review</p>
+          <h2 className="text-lg font-semibold">Email Conversation</h2>
         </div>
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          Select an email to view its content
+        <div className="flex-1 flex items-center justify-center text-center px-6">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Select an email to view its content</p>
+          </div>
         </div>
       </div>
     );
@@ -79,93 +81,101 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="p-6 border-b bg-card">
-        <h2 className="text-lg font-semibold line-clamp-2">
-          {email.subject || "(No Subject)"}
-        </h2>
+      {/* Compact Header */}
+      <div className="px-6 py-3 border-b bg-card">
+        <div className="flex items-start justify-between gap-4 mb-1">
+          <h2 className="text-lg font-bold text-foreground line-clamp-1 flex-1">
+            {email.subject || "(No Subject)"}
+          </h2>
+          <span className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+            {formatEmailDate(email)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+          <span className="inline-flex items-center gap-1">
+            <span className="font-medium">From:</span>
+            <span className="review-chip">{getFromDisplay(email)}</span>
+          </span>
+          {email.to_list && email.to_list.length > 0 && (
+            <>
+              <span>→</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-medium">To:</span>
+                <span className="review-chip">{email.to_list.join(", ")}</span>
+              </span>
+            </>
+          )}
+          {email.cc_list && email.cc_list.length > 0 && (
+            <>
+              <span>→</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="font-medium">Cc:</span>
+                <span className="review-chip">{email.cc_list.join(", ")}</span>
+              </span>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Email Content */}
+      {/* Email Body */}
       <ScrollArea className="flex-1">
-        <div className="p-6 space-y-4">
-          {/* Metadata */}
-          <div className="space-y-2 pb-4 border-b">
-            <div>
-              <span className="text-sm font-medium text-muted-foreground">From: </span>
-              <span className="text-sm">{getFromDisplay(email)}</span>
-            </div>
-
-            {email.to_list && email.to_list.length > 0 && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">To: </span>
-                <span className="text-sm">{email.to_list.join(", ")}</span>
-              </div>
-            )}
-
-            {email.cc_list && email.cc_list.length > 0 && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Cc: </span>
-                <span className="text-sm">{email.cc_list.join(", ")}</span>
-              </div>
-            )}
-
-            {email.reply_to && (
-              <div>
-                <span className="text-sm font-medium text-muted-foreground">Reply-To: </span>
-                <span className="text-sm">{email.reply_to}</span>
-              </div>
-            )}
-
-            <div>
-              <span className="text-sm font-medium text-muted-foreground">Date: </span>
-              <span className="text-sm">{formatEmailDate(email)}</span>
-            </div>
-
-            {/* Optional Headers */}
-            {email.headers_slim && Object.keys(email.headers_slim).length > 0 && (
-              <Collapsible open={showHeaders} onOpenChange={setShowHeaders}>
-                <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      showHeaders ? "rotate-180" : ""
-                    }`}
-                  />
-                  View Headers
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  <div className="bg-muted/50 rounded-md p-3 text-xs font-mono space-y-1">
-                    {Object.entries(email.headers_slim).map(([key, value]) => (
-                      <div key={key}>
-                        <span className="font-semibold">{key}:</span>{" "}
-                        <span className="text-muted-foreground">{String(value)}</span>
-                      </div>
-                    ))}
+        <div className="p-6">
+          <div className="review-prose">
+            {/* Additional Metadata (Collapsible) */}
+            {(email.reply_to || (email.headers_slim && Object.keys(email.headers_slim).length > 0)) && (
+              <div className="pb-4 mb-4 border-b space-y-2">
+                {email.reply_to && (
+                  <div className="text-xs">
+                    <span className="font-medium text-muted-foreground">Reply-To: </span>
+                    <span className="text-foreground">{email.reply_to}</span>
                   </div>
-                </CollapsibleContent>
-              </Collapsible>
+                )}
+                
+                {email.headers_slim && Object.keys(email.headers_slim).length > 0 && (
+                  <Collapsible open={showHeaders} onOpenChange={setShowHeaders}>
+                    <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      <ChevronDown
+                        className={`h-3 w-3 transition-transform ${
+                          showHeaders ? "rotate-180" : ""
+                        }`}
+                      />
+                      View Full Headers
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="mt-2">
+                      <div className="bg-muted/30 rounded-md p-2 text-xs font-mono space-y-1">
+                        {Object.entries(email.headers_slim).map(([key, value]) => (
+                          <div key={key}>
+                            <span className="font-semibold">{key}:</span>{" "}
+                            <span className="text-muted-foreground">{String(value)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+              </div>
             )}
-          </div>
 
-          {/* Email Body */}
-          <div className="email-body prose prose-sm max-w-none">
-            {email.body_html_safe ? (
-              <div
-                dangerouslySetInnerHTML={{ __html: email.body_html_safe }}
-                className="[&_*]:text-foreground [&_img]:max-w-full [&_img]:h-auto [&_table]:border-collapse [&_table]:w-full"
-              />
-            ) : email.body_text_fallback ? (
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: email.body_text_fallback.replace(/\n/g, "<br>"),
-                }}
-                className="whitespace-pre-wrap"
-              />
-            ) : (
-              <p className="text-muted-foreground italic">
-                No message body found for this email.
-              </p>
-            )}
+            {/* Email Body Content */}
+            <div className="prose prose-sm max-w-none [&_*]:break-words">
+              {email.body_html_safe ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: email.body_html_safe }}
+                  className="[&_*]:text-foreground [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:border [&_img]:border-border [&_table]:border-collapse [&_table]:w-full [&_a]:text-blue-600 [&_a]:no-underline hover:[&_a]:underline [&_blockquote]:border-l-[3px] [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:text-slate-600"
+                />
+              ) : email.body_text_fallback ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: email.body_text_fallback.replace(/\n/g, "<br>"),
+                  }}
+                  className="whitespace-pre-wrap break-words"
+                />
+              ) : (
+                <p className="text-muted-foreground italic text-sm">
+                  No message body found for this email.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </ScrollArea>

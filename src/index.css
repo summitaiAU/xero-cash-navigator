@@ -163,6 +163,12 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.3;
   }
 }
 
@@ -237,6 +243,70 @@ All colors MUST be HSL.
   
   .command-bar {
     @apply flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-[var(--radius-lg)] shadow-soft;
+  }
+  
+  /* Review page styles */
+  .review-email-row {
+    @apply bg-card border border-border rounded-[10px] p-3 transition-smooth hover:shadow-[0_1px_2px_rgba(0,0,0,0.06)] cursor-pointer;
+  }
+  
+  .review-email-row:hover {
+    border-color: hsl(220 15% 84%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  
+  .review-email-row.active {
+    border-left: 3px solid hsl(var(--primary));
+    background: hsl(25 85% 50% / 0.04);
+  }
+  
+  .review-chip {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600;
+  }
+  
+  .review-attachment-card {
+    @apply bg-card border border-border rounded-[10px] p-2.5 transition-smooth hover:shadow-[0_1px_2px_rgba(0,0,0,0.06)] cursor-pointer;
+  }
+  
+  .review-attachment-card:hover {
+    border-color: hsl(220 15% 84%);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  
+  .review-prose {
+    @apply max-w-[700px] mx-auto bg-card rounded-[10px] p-4 shadow-[0_1px_2px_rgba(0,0,0,0.06)];
+  }
+  
+  .review-prose pre {
+    @apply whitespace-pre-wrap break-words;
+  }
+  
+  .review-prose blockquote {
+    @apply border-l-[3px] border-slate-300 pl-4 text-slate-600;
+  }
+  
+  .review-prose a {
+    @apply text-blue-600 no-underline hover:underline;
+  }
+  
+  .review-prose img {
+    @apply max-w-full rounded-lg border border-border;
+  }
+  
+  .status-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full;
+  }
+  
+  .status-dot.flagged {
+    @apply bg-destructive;
+  }
+  
+  .status-dot.added {
+    @apply bg-success;
+  }
+  
+  .status-dot.neutral {
+    @apply bg-muted-foreground;
   }
 }
 

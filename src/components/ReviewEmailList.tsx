@@ -127,18 +127,19 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
   if (loading) {
     return (
-      <div className="w-[360px] flex-shrink-0 border-r bg-card flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Needs Review</h2>
+      <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
+        <div className="px-6 py-4 border-b bg-card">
+          <h2 className="text-lg font-semibold">Emails</h2>
         </div>
-        <div className="flex-1 p-2 space-y-2">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="p-3 rounded-lg border space-y-2">
+        <div className="flex-1 px-6 py-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="review-email-row">
               <div className="flex gap-3">
                 <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
                 </div>
               </div>
             </div>
@@ -149,16 +150,14 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   }
 
   return (
-    <div className="w-[360px] flex-shrink-0 border-r bg-card flex flex-col">
+    <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
       {/* Header with count */}
-      <div className="p-4 border-b space-y-3">
+      <div className="px-6 py-4 border-b bg-card space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Needs Review</h2>
-          {totalCount > 0 && (
-            <Badge variant="secondary" className="ml-2">
-              {totalCount}
-            </Badge>
-          )}
+          <h2 className="text-lg font-semibold">
+            Emails 
+            {totalCount > 0 && <span className="text-muted-foreground ml-2">({totalCount})</span>}
+          </h2>
         </div>
 
         {/* Search and Sort */}
@@ -169,7 +168,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
               placeholder="Search emails..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-9"
+              className="pl-9 pr-9 h-9 rounded-md"
             />
             {searchQuery && (
               <Button
@@ -188,7 +187,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
             variant="outline"
             size="sm"
             onClick={toggleSort}
-            className="flex-shrink-0"
+            className="flex-shrink-0 h-9"
             title={sortBy === 'newest' ? 'Newest first' : 'Oldest first'}
           >
             <ArrowUpDown className="h-4 w-4" />
@@ -199,9 +198,9 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
       {/* Email List */}
       <ScrollArea className="flex-1" onScrollCapture={handleScroll} ref={scrollRef}>
         {error && (
-          <Alert variant="destructive" className="m-2">
+          <Alert variant="destructive" className="mx-6 mt-4">
             <AlertDescription className="flex items-center justify-between">
-              <span>Unable to load emails</span>
+              <span className="text-sm">Unable to load emails</span>
               <Button variant="outline" size="sm" onClick={() => fetchEmails(0, false)}>
                 Retry
               </Button>
@@ -210,21 +209,25 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         )}
 
         {emails.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-64 text-muted-foreground p-4">
-            <Mail className="h-12 w-12 mb-4 opacity-20" />
-            <p className="text-sm text-center">
-              {searchQuery ? "No emails match your search" : "No review emails found"}
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <Mail className="h-12 w-12 mb-3 opacity-20 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-2">
+              {searchQuery ? "No emails match your search" : "Nothing to review"}
             </p>
-            {searchQuery && (
-              <Button variant="link" size="sm" onClick={() => setSearchQuery("")} className="mt-2">
+            {searchQuery ? (
+              <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
                 Clear search
+              </Button>
+            ) : (
+              <Button variant="ghost" size="sm" className="text-xs">
+                Go to Payable
               </Button>
             )}
           </div>
         )}
 
         {emails.length > 0 && (
-          <div className="p-2 space-y-1">
+          <div className="px-6 py-4 space-y-3">
             {emails.map((email) => {
               const isSelected = selectedEmailId === email.id;
 
@@ -232,9 +235,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
                 <button
                   key={email.id}
                   onClick={() => onSelectEmail(email)}
-                  className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                    isSelected ? "bg-accent border-primary" : "hover:bg-accent/50"
-                  }`}
+                  className={`review-email-row ${isSelected ? "active" : ""}`}
                 >
                   <div className="flex gap-3">
                     {/* Avatar */}
@@ -246,7 +247,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
                     <div className="flex-1 min-w-0 space-y-1">
                       {/* First Line: Sender + Date */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium text-sm truncate">
+                        <span className="font-semibold text-sm truncate text-foreground">
                           {getDisplayName(email)}
                         </span>
                         <span className="text-xs text-muted-foreground flex-shrink-0">
@@ -255,7 +256,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
                       </div>
 
                       {/* Second Line: Subject */}
-                      <div className="font-medium text-sm truncate">
+                      <div className="text-sm truncate text-foreground">
                         {email.subject || "(no subject)"}
                       </div>
 
@@ -268,11 +269,11 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
                       {/* Attachment Badge */}
                       {email.no_of_attachments > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
-                            <Paperclip className="h-2.5 w-2.5" />
+                        <div className="flex items-center gap-1 pt-1">
+                          <span className="review-chip">
+                            <Paperclip className="h-3 w-3 mr-1" />
                             {email.no_of_attachments}
-                          </Badge>
+                          </span>
                         </div>
                       )}
                     </div>
@@ -283,8 +284,8 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
             {/* Loading More Indicator */}
             {loadingMore && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-3">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
               </div>
             )}
           </div>

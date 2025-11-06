@@ -149,23 +149,22 @@ export const Review: React.FC = () => {
         }}
       >
         {/* Header */}
-        <header className="h-16 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-4">
-            <img src={SodhiLogo} alt="Sodhi Logo" className="h-8" />
-            <h1 className="text-xl font-semibold">Review</h1>
+            <img src={SodhiLogo} alt="Sodhi Logo" className="h-7" />
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <User className="h-4 w-4" />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <User className="h-3.5 w-3.5" />
               <span>{user?.email}</span>
             </div>
             <Button
               variant="outline"
               size="sm"
               onClick={handleSignOut}
-              className="gap-2"
+              className="gap-2 h-8"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3.5 w-3.5" />
               Sign Out
             </Button>
           </div>
@@ -184,8 +183,8 @@ export const Review: React.FC = () => {
             <div className="flex-1 flex">
               <ResizablePanelGroup direction="horizontal" className="h-full">
                 {/* Conversation (Middle) */}
-                <ResizablePanel defaultSize={65} minSize={50}>
-                  <div className="h-full animate-in fade-in-50 duration-300">
+                <ResizablePanel defaultSize={70} minSize={50}>
+                  <div className="h-full">
                     <EmailConversationView
                       email={emailContent}
                       loading={loadingContent}
@@ -196,10 +195,10 @@ export const Review: React.FC = () => {
                 <ResizableHandle withHandle />
 
                 {/* Attachments (Right) */}
-                <ResizablePanel defaultSize={35} minSize={25} maxSize={45}>
-                  <div className="h-full flex flex-col border-l bg-card animate-in slide-in-from-right-5 duration-300">
-                    <div className="p-4 border-b">
-                      <h2 className="text-lg font-semibold">Attachments</h2>
+                <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
+                  <div className="h-full flex flex-col border-l bg-card">
+                    <div className="px-4 py-3 border-b">
+                      <h2 className="text-sm font-semibold">Attachments</h2>
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <AttachmentsPanel 
