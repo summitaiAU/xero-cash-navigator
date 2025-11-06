@@ -227,16 +227,12 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
       }
 
       return (
-        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh" }}>
+        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto" }}>
           {blobUrl ? (
             <iframe
-              src={blobUrl}
+              src={`${blobUrl}#zoom=${zoom}`}
               className="w-full border-0 rounded-lg"
-              style={{ 
-                minHeight: "70vh",
-                transform: `scale(${zoom / 100})`, 
-                transformOrigin: "top center",
-              }}
+              style={{ minHeight: "70vh" }}
               title={attachment.filename}
               onError={() => {
                 toast({
