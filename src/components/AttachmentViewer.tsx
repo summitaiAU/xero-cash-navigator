@@ -62,6 +62,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [blobError, setBlobError] = useState(false);
 
   const loadAttachment = async () => {
     if (!attachmentId) return;
@@ -97,11 +98,41 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
       loadAttachment();
       setZoom(100);
       setBlobUrl(null);
+      setBlobError(false);
     } else {
       setAttachment(null);
       setBlobUrl(null);
+      setBlobError(false);
     }
   }, [attachmentId]);
+
+  // Create Blob URL when attachment data changes
+  useEffect(() => {
+    if (!attachment || !attachment.data_base64url) {
+      setBlobUrl(null);
+      return;
+    }
+
+    const kind = getViewerKind();
+    if (kind !== "pdf" && kind !== "image") {
+      setBlobUrl(null);
+      return;
+    }
+
+    try {
+      const url = createBlobUrl(attachment.data_base64url, attachment.mime_type);
+      setBlobUrl(url);
+      setBlobError(false);
+    } catch (error) {
+      console.error("Failed to create Blob URL:", error);
+      setBlobError(true);
+      toast({
+        title: "Error",
+        description: "Failed to render preview. Please download the file instead.",
+        variant: "destructive",
+      });
+    }
+  }, [attachment?.id, attachment?.data_base64url]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -212,19 +243,16 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
         );
       }
 
-      // Create blob URL if not already created
-      if (!blobUrl && attachment.data_base64url) {
-        try {
-          const url = createBlobUrl(attachment.data_base64url, "application/pdf");
-          setBlobUrl(url);
-        } catch (error) {
-          console.error("Failed to create PDF Blob URL:", error);
-          toast({
-            title: "Error",
-            description: "Failed to render PDF. Please download the file instead.",
-            variant: "destructive",
-          });
-        }
+      if (blobError) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-destructive">
+            <p>Failed to render PDF preview</p>
+            <Button onClick={handleDownload} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Download PDF
+            </Button>
+          </div>
+        );
       }
 
       return (
@@ -233,9 +261,10 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
             <iframe
               src={`${blobUrl}#zoom=${zoom}`}
               className="w-full border-0 rounded-lg"
-              style={{ minHeight: "70vh" }}
+              style={{ minHeight: "70vh", width: "100%" }}
               title={attachment.filename}
               onError={() => {
+                setBlobError(true);
                 toast({
                   title: "Error",
                   description: "Failed to load PDF. Try Download.",
@@ -262,19 +291,16 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
         );
       }
 
-      // Create blob URL if not already created
-      if (!blobUrl && attachment.data_base64url) {
-        try {
-          const url = createBlobUrl(attachment.data_base64url, attachment.mime_type);
-          setBlobUrl(url);
-        } catch (error) {
-          console.error("Failed to create image Blob URL:", error);
-          toast({
-            title: "Error",
-            description: "Failed to render image. Please download the file instead.",
-            variant: "destructive",
-          });
-        }
+      if (blobError) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-destructive">
+            <p>Failed to render image preview</p>
+            <Button onClick={handleDownload} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              Download Image
+            </Button>
+          </div>
+        );
       }
 
       return (
@@ -290,6 +316,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
                 transition: "transform 0.2s ease",
               }}
               onError={() => {
+                setBlobError(true);
                 toast({
                   title: "Error",
                   description: "Failed to load image. Try Download.",
