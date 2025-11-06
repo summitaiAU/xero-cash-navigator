@@ -16,8 +16,10 @@ export interface EmailListItem {
 
 export interface EmailAttachment {
   id: string;
+  email_id: string;
   filename: string;
   mime_type: string;
+  mime_detected: string | null;
   size_bytes: number;
   status: string;
   error_code: string | null;
@@ -28,7 +30,9 @@ export interface EmailAttachment {
   text_excerpt: string | null;
   data_base64url: string | null;
   safe_html: string | null;
+  eml_headers: any;
   created_at: string;
+  updated_at: string;
 }
 
 export interface NormalizedEmail {
@@ -121,8 +125,10 @@ function groupAttachments(attachments: any[]): {
   for (const att of attachments) {
     const normalized: EmailAttachment = {
       id: att.id,
+      email_id: att.email_id,
       filename: att.filename || "Unknown File",
       mime_type: att.mime_type || "application/octet-stream",
+      mime_detected: att.mime_detected || null,
       size_bytes: att.size_bytes || 0,
       status: att.status,
       error_code: att.error_code,
@@ -133,7 +139,9 @@ function groupAttachments(attachments: any[]): {
       text_excerpt: att.text_excerpt || null,
       data_base64url: att.data_base64url || null,
       safe_html: att.safe_html || null,
+      eml_headers: att.eml_headers || null,
       created_at: att.created_at || new Date().toISOString(),
+      updated_at: att.updated_at || new Date().toISOString(),
     };
 
     if (att.status === "review" && att.error_code) {
@@ -183,7 +191,7 @@ export async function fetchReviewEmails(
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
-      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason")
+      .select("id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at")
       .in("email_id", emailIds);
 
     if (attachmentsError) {
@@ -326,7 +334,7 @@ export async function fetchEmailAttachments(
     const { data, error } = await (supabase as any)
       .from("email_attachments")
       .select(
-        "id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, created_at"
+        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at"
       )
       .eq("email_id", emailId)
       .order("status", { ascending: true }) // review first, then completed
@@ -342,6 +350,41 @@ export async function fetchEmailAttachments(
     console.error("Unexpected error in fetchEmailAttachments:", error);
     return {
       data: [],
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
+/**
+ * Fetch a single attachment by ID
+ */
+export async function fetchAttachmentById(
+  attachmentId: string
+): Promise<{ data: EmailAttachment | null; error: Error | null }> {
+  try {
+    // @ts-ignore - Supabase type inference has issues with complex queries
+    const { data, error } = await (supabase as any)
+      .from("email_attachments")
+      .select(
+        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at"
+      )
+      .eq("id", attachmentId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching attachment:", error);
+      return { data: null, error };
+    }
+
+    if (!data) {
+      return { data: null, error: new Error("Attachment not found") };
+    }
+
+    return { data: data as EmailAttachment, error: null };
+  } catch (error) {
+    console.error("Unexpected error in fetchAttachmentById:", error);
+    return {
+      data: null,
       error: error instanceof Error ? error : new Error(String(error)),
     };
   }
@@ -374,7 +417,7 @@ export async function fetchEmailById(
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
-      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason")
+      .select("id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at")
       .eq("email_id", emailId);
 
     if (attachmentsError) {

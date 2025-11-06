@@ -19,6 +19,7 @@ import {
 import { ReviewEmailList } from "@/components/ReviewEmailList";
 import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
+import { AttachmentViewer } from "@/components/AttachmentViewer";
 
 type View = "payable" | "paid" | "flagged";
 
@@ -30,6 +31,7 @@ export const Review: React.FC = () => {
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
+  const [selectedAttachmentId, setSelectedAttachmentId] = useState<string | null>(null);
 
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -172,8 +174,7 @@ export const Review: React.FC = () => {
                       <AttachmentsPanel 
                         emailId={selectedEmailId} 
                         onAttachmentClick={(attachment: EmailAttachment) => {
-                          console.log("Attachment clicked:", attachment);
-                          // TODO: Open viewer popup in next step
+                          setSelectedAttachmentId(attachment.id);
                         }}
                       />
                     </div>
@@ -184,6 +185,12 @@ export const Review: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Attachment Viewer Modal */}
+      <AttachmentViewer
+        attachmentId={selectedAttachmentId}
+        onClose={() => setSelectedAttachmentId(null)}
+      />
     </div>
   );
 };
