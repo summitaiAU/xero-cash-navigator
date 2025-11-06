@@ -97,6 +97,12 @@ export interface Invoice {
   amount_paid?: number;
   invoice_date?: string;
   currency?: string;
+  
+  // New timestamp fields for event tracking
+  payment_made_at?: string;
+  partial_payment_made_at?: string;
+  remittance_sent_at?: string;
+  flag_email_sent_at?: string;
 }
 
 export interface ProcessingStatus {

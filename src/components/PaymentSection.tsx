@@ -20,6 +20,7 @@ interface PaymentSectionProps {
   onSkip: () => void;
   onFlag?: (invoiceId: string) => void;
   loading?: boolean;
+  onPartialPaymentUpdate?: () => Promise<void>;
 }
 
 export const PaymentSection: React.FC<PaymentSectionProps> = ({
@@ -27,7 +28,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   onMarkAsPaid,
   onSkip,
   onFlag,
-  loading = false
+  loading = false,
+  onPartialPaymentUpdate
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -190,7 +192,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
       // Step 2: Mark as paid (only if remittance succeeded)
       const paymentData: PaymentData = {
-        email,
+        email: selectedEmailForRemittance || email,
         message,
         payment_method: paymentMethod as any,
         image_base64: imageData
@@ -359,8 +361,12 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         description: `Payment of ${formatCurrency(amountPaid)} has been recorded.`,
       });
       
-      // Refresh the page to update the view
-      window.location.reload();
+      // Call refresh callback if provided
+      if (onPartialPaymentUpdate) {
+        await onPartialPaymentUpdate();
+      }
+      
+      setShowPartialPaymentModal(false);
     } catch (error: any) {
       toast({
         title: "Failed to record partial payment",
@@ -380,8 +386,10 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         description: "Invoice has been unmarked as partially paid.",
       });
       
-      // Refresh the page to update the view
-      window.location.reload();
+      // Call refresh callback if provided
+      if (onPartialPaymentUpdate) {
+        await onPartialPaymentUpdate();
+      }
     } catch (error: any) {
       toast({
         title: "Failed to unmark partial payment",
@@ -399,217 +407,247 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   };
 
   return (
-    <div className="dashboard-card p-6">
+    <div className="dashboard-card p-8 space-y-8">
       <h3 className="section-header">Payment Confirmation</h3>
 
-      {/* Payment Proof Upload */}
-      <div className="space-y-4">
-        <Label className="text-base font-medium">Payment Proof</Label>
-        
-        <div 
-          className={`upload-area ${dragOver ? 'dragover' : ''} ${imageData ? 'border-success' : ''}`}
-          onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onClick={() => !imageData && document.getElementById('file-input')?.click()}
-        >
-          {!imageData ? (
-            <div className="space-y-4">
-              <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
-              <div className="text-center">
-                <h4 className="text-lg font-medium mb-2">Drop your remittance file here</h4>
-                <p className="text-muted-foreground mb-4">Images or PDFs accepted • Click to browse files</p>
-                <div className="flex items-center justify-center gap-2 text-sm text-primary">
-                  <Camera className="h-4 w-4" />
-                  <span>💡 Press Ctrl+V to paste from clipboard</span>
-                </div>
-              </div>
-              <input
-                id="file-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+      {/* Guided Three-Step Layout */}
+      <div className="space-y-8">
+        {/* Step 1: Upload Remittance */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+              1
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="relative">
-                <img 
-                  src={imageData} 
-                  alt="Payment proof" 
-                  className="max-h-64 w-auto mx-auto rounded-lg shadow-medium"
-                />
-                <Button
-                  variant="ghost-destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 bg-background/80 hover:bg-background"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setImageData(null);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex items-center justify-center gap-2 text-success">
-                <Check className="h-4 w-4" />
-                <span className="text-sm font-medium">Payment proof uploaded</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-
-        {/* Email Configuration */}
-        <div className="space-y-4 pt-4 border-t border-border">
-          <SavedEmailManager
-            invoice={invoice}
-            onEmailSaved={handleEmailSaved}
-            onEmailRemoved={handleEmailRemoved}
-            onEmailSelected={handleEmailSelected}
-            selectedEmail={selectedEmailForRemittance}
-          />
-
-          {/* Only show CC Jonathon if there are actual emails (not just default) */}
-          {(() => {
-            const hasRealEmails = invoice.remittance_email || 
-                                 invoice.supplier_email_on_invoice || 
-                                 invoice.sender_email || 
-                                 (invoice.saved_emails && invoice.saved_emails.length > 0);
-            
-            return hasRealEmails ? (
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="cc-jonathon"
-                    checked={ccJonathon}
-                    onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
-                  />
-                  <Label htmlFor="cc-jonathon" className="text-sm">
-                    CC Jonathon
-                  </Label>
-                </div>
-              </div>
-            ) : null;
-          })()}
-
-          {/* Send Now Button */}
-          <Button
-            variant="outline"
-            onClick={sendRemittanceNow}
-            disabled={sendingRemittance || !email || !imageData}
-            className="w-full"
+            <Label className="text-base font-semibold">Upload Payment Proof</Label>
+          </div>
+          
+          <div 
+            className={`upload-area ${dragOver ? 'dragover' : ''} ${imageData ? 'border-success bg-success/5' : ''}`}
+            onDrop={handleDrop}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onClick={() => !imageData && document.getElementById('file-input')?.click()}
           >
-            <Send className="h-4 w-4 mr-2" />
-            {sendingRemittance ? 'Sending...' : 'Send Remittance Now'}
-          </Button>
-
-          {/* Response Message */}
-          {remittanceResponse && (
-            <div className="p-3 bg-muted rounded-lg text-sm">
-              <p>{remittanceResponse}</p>
-            </div>
-          )}
+            {!imageData ? (
+              <div className="space-y-5 py-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <Upload className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-center space-y-2">
+                  <h4 className="text-lg font-semibold text-foreground">Drop your remittance file here</h4>
+                  <p className="text-sm text-muted-foreground">Images or PDFs accepted • Click to browse files</p>
+                  <div className="flex items-center justify-center gap-2 text-xs text-primary pt-2">
+                    <Camera className="h-4 w-4" />
+                    <span>Tip: Press Ctrl+V to paste from clipboard</span>
+                  </div>
+                </div>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative">
+                  <img 
+                    src={imageData} 
+                    alt="Payment proof" 
+                    className="max-h-64 w-auto mx-auto rounded-lg shadow-medium"
+                  />
+                  <Button
+                    variant="ghost-destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 bg-background/80 hover:bg-background"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setImageData(null);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-success">
+                  <Check className="h-4 w-4" />
+                  <span className="text-sm font-medium">Payment proof uploaded</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Invoice Summary */}
-        <div className="p-4 bg-muted rounded-lg space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Invoice:</span>
-            <span className="font-medium">{invoice.invoice_number}</span>
+        {/* Step 2: Choose Recipients */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+              2
+            </div>
+            <Label className="text-base font-semibold">Choose Recipients</Label>
           </div>
-          <div className="flex justify-between text-sm">
-            <span>Supplier:</span>
-            <span className="font-medium">{invoice.supplier}</span>
+          
+          <div className="space-y-4">
+            <SavedEmailManager
+              invoice={invoice}
+              onEmailSaved={handleEmailSaved}
+              onEmailRemoved={handleEmailRemoved}
+              onEmailSelected={handleEmailSelected}
+              selectedEmail={selectedEmailForRemittance}
+            />
+
+            {/* Only show CC Jonathon if there are actual emails (not just default) */}
+            {(() => {
+              const hasRealEmails = invoice.remittance_email || 
+                                   invoice.supplier_email_on_invoice || 
+                                   invoice.sender_email || 
+                                   (invoice.saved_emails && invoice.saved_emails.length > 0);
+              
+              return hasRealEmails ? (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="cc-jonathon"
+                      checked={ccJonathon}
+                      onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
+                    />
+                    <Label htmlFor="cc-jonathon" className="text-sm">
+                      CC Jonathon
+                    </Label>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
+            {/* Send Now Button */}
+            <Button
+              variant="outline"
+              onClick={sendRemittanceNow}
+              disabled={sendingRemittance || !email || !imageData}
+              className="w-full"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {sendingRemittance ? 'Sending...' : 'Send Remittance Now'}
+            </Button>
+
+            {/* Response Message */}
+            {remittanceResponse && (
+              <div className="p-3 bg-muted rounded-lg text-sm">
+                <p>{remittanceResponse}</p>
+              </div>
+            )}
           </div>
-          <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
-            <span>Amount:</span>
-            <span>{formatCurrency(invoice.amount)}</span>
+        </div>
+
+        {/* Step 3: Confirm & Send */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+              3
+            </div>
+            <Label className="text-base font-semibold">Confirm & Send</Label>
+          </div>
+          
+          {/* Invoice Summary Sticky Section */}
+          <div className="p-5 bg-secondary/50 rounded-[var(--radius-lg)] space-y-3 border border-border/50">
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Invoice:</span>
+              <span className="font-medium text-foreground">{invoice.invoice_number}</span>
+            </div>
+            <div className="flex justify-between text-sm text-muted-foreground">
+              <span>Supplier:</span>
+              <span className="font-medium text-foreground">{invoice.supplier}</span>
+            </div>
+            <div className="flex justify-between text-base font-semibold border-t border-border pt-3">
+              <span>Amount:</span>
+              <span className="text-primary">{formatCurrency(invoice.amount)}</span>
+            </div>
           </div>
         </div>
 
         {/* Action Buttons */}
         {/* Show payment status */}
         {invoice.status === 'PAID' && (
-          <div className="p-4 bg-success/5 border border-success/20 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-success" />
-                <span className="font-medium text-success">Fully Paid</span>
+            <div className="p-5 bg-success/10 border border-success/30 rounded-[var(--radius-lg)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                  <span className="font-semibold text-success">Fully Paid</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
+                    try {
+                      await unmarkInvoiceAsPaid(invoice.id);
+                      toast({
+                        title: "Invoice unmarked",
+                        description: "Invoice has been unmarked as paid and moved back to payable.",
+                      });
+                      window.location.reload();
+                    } catch (error: any) {
+                      toast({
+                        title: "Error",
+                        description: error.message || "Failed to unmark invoice as paid",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                >
+                  <Undo className="h-4 w-4 mr-1" />
+                  Undo
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
-                  try {
-                    await unmarkInvoiceAsPaid(invoice.id);
-                    toast({
-                      title: "Invoice unmarked",
-                      description: "Invoice has been unmarked as paid and moved back to payable.",
-                    });
-                    window.location.reload();
-                  } catch (error: any) {
-                    toast({
-                      title: "Error",
-                      description: error.message || "Failed to unmark invoice as paid",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                Unmark as Paid
-              </Button>
+              <p className="text-sm text-success/80 mt-2">
+                This invoice has been fully paid. You can unmark it if needed.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              This invoice has been fully paid. You can unmark it if needed.
-            </p>
-          </div>
         )}
 
         {invoice.status === 'PARTIALLY PAID' && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-orange-600" />
-                <span className="font-medium text-orange-800">Partially Paid</span>
+            <div className="p-5 bg-warning/10 border border-warning/30 rounded-[var(--radius-lg)]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-warning" />
+                  <span className="font-semibold text-warning">Partially Paid</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUnmarkPartialPayment}
+                  className="border-destructive text-destructive hover:bg-destructive/10"
+                >
+                  <Undo className="h-4 w-4 mr-1" />
+                  Undo
+                </Button>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleUnmarkPartialPayment}
-                className="text-orange-700 hover:text-orange-800"
-              >
-                <Undo className="h-4 w-4 mr-1" />
-                Unmark Partial
-              </Button>
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Paid:</span>
+                  <span className="font-semibold text-foreground">{formatCurrency(Number(invoice.amount_paid) || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount Due:</span>
+                  <span className="font-semibold text-foreground">{formatCurrency(Number(invoice.amount_due) || 0)}</span>
+                </div>
+              </div>
             </div>
-            <div className="mt-2 space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Paid:</span>
-                <span className="font-medium">{formatCurrency(Number(invoice.amount_paid) || 0)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Amount Due:</span>
-                <span className="font-medium">{formatCurrency(Number(invoice.amount_due) || 0)}</span>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Only show payment buttons if status is not PAID */}
         {invoice.status !== 'PAID' && (
-          <div className="flex flex-col gap-3 pt-4">
+          <div className="space-y-3">
             <Button
               variant="default"
               size="lg"
               onClick={handleMarkAsPaidWithRemittance}
               disabled={loading || !email}
-              className="w-full"
+              className="w-full font-semibold"
             >
               <Send className="h-4 w-4 mr-2" />
               {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
@@ -631,7 +669,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               size="lg"
               onClick={() => setShowPartialPaymentModal(true)}
               disabled={loading}
-              className="w-full border-orange-200 text-orange-700 hover:bg-orange-50"
+              className="w-full"
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Mark as Partially Paid
@@ -641,7 +679,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               variant="ghost"
               onClick={onSkip}
               disabled={loading}
-              className="text-muted-foreground hover:text-foreground"
+              className="w-full"
             >
               Skip to Next Invoice
             </Button>
