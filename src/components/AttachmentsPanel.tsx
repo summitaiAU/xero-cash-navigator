@@ -118,23 +118,23 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
   const categorized = categorizeAttachments(attachments);
 
   const renderAttachmentTile = (attachment: EmailAttachment, category: "flagged" | "added" | "neutral") => {
-    const borderColor = {
-      flagged: "border-l-red-600",
-      added: "border-l-green-600",
-      neutral: "border-l-gray-400",
-    }[category];
+  const borderColor = {
+    flagged: "border-l-destructive",
+    added: "border-l-green-600",
+    neutral: "border-l-gray-400",
+  }[category];
 
-    const StatusIcon = {
-      flagged: AlertCircle,
-      added: CheckCircle,
-      neutral: Clock,
-    }[category];
+  const StatusIcon = {
+    flagged: AlertCircle,
+    added: CheckCircle,
+    neutral: Clock,
+  }[category];
 
-    const statusColor = {
-      flagged: "text-red-600",
-      added: "text-green-600",
-      neutral: "text-gray-400",
-    }[category];
+  const statusColor = {
+    flagged: "text-destructive",
+    added: "text-green-600",
+    neutral: "text-gray-400",
+  }[category];
 
     const isSelected = selectedAttachment?.id === attachment.id;
 
@@ -177,7 +177,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
     <div className="h-full overflow-y-auto p-4 space-y-6">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-red-600 flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
               <AlertCircle className="w-4 h-4" />
               Flagged ({categorized.flagged.length})
             </h3>

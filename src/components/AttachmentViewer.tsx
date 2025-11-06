@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ZoomIn, ZoomOut, Download, RefreshCw, Plus, X } from "lucide-react";
+import { ZoomIn, ZoomOut, Download, RefreshCw, Plus, X, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -418,6 +418,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
                     size="sm"
                     onClick={() => setZoom((prev) => Math.max(prev - 25, 50))}
                     disabled={zoom <= 50}
+                    title="Zoom out (-)"
                   >
                     <ZoomOut className="w-3 h-3" />
                   </Button>
@@ -427,6 +428,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
                     size="sm"
                     onClick={() => setZoom((prev) => Math.min(prev + 25, 200))}
                     disabled={zoom >= 200}
+                    title="Zoom in (+)"
                   >
                     <ZoomIn className="w-3 h-3" />
                   </Button>
@@ -443,24 +445,24 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
               )}
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {attachment?.data_base64url && (
-                <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Button variant="outline" size="sm" onClick={handleDownload} title="Download">
                   <Download className="w-3 h-3 mr-1" />
                   <span className="text-xs">Download</span>
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={loadAttachment}>
+              <Button variant="outline" size="sm" onClick={loadAttachment} title="Refresh">
                 <RefreshCw className="w-3 h-3" />
               </Button>
-              {attachment && getViewerKind() !== "unsupported" && onAddInvoice && (
-                <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
+              {attachment && getViewerKind() !== "unsupported" && !attachment.error_code && onAddInvoice && (
+                <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)} title="Add Invoice">
                   <Plus className="w-3 h-3 mr-1" />
                   <span className="text-xs">Add Invoice</span>
                 </Button>
               )}
               <div className="w-4" />
-              <Button variant="ghost" size="sm" onClick={onClose}>
+              <Button variant="ghost" size="sm" onClick={onClose} title="Close (ESC)">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -468,10 +470,11 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
 
           {!loading && attachment && (attachment.error_code || attachment.error_message) && attachment.status === "review" && (
             <Collapsible className="mt-2">
-              <CollapsibleTrigger className="text-sm text-destructive hover:underline">
+              <CollapsibleTrigger className="text-sm text-destructive hover:underline flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
                 View Errors
               </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <CollapsibleContent className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg animate-in slide-in-from-top-2">
                 {attachment.error_code && (
                   <div className="text-sm">
                     <span className="font-semibold">Error Code:</span> {attachment.error_code}

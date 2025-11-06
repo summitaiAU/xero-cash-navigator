@@ -140,10 +140,13 @@ export const AddInvoiceDrawer = ({
 }: AddInvoiceDrawerProps) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [markingNeutral, setMarkingNeutral] = useState(false);
+  const [retryingWebhook, setRetryingWebhook] = useState(false);
   const [draftInvoice, setDraftInvoice] = useState<DraftInvoice | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [zoom, setZoom] = useState(100);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [webhookRetryCount, setWebhookRetryCount] = useState(0);
 
   // Cleanup blob URL
   useEffect(() => {
@@ -154,12 +157,30 @@ export const AddInvoiceDrawer = ({
     };
   }, [blobUrl]);
 
+  // Keyboard handlers
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close
+      if (e.key === "Escape" && !saving && !markingNeutral) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, saving, markingNeutral, onClose]);
+
   // Initialize draft invoice from selected attachment
   useEffect(() => {
     if (open && selectedAttachment) {
       setLoading(true);
       setBlobUrl(null);
       setZoom(100);
+      setWebhookRetryCount(0);
+      setValidationErrors({});
       
       // Simulate loading time for prefill
       setTimeout(() => {
@@ -379,7 +400,50 @@ export const AddInvoiceDrawer = ({
     return false;
   };
 
-  const callWebhook = async (attachmentId: string): Promise<boolean> => {
+  const handleMarkNotInvoice = async () => {
+    if (!selectedAttachment) return;
+
+    setMarkingNeutral(true);
+
+    try {
+      const { error } = await supabase
+        .from('email_attachments' as any)
+        .update({
+          status: 'completed',
+          error_code: 'NOT_INVOICE',
+          attachment_added_at: new Date().toISOString(),
+        })
+        .eq('id', selectedAttachment.id);
+
+      if (error) {
+        console.error("Failed to mark as not invoice:", error);
+        toast({
+          title: "Error",
+          description: "Failed to mark attachment. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "✓ Marked as Not Invoice",
+        description: "This attachment has been marked as not an invoice.",
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Unexpected error marking not invoice:", error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setMarkingNeutral(false);
+    }
+  };
+
+  const callWebhook = async (attachmentId: string, isRetry = false): Promise<boolean> => {
     try {
       const response = await fetch(
         "https://sodhipg.app.n8n.cloud/webhook/4175ced6-167b-4180-9aeb-00fba65c9350",
@@ -392,11 +456,55 @@ export const AddInvoiceDrawer = ({
         }
       );
 
-      return response.ok;
+      if (!response.ok) {
+        throw new Error(`Webhook failed with status ${response.status}`);
+      }
+
+      if (isRetry) {
+        toast({
+          title: "Webhook Success",
+          description: "Processing started successfully.",
+        });
+      }
+
+      return true;
     } catch (error) {
       console.error("Webhook error:", error);
+      
+      // Show retry toast only on first attempt
+      if (!isRetry && webhookRetryCount === 0) {
+        toast({
+          title: "Webhook Failed",
+          description: "Will retry in 10 seconds...",
+          variant: "default",
+        });
+        
+        // Auto-retry after 10 seconds
+        setTimeout(async () => {
+          setWebhookRetryCount(1);
+          const retrySuccess = await callWebhook(attachmentId, true);
+          if (!retrySuccess) {
+            toast({
+              title: "Webhook Failed",
+              description: "Could not start processing. Use Retry button.",
+              variant: "destructive",
+            });
+          }
+        }, 10000);
+      }
+      
       return false;
     }
+  };
+
+  const handleRetryWebhook = async () => {
+    if (!selectedAttachment) return;
+    
+    setRetryingWebhook(true);
+    const success = await callWebhook(selectedAttachment.id, true);
+    setRetryingWebhook(false);
+    
+    onWebhookResult?.(success);
   };
 
   const handleSave = async () => {
@@ -471,15 +579,22 @@ export const AddInvoiceDrawer = ({
 
       if (updateError) {
         console.error("Failed to update attachment status:", updateError);
+        
+        // Rollback: delete the invoice we just created
+        await supabase.from('invoices').delete().eq('id', invoiceId);
+        
         toast({
-          title: "Warning",
-          description: "Invoice saved but attachment status not updated.",
-          variant: "default",
+          title: "Save Failed",
+          description: "Could not update attachment status. Changes reverted.",
+          variant: "destructive",
         });
+        
+        setSaving(false);
+        return;
       }
 
       toast({
-        title: "Invoice Saved",
+        title: "✓ Invoice Saved",
         description: "Invoice has been saved successfully.",
       });
 
@@ -1314,16 +1429,29 @@ export const AddInvoiceDrawer = ({
             </div>
 
             {/* Action Bar */}
-            <div className="border-t px-6 py-4 flex items-center justify-end gap-3">
-              <Button variant="outline" onClick={onClose} disabled={saving}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={!isFormValid || saving}
+            <div className="border-t px-6 py-4 flex items-center justify-between gap-3">
+              <Button 
+                variant="outline" 
+                onClick={handleMarkNotInvoice} 
+                disabled={saving || markingNeutral}
+                className="text-muted-foreground"
               >
-                {saving ? "Saving..." : "Save Invoice"}
+                {markingNeutral && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                {markingNeutral ? "Marking..." : "Not an Invoice"}
               </Button>
+              
+              <div className="flex items-center gap-3">
+                <Button variant="outline" onClick={onClose} disabled={saving || markingNeutral}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSave}
+                  disabled={!isFormValid || saving || markingNeutral}
+                >
+                  {saving && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving ? "Saving..." : "Save Invoice"}
+                </Button>
+              </div>
             </div>
           </>
         )}

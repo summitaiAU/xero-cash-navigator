@@ -35,9 +35,24 @@ export const Review: React.FC = () => {
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string | null>(null);
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
   const [invoiceAttachment, setInvoiceAttachment] = useState<EmailAttachment | null>(null);
+  const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
+  const conversationScrollRef = React.useRef<number>(0);
 
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+
+  // Keyboard handlers for Review page
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close attachment viewer
+      if (e.key === "Escape" && selectedAttachmentId) {
+        setSelectedAttachmentId(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedAttachmentId]);
 
   // Load selected email content when selection changes
   useEffect(() => {
@@ -71,7 +86,18 @@ export const Review: React.FC = () => {
   };
 
   const handleSelectEmail = (email: EmailListItem) => {
+    // Save scroll position if re-selecting same email
+    if (selectedEmailId === email.id) {
+      // Same email - preserve scroll
+      setPreviousEmailId(email.id);
+    } else {
+      // Different email - reset scroll
+      setPreviousEmailId(null);
+      conversationScrollRef.current = 0;
+    }
+    
     setSelectedEmailId(email.id);
+    setSelectedAttachmentId(null); // Clear attachment selection on new email
   };
 
   const handleToggleSidebar = React.useCallback(() => {
@@ -147,7 +173,7 @@ export const Review: React.FC = () => {
 
         {/* Three-Column Layout */}
         <div className="flex-1 overflow-hidden">
-          <div className="h-full flex">
+          <div className="h-full flex transition-all duration-300">
             {/* Email List (Left) - Fixed 360px */}
             <ReviewEmailList
               selectedEmailId={selectedEmailId}
@@ -159,17 +185,19 @@ export const Review: React.FC = () => {
               <ResizablePanelGroup direction="horizontal" className="h-full">
                 {/* Conversation (Middle) */}
                 <ResizablePanel defaultSize={65} minSize={50}>
-                  <EmailConversationView
-                    email={emailContent}
-                    loading={loadingContent}
-                  />
+                  <div className="h-full animate-in fade-in-50 duration-300">
+                    <EmailConversationView
+                      email={emailContent}
+                      loading={loadingContent}
+                    />
+                  </div>
                 </ResizablePanel>
 
                 <ResizableHandle withHandle />
 
                 {/* Attachments (Right) */}
                 <ResizablePanel defaultSize={35} minSize={25} maxSize={45}>
-                  <div className="h-full flex flex-col border-l bg-card">
+                  <div className="h-full flex flex-col border-l bg-card animate-in slide-in-from-right-5 duration-300">
                     <div className="p-4 border-b">
                       <h2 className="text-lg font-semibold">Attachments</h2>
                     </div>
