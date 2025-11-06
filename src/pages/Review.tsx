@@ -126,7 +126,7 @@ export const Review: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F6F8FB] flex">
+    <div className="min-h-screen w-full bg-background flex">
       {/* Sidebar Navigation */}
       <SimpleSidebar
         viewState={viewState}
@@ -140,67 +140,50 @@ export const Review: React.FC = () => {
         userName={user?.email}
       />
 
-      {/* Vertical Divider */}
-      <div 
-        className="fixed top-0 bottom-0 w-px bg-[#E5E7EB] z-30 transition-all duration-300"
-        style={{
-          left: sidebarCollapsed ? "64px" : "192px",
-        }}
-      />
-
       {/* Main Content Area */}
       <div
-        className="flex-1 flex flex-col transition-all duration-300 p-6"
+        className="flex-1 flex flex-col transition-all duration-300"
         style={{
           marginLeft: sidebarCollapsed ? "64px" : "192px",
         }}
       >
-        {/* Framed Canvas Container */}
-        <div className="flex-1 bg-white rounded-[10px] shadow-[0_1px_2px_rgba(0,0,0,.06),0_8px_24px_rgba(0,0,0,.04)] p-4 overflow-hidden animate-in fade-in slide-in-from-right-8 duration-500">
-          {/* Three-Column Layout */}
-          <div className="h-full overflow-hidden">
-            <div className="h-full flex gap-4">
-              {/* Email List (Left) - Fixed 360px */}
-              <div className="w-[360px] flex-shrink-0">
-                <ReviewEmailList
-                  selectedEmailId={selectedEmailId}
-                  onSelectEmail={handleSelectEmail}
+        {/* Three-Column Layout */}
+        <div className="h-full overflow-hidden border-l border-border">
+          <div className="h-full flex">
+            {/* Email List (Left) - Fixed 360px */}
+            <div className="w-[360px] flex-shrink-0 border-r border-border">
+              <ReviewEmailList
+                selectedEmailId={selectedEmailId}
+                onSelectEmail={handleSelectEmail}
+              />
+            </div>
+
+            {/* Conversation and Attachments (Right) */}
+            <div className="flex-1 flex min-w-0">
+              {/* Conversation (Middle) */}
+              <div className="flex-1 min-w-0 border-r border-border">
+                <EmailConversationView
+                  email={emailContent}
+                  loading={loadingContent}
                 />
               </div>
 
-              {/* Vertical Divider */}
-              <div className="w-px bg-[#E5E7EB] flex-shrink-0" />
-
-              {/* Conversation and Attachments (Right) */}
-              <div className="flex-1 flex gap-4 min-w-0">
-                {/* Conversation (Middle) */}
-                <div className="flex-1 min-w-0">
-                  <EmailConversationView
-                    email={emailContent}
-                    loading={loadingContent}
-                  />
+              {/* Attachments (Right) */}
+              <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
+                <div className="px-4 py-3 border-b border-border">
+                  <h2 className="text-sm font-semibold">Attachments</h2>
                 </div>
-
-                {/* Vertical Divider */}
-                <div className="w-px bg-[#E5E7EB] flex-shrink-0" />
-
-                {/* Attachments (Right) */}
-                <div className="w-[320px] flex-shrink-0 flex flex-col">
-                  <div className="px-4 py-3 border-b border-[#E5E7EB]">
-                    <h2 className="text-sm font-semibold text-[#0F172A]">Attachments</h2>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <AttachmentsPanel 
-                      emailId={selectedEmailId} 
-                      onAttachmentClick={(attachment: EmailAttachment) => {
-                        setSelectedAttachmentId(attachment.id);
-                      }}
-                      onAddInvoice={(attachment: EmailAttachment) => {
-                        setInvoiceAttachment(attachment);
-                        setInvoiceDrawerOpen(true);
-                      }}
-                    />
-                  </div>
+                <div className="flex-1 overflow-hidden">
+                  <AttachmentsPanel 
+                    emailId={selectedEmailId} 
+                    onAttachmentClick={(attachment: EmailAttachment) => {
+                      setSelectedAttachmentId(attachment.id);
+                    }}
+                    onAddInvoice={(attachment: EmailAttachment) => {
+                      setInvoiceAttachment(attachment);
+                      setInvoiceDrawerOpen(true);
+                    }}
+                  />
                 </div>
               </div>
             </div>
