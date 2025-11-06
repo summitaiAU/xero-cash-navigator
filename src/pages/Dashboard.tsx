@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { PaymentSection } from "@/components/PaymentSection";
@@ -30,6 +31,9 @@ import { FlaggedInvoiceSection } from "@/components/FlaggedInvoiceSection";
 import { useSafeOffsets } from "@/hooks/useSafeOffsets";
 
 export const Dashboard: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const initialView = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
+  
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // All invoices for search
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -42,7 +46,7 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false,
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">("payable");
+  const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">(initialView);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => 
     localStorage.getItem('sidebar-collapsed') === 'true'
   );

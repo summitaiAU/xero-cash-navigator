@@ -155,22 +155,22 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
             icon={FileText}
             label="Payable"
             count={payableCount}
-            active={viewState === "payable"}
-            onClick={() => onViewStateChange("payable")}
+            active={viewState === "payable" && location.pathname === "/dashboard"}
+            onClick={() => navigate("/dashboard?view=payable")}
           />
           <Btn
             icon={CheckCircle}
             label="Paid"
             count={paidCount}
-            active={viewState === "paid"}
-            onClick={() => onViewStateChange("paid")}
+            active={viewState === "paid" && location.pathname === "/dashboard"}
+            onClick={() => navigate("/dashboard?view=paid")}
           />
           <Btn
             icon={Flag}
             label="Flagged"
             count={flaggedCount}
-            active={viewState === "flagged"}
-            onClick={() => onViewStateChange("flagged")}
+            active={viewState === "flagged" && location.pathname === "/dashboard"}
+            onClick={() => navigate("/dashboard?view=flagged")}
           />
 
           {/* Review Page Link */}

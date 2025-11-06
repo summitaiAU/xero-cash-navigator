@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ import { AddInvoiceDrawer } from "@/components/AddInvoiceDrawer";
 type View = "payable" | "paid" | "flagged";
 
 export const Review: React.FC = () => {
+  const navigate = useNavigate();
   const [viewState, setViewState] = useState<View>("payable");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
     localStorage.getItem("sidebar-collapsed") === "true"
@@ -122,7 +124,7 @@ export const Review: React.FC = () => {
   };
 
   const handleViewStateChange = (newView: View) => {
-    setViewState(newView);
+    navigate(`/dashboard?view=${newView}`);
   };
 
   return (

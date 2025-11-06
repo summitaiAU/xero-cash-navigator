@@ -272,17 +272,17 @@ All colors MUST be HSL.
     right: 0;
     top: 0;
     bottom: 0;
-    width: 30px;
-    background: linear-gradient(to right, transparent, hsl(var(--card)));
+    width: 40px;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--card)));
     pointer-events: none;
   }
   
   .review-email-row:hover .text-fade::after {
-    background: linear-gradient(to right, transparent, hsl(var(--accent) / 0.5));
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--accent) / 0.5));
   }
   
   .review-email-row.active .text-fade::after {
-    background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.05));
+    background: linear-gradient(to right, rgba(255, 255, 255, 0), hsl(var(--primary) / 0.05));
   }
   
   .review-chip {
