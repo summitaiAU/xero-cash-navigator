@@ -2,10 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface EmailListItem {
   id: string;
-  status: string;
-  priority: number;
-  attempt_count: number;
-  max_attempts: number;
   from_name: string | null;
   from_email: string | null;
   subject: string | null;
@@ -13,19 +9,11 @@ export interface EmailListItem {
   no_of_attachments: number;
   display_date_local: string | null;
   date_received: string | null;
-  created_at: string;
-  error_message: string | null;
 }
 
 export interface EmailListFilters {
-  statuses?: string[];
-  hasAttachments?: boolean | null;
-  hasErrors?: boolean | null;
-  reviewProcessed?: boolean | null;
-  startDate?: string;
-  endDate?: string;
   searchQuery?: string;
-  sortBy?: 'newest' | 'oldest' | 'priority' | 'attempts';
+  sortBy?: 'newest' | 'oldest';
 }
 
 export interface EmailAttachment {
@@ -70,7 +58,8 @@ export interface NormalizedEmail {
 const PAGE_SIZE = 30;
 
 /**
- * Fetch email list items with filters (for left sidebar)
+ * Fetch review email list items (for left sidebar)
+ * Only returns emails with status='review' and review_status_processed=true
  */
 export async function fetchReviewEmailList(
   page = 0,
@@ -79,64 +68,24 @@ export async function fetchReviewEmailList(
   try {
     const offset = page * PAGE_SIZE;
     
-    // Build base query
     const baseSelect = `id,
-      status,
-      priority,
-      attempt_count,
-      max_attempts,
       from_name,
       from_email,
       subject,
       snippet_text,
       no_of_attachments,
       display_date_local,
-      date_received,
-      created_at,
-      error_message`;
+      date_received`;
 
-    // Start with base query
+    // Start with base query - only review emails that have been processed
     // @ts-ignore
-    let query = supabase.from("email_queue").select(baseSelect, { count: "exact" });
+    let query = supabase
+      .from("email_queue")
+      .select(baseSelect, { count: "exact" })
+      .eq("status", "review")
+      .eq("review_status_processed", true);
 
-    // Apply status filter
-    if (filters.statuses && filters.statuses.length > 0) {
-      // @ts-ignore
-      query = query.in("status", filters.statuses);
-    }
-
-    // Apply attachment filter
-    if (filters.hasAttachments === true) {
-      // @ts-ignore
-      query = query.gt("no_of_attachments", 0);
-    } else if (filters.hasAttachments === false) {
-      // @ts-ignore
-      query = query.or("no_of_attachments.eq.0,no_of_attachments.is.null");
-    }
-
-    // Apply error filter
-    if (filters.hasErrors === true) {
-      // @ts-ignore
-      query = query.not("error_message", "is", null).neq("error_message", "");
-    }
-
-    // Apply review processed filter
-    if (filters.reviewProcessed !== null && filters.reviewProcessed !== undefined) {
-      // @ts-ignore
-      query = query.eq("review_status_processed", filters.reviewProcessed);
-    }
-
-    // Apply date range filters
-    if (filters.startDate) {
-      // @ts-ignore
-      query = query.gte("date_received", filters.startDate);
-    }
-    if (filters.endDate) {
-      // @ts-ignore
-      query = query.lt("date_received", filters.endDate);
-    }
-
-    // Apply text search
+    // Apply text search if provided
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const searchTerm = `%${filters.searchQuery.trim()}%`;
       // @ts-ignore
@@ -146,33 +95,9 @@ export async function fetchReviewEmailList(
     }
 
     // Apply sorting
-    switch (filters.sortBy) {
-      case 'oldest':
-        // @ts-ignore
-        query = query.order("date_received", { ascending: true, nullsFirst: false });
-        break;
-      case 'priority':
-        // @ts-ignore
-        query = query
-          .order("priority", { ascending: false })
-          .order("date_received", { ascending: false, nullsFirst: false });
-        break;
-      case 'attempts':
-        // @ts-ignore
-        query = query
-          .order("attempt_count", { ascending: false })
-          .order("date_received", { ascending: false, nullsFirst: false });
-        break;
-      case 'newest':
-      default:
-        // @ts-ignore
-        query = query.order("date_received", { ascending: false, nullsFirst: false });
-        break;
-    }
-
-    // Add fallback ordering
+    const sortOrder = filters.sortBy === 'oldest' ? { ascending: true } : { ascending: false };
     // @ts-ignore
-    query = query.order("created_at", { ascending: false });
+    query = query.order("date_received", { ...sortOrder, nullsFirst: false });
 
     // Apply pagination
     // @ts-ignore
@@ -182,16 +107,12 @@ export async function fetchReviewEmailList(
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Error fetching email list:", error);
+      console.error("Error fetching review email list:", error);
       return { data: [], error, count: 0 };
     }
 
     const mappedData: EmailListItem[] = (data || []).map((item: any) => ({
       id: item.id,
-      status: item.status,
-      priority: item.priority,
-      attempt_count: item.attempt_count,
-      max_attempts: item.max_attempts,
       from_name: item.from_name,
       from_email: item.from_email,
       subject: item.subject,
@@ -199,8 +120,6 @@ export async function fetchReviewEmailList(
       no_of_attachments: item.no_of_attachments || 0,
       display_date_local: item.display_date_local,
       date_received: item.date_received,
-      created_at: item.created_at,
-      error_message: item.error_message,
     }));
 
     return { data: mappedData, error: null, count: count || 0 };
