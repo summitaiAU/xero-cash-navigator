@@ -593,9 +593,18 @@ export const Dashboard: React.FC = () => {
   const hasNoInvoices = invoices.length === 0;
 
   // Calculate counts for navigation rail - use allInvoices for accurate counts across all views
-  const payableCount = allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length;
-  const paidCount = allInvoices.filter(inv => inv.status === 'PAID').length;
-  const flaggedCount = allInvoices.filter(inv => inv.status === 'FLAGGED').length;
+  const payableCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length,
+    [allInvoices]
+  );
+  const paidCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status === 'PAID').length,
+    [allInvoices]
+  );
+  const flaggedCount = React.useMemo(() => 
+    allInvoices.filter(inv => inv.status === 'FLAGGED').length,
+    [allInvoices]
+  );
 
   return (
     <>

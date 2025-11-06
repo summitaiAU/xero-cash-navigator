@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 type View = "payable" | "paid" | "flagged";
 
-export function SimpleSidebar({
+export const SimpleSidebar = React.memo(function SimpleSidebar({
   viewState,
   onViewStateChange,
   payableCount = 0,
@@ -90,5 +90,5 @@ export function SimpleSidebar({
       />
     </aside>
   );
-}
+});
 
