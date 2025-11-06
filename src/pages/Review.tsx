@@ -288,6 +288,14 @@ export const Review: React.FC = () => {
                           </div>
                           <div className="text-base">{selectedEmail.to}</div>
                         </div>
+                        {selectedEmail.cc && (
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">
+                              CC
+                            </div>
+                            <div className="text-base">{selectedEmail.cc}</div>
+                          </div>
+                        )}
                         <div>
                           <div className="text-sm font-medium text-muted-foreground">
                             Date
@@ -304,8 +312,18 @@ export const Review: React.FC = () => {
                           <div className="text-sm font-medium text-muted-foreground mb-2">
                             Body
                           </div>
-                          <div className="prose prose-sm max-w-none">
-                            {selectedEmail.body ? (
+                          <div className="prose prose-sm max-w-none text-foreground">
+                            {selectedEmail.body_html ? (
+                              <div 
+                                dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }}
+                                className="[&_*]:text-foreground"
+                              />
+                            ) : selectedEmail.body_text ? (
+                              <div 
+                                dangerouslySetInnerHTML={{ __html: selectedEmail.body_text.replace(/\n/g, '<br>') }}
+                                className="[&_*]:text-foreground"
+                              />
+                            ) : selectedEmail.body ? (
                               <div dangerouslySetInnerHTML={{ __html: selectedEmail.body }} />
                             ) : (
                               <p className="text-muted-foreground italic">No content available</p>

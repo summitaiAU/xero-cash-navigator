@@ -16,9 +16,12 @@ export interface NormalizedEmail {
   id: string;
   from: string;
   to: string;
+  cc?: string;
   subject: string;
   date: string;
-  body: string;
+  body_html?: string;
+  body_text?: string;
+  body: string; // Keep for backwards compatibility
   messageId: string;
   threadId: string;
   attachments: {
@@ -35,61 +38,36 @@ export interface NormalizedEmail {
 function parseEmailData(emailData: any): {
   from: string;
   to: string;
+  cc?: string;
   subject: string;
   date: string;
   body: string;
+  body_html?: string;
+  body_text?: string;
 } {
-  const from = emailData?.payload?.headers?.find(
-    (h: any) => h.name?.toLowerCase() === "from"
-  )?.value || "Unknown Sender";
-
-  const to = emailData?.payload?.headers?.find(
-    (h: any) => h.name?.toLowerCase() === "to"
-  )?.value || "Unknown Recipient";
-
-  const subject = emailData?.payload?.headers?.find(
-    (h: any) => h.name?.toLowerCase() === "subject"
-  )?.value || "(No Subject)";
-
-  const date = emailData?.payload?.headers?.find(
-    (h: any) => h.name?.toLowerCase() === "date"
-  )?.value || emailData?.internalDate || new Date().toISOString();
-
-  // Extract body - prefer HTML, fallback to plain text
-  let body = "";
+  // Extract from email_data structure
+  const emailContent = emailData?.email_data || {};
   
-  if (emailData?.payload) {
-    const parts = emailData.payload.parts || [emailData.payload];
-    
-    // Try to find HTML version first
-    const htmlPart = parts.find((p: any) => p.mimeType === "text/html");
-    if (htmlPart?.body?.data) {
-      try {
-        body = atob(htmlPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-      } catch (e) {
-        console.error("Failed to decode HTML body:", e);
-      }
-    }
-    
-    // Fallback to plain text
-    if (!body) {
-      const textPart = parts.find((p: any) => p.mimeType === "text/plain");
-      if (textPart?.body?.data) {
-        try {
-          body = atob(textPart.body.data.replace(/-/g, '+').replace(/_/g, '/'));
-        } catch (e) {
-          console.error("Failed to decode text body:", e);
-        }
-      }
-    }
-    
-    // Last resort: use snippet if available
-    if (!body && emailData.snippet) {
-      body = emailData.snippet;
-    }
+  const from = emailContent.from || "Unknown Sender";
+  const to = emailContent.to || "Unknown Recipient";
+  const cc = emailContent.cc || undefined;
+  const subject = emailContent.subject || "(No Subject)";
+  const date = emailContent.date || new Date().toISOString();
+  
+  const body_html = emailContent.body_html;
+  const body_text = emailContent.body_text;
+  
+  // Prefer HTML, fallback to text with <br> formatting
+  let body = "";
+  if (body_html) {
+    body = body_html;
+  } else if (body_text) {
+    body = body_text.replace(/\n/g, '<br>');
+  } else {
+    body = "(No content available)";
   }
 
-  return { from, to, subject, date, body };
+  return { from, to, cc, subject, date, body, body_html, body_text };
 }
 
 /**
@@ -192,9 +170,12 @@ export async function fetchReviewEmails(
           id: email.id,
           from: parsed.from,
           to: parsed.to,
+          cc: parsed.cc,
           subject: parsed.subject,
           date: parsed.date,
           body: parsed.body,
+          body_html: parsed.body_html,
+          body_text: parsed.body_text,
           messageId: email.message_id,
           threadId: email.thread_id,
           attachments: grouped,
@@ -253,9 +234,12 @@ export async function fetchEmailById(
       id: (emailData as any).id,
       from: parsed.from,
       to: parsed.to,
+      cc: parsed.cc,
       subject: parsed.subject,
       date: parsed.date,
       body: parsed.body,
+      body_html: parsed.body_html,
+      body_text: parsed.body_text,
       messageId: (emailData as any).message_id,
       threadId: (emailData as any).thread_id,
       attachments: grouped,
