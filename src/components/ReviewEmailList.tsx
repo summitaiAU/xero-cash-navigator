@@ -293,3 +293,5 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
     </div>
   );
 };
+
+export default ReviewEmailList;

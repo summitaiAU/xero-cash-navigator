@@ -205,3 +205,5 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick }: AttachmentsPane
     </div>
   );
 };
+
+export default AttachmentsPanel;

@@ -401,3 +401,5 @@ export const AttachmentViewer = ({ attachmentId, onClose }: AttachmentViewerProp
     </Dialog>
   );
 };
+
+export default AttachmentViewer;

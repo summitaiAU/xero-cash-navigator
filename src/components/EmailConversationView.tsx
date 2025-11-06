@@ -172,3 +172,5 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
     </div>
   );
 };
+
+export default EmailConversationView;
