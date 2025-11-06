@@ -230,8 +230,85 @@ export async function fetchReviewEmails(
   }
 }
 
+export interface EmailContent {
+  id: string;
+  from_name: string | null;
+  from_email: string | null;
+  to_list: string[];
+  cc_list: string[];
+  reply_to: string | null;
+  subject: string | null;
+  date_received: string | null;
+  display_date_local: string | null;
+  headers_slim: any;
+  body_html_safe: string | null;
+  body_text_fallback: string | null;
+}
+
 /**
- * Fetch a single email by ID
+ * Fetch email content for conversation view (no attachments)
+ */
+export async function fetchEmailContent(
+  emailId: string
+): Promise<{ data: EmailContent | null; error: Error | null }> {
+  try {
+    // @ts-ignore - Supabase type inference has issues with complex queries
+    const { data, error } = await supabase
+      .from("email_queue")
+      .select(
+        `id,
+        from_name,
+        from_email,
+        to_list,
+        cc_list,
+        reply_to,
+        subject,
+        date_received,
+        display_date_local,
+        headers_slim,
+        body_html_safe,
+        body_text_fallback`
+      )
+      .eq("id", emailId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error fetching email content:", error);
+      return { data: null, error };
+    }
+
+    if (!data) {
+      return { data: null, error: new Error("Email not found") };
+    }
+
+    // Cast to EmailContent
+    const emailContent: EmailContent = {
+      id: (data as any).id,
+      from_name: (data as any).from_name,
+      from_email: (data as any).from_email,
+      to_list: (data as any).to_list || [],
+      cc_list: (data as any).cc_list || [],
+      reply_to: (data as any).reply_to,
+      subject: (data as any).subject,
+      date_received: (data as any).date_received,
+      display_date_local: (data as any).display_date_local,
+      headers_slim: (data as any).headers_slim,
+      body_html_safe: (data as any).body_html_safe,
+      body_text_fallback: (data as any).body_text_fallback,
+    };
+
+    return { data: emailContent, error: null };
+  } catch (error) {
+    console.error("Unexpected error in fetchEmailContent:", error);
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
+/**
+ * Fetch a single email by ID (with attachments)
  */
 export async function fetchEmailById(
   emailId: string

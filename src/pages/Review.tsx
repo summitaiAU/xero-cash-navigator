@@ -13,10 +13,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   fetchEmailById,
+  fetchEmailContent,
   NormalizedEmail,
   EmailListItem,
+  EmailContent,
 } from "@/services/emailReviewService";
 import { ReviewEmailList } from "@/components/ReviewEmailList";
+import { EmailConversationView } from "@/components/EmailConversationView";
 import { Card } from "@/components/ui/card";
 
 type View = "payable" | "paid" | "flagged";
@@ -28,18 +31,44 @@ export const Review: React.FC = () => {
   );
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [selectedEmail, setSelectedEmail] = useState<NormalizedEmail | null>(null);
+  const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
+  const [loadingContent, setLoadingContent] = useState(false);
 
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
-  // Load selected email details when selection changes
+  // Load selected email content when selection changes
   useEffect(() => {
     if (selectedEmailId) {
+      loadEmailContent(selectedEmailId);
       loadEmailDetails(selectedEmailId);
     } else {
+      setEmailContent(null);
       setSelectedEmail(null);
     }
   }, [selectedEmailId]);
+
+  const loadEmailContent = async (emailId: string) => {
+    try {
+      setLoadingContent(true);
+      const { data, error: fetchError } = await fetchEmailContent(emailId);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      setEmailContent(data);
+    } catch (err) {
+      console.error("Failed to load email content:", err);
+      toast({
+        title: "Unable to load email content",
+        description: "Please retry.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingContent(false);
+    }
+  };
 
   const handleSelectEmail = (email: EmailListItem) => {
     setSelectedEmailId(email.id);
@@ -163,78 +192,10 @@ export const Review: React.FC = () => {
               <ResizablePanelGroup direction="horizontal" className="h-full">
                 {/* Conversation (Middle) */}
                 <ResizablePanel defaultSize={65} minSize={50}>
-                  <div className="h-full flex flex-col bg-background">
-                    <div className="p-4 border-b bg-card">
-                      <h2 className="text-lg font-semibold">Conversation</h2>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedEmail ? selectedEmail.subject : "Select an email to view"}
-                      </p>
-                    </div>
-                    <ScrollArea className="flex-1">
-                      <div className="p-6">
-                        {selectedEmail ? (
-                          <div className="space-y-4">
-                            <div>
-                              <div className="text-sm font-medium text-muted-foreground">
-                                From
-                              </div>
-                              <div className="text-base">{selectedEmail.from}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-muted-foreground">
-                                To
-                              </div>
-                              <div className="text-base">{selectedEmail.to.join(", ")}</div>
-                            </div>
-                            {selectedEmail.cc && selectedEmail.cc.length > 0 && (
-                              <div>
-                                <div className="text-sm font-medium text-muted-foreground">
-                                  CC
-                                </div>
-                                <div className="text-base">{selectedEmail.cc.join(", ")}</div>
-                              </div>
-                            )}
-                            <div>
-                              <div className="text-sm font-medium text-muted-foreground">
-                                Date
-                              </div>
-                              <div className="text-base">{formatDate(selectedEmail.date)}</div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium text-muted-foreground">
-                                Subject
-                              </div>
-                              <div className="text-base">{selectedEmail.subject}</div>
-                            </div>
-                            <div className="pt-4 border-t">
-                              <div className="text-sm font-medium text-muted-foreground mb-2">
-                                Body
-                              </div>
-                              <div className="prose prose-sm max-w-none text-foreground">
-                                {selectedEmail.body_html ? (
-                                  <div 
-                                    dangerouslySetInnerHTML={{ __html: selectedEmail.body_html }}
-                                    className="[&_*]:text-foreground"
-                                  />
-                                ) : selectedEmail.body_text ? (
-                                  <div 
-                                    dangerouslySetInnerHTML={{ __html: selectedEmail.body_text.replace(/\n/g, '<br>') }}
-                                    className="[&_*]:text-foreground"
-                                  />
-                                ) : (
-                                  <p className="text-muted-foreground italic">No content available</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-muted-foreground">
-                            Select an email to view the conversation
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
+                  <EmailConversationView
+                    email={emailContent}
+                    loading={loadingContent}
+                  />
                 </ResizablePanel>
 
                 <ResizableHandle withHandle />
