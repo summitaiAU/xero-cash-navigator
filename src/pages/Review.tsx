@@ -286,14 +286,14 @@ export const Review: React.FC = () => {
                           <div className="text-sm font-medium text-muted-foreground">
                             To
                           </div>
-                          <div className="text-base">{selectedEmail.to}</div>
+                          <div className="text-base">{selectedEmail.to.join(", ")}</div>
                         </div>
-                        {selectedEmail.cc && (
+                        {selectedEmail.cc && selectedEmail.cc.length > 0 && (
                           <div>
                             <div className="text-sm font-medium text-muted-foreground">
                               CC
                             </div>
-                            <div className="text-base">{selectedEmail.cc}</div>
+                            <div className="text-base">{selectedEmail.cc.join(", ")}</div>
                           </div>
                         )}
                         <div>
@@ -323,8 +323,6 @@ export const Review: React.FC = () => {
                                 dangerouslySetInnerHTML={{ __html: selectedEmail.body_text.replace(/\n/g, '<br>') }}
                                 className="[&_*]:text-foreground"
                               />
-                            ) : selectedEmail.body ? (
-                              <div dangerouslySetInnerHTML={{ __html: selectedEmail.body }} />
                             ) : (
                               <p className="text-muted-foreground italic">No content available</p>
                             )}

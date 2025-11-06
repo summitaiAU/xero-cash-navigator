@@ -8,67 +8,29 @@ export interface EmailAttachment {
   status: string;
   error_code: string | null;
   error_message: string | null;
-  gmail_attachment_id: string;
-  gmail_part_id: string;
+  previewable: boolean | null;
+  viewer_kind: string | null;
+  unsupported_reason: string | null;
 }
 
 export interface NormalizedEmail {
   id: string;
   from: string;
-  to: string;
-  cc?: string;
   subject: string;
   date: string;
+  snippet: string;
+  to: string[];
+  cc: string[];
   body_html?: string;
   body_text?: string;
-  body: string; // Keep for backwards compatibility
-  messageId: string;
-  threadId: string;
   attachments: {
     flagged: EmailAttachment[];
     added: EmailAttachment[];
     neutral: EmailAttachment[];
   };
-  rawData?: any;
+  no_of_attachments: number;
 }
 
-/**
- * Parse email_data_raw to extract normalized fields
- */
-function parseEmailData(emailData: any): {
-  from: string;
-  to: string;
-  cc?: string;
-  subject: string;
-  date: string;
-  body: string;
-  body_html?: string;
-  body_text?: string;
-} {
-  // Extract from email_data structure
-  const emailContent = emailData?.email_data || {};
-  
-  const from = emailContent.from || "Unknown Sender";
-  const to = emailContent.to || "Unknown Recipient";
-  const cc = emailContent.cc || undefined;
-  const subject = emailContent.subject || "(No Subject)";
-  const date = emailContent.date || new Date().toISOString();
-  
-  const body_html = emailContent.body_html;
-  const body_text = emailContent.body_text;
-  
-  // Prefer HTML, fallback to text with <br> formatting
-  let body = "";
-  if (body_html) {
-    body = body_html;
-  } else if (body_text) {
-    body = body_text.replace(/\n/g, '<br>');
-  } else {
-    body = "(No content available)";
-  }
-
-  return { from, to, cc, subject, date, body, body_html, body_text };
-}
 
 /**
  * Group attachments by type
@@ -91,8 +53,9 @@ function groupAttachments(attachments: any[]): {
       status: att.status,
       error_code: att.error_code,
       error_message: att.error_message,
-      gmail_attachment_id: att.gmail_attachment_id || "",
-      gmail_part_id: att.gmail_part_id || "",
+      previewable: att.previewable,
+      viewer_kind: att.viewer_kind,
+      unsupported_reason: att.unsupported_reason,
     };
 
     if (att.status === "review" && att.error_code) {
@@ -115,14 +78,17 @@ export async function fetchReviewEmails(
   offset = 0
 ): Promise<{ data: NormalizedEmail[]; error: Error | null; count: number }> {
   try {
-    // Fetch email queue records
+    // Fetch email queue records with pre-parsed fields
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: emailQueueData, error: emailError, count } = await supabase
       .from("email_queue")
-      .select("id, message_id, thread_id, created_at, email_data_raw", { count: "exact" })
+      .select(
+        "id, from_name, from_email, subject, date_received, snippet_text, to_list, cc_list, body_html_safe, body_text_fallback, no_of_attachments",
+        { count: "exact" }
+      )
       .eq("status", "review")
       .eq("review_status_processed", true)
-      .order("created_at", { ascending: false })
+      .order("date_received", { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (emailError) {
@@ -139,7 +105,7 @@ export async function fetchReviewEmails(
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
-      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, gmail_attachment_id, gmail_part_id")
+      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason")
       .in("email_id", emailIds);
 
     if (attachmentsError) {
@@ -162,24 +128,23 @@ export async function fetchReviewEmails(
     // Normalize the data
     const normalizedEmails: NormalizedEmail[] = emailQueueData.map(
       (email: any) => {
-        const parsed = parseEmailData(email.email_data_raw);
         const emailAttachments = attachmentsByEmailId.get(email.id) || [];
         const grouped = groupAttachments(emailAttachments);
 
         return {
           id: email.id,
-          from: parsed.from,
-          to: parsed.to,
-          cc: parsed.cc,
-          subject: parsed.subject,
-          date: parsed.date,
-          body: parsed.body,
-          body_html: parsed.body_html,
-          body_text: parsed.body_text,
-          messageId: email.message_id,
-          threadId: email.thread_id,
+          from: email.from_name 
+            ? `${email.from_name} <${email.from_email}>` 
+            : email.from_email || "Unknown Sender",
+          subject: email.subject || "(No Subject)",
+          date: email.date_received || new Date().toISOString(),
+          snippet: email.snippet_text || "",
+          to: email.to_list || [],
+          cc: email.cc_list || [],
+          body_html: email.body_html_safe,
+          body_text: email.body_text_fallback,
           attachments: grouped,
-          rawData: email.email_data_raw,
+          no_of_attachments: email.no_of_attachments || 0,
         };
       }
     );
@@ -205,7 +170,9 @@ export async function fetchEmailById(
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: emailData, error: emailError } = await supabase
       .from("email_queue")
-      .select("id, message_id, thread_id, created_at, email_data_raw")
+      .select(
+        "id, from_name, from_email, subject, date_received, snippet_text, to_list, cc_list, body_html_safe, body_text_fallback, no_of_attachments"
+      )
       .eq("id", emailId)
       .maybeSingle();
 
@@ -220,30 +187,30 @@ export async function fetchEmailById(
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
-      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, gmail_attachment_id, gmail_part_id")
+      .select("id, email_id, filename, mime_type, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason")
       .eq("email_id", emailId);
 
     if (attachmentsError) {
       console.error("Error fetching attachments:", attachmentsError);
     }
 
-    const parsed = parseEmailData((emailData as any).email_data_raw);
     const grouped = groupAttachments((attachmentsData as any[]) || []);
+    const email = emailData as any;
 
     const normalized: NormalizedEmail = {
-      id: (emailData as any).id,
-      from: parsed.from,
-      to: parsed.to,
-      cc: parsed.cc,
-      subject: parsed.subject,
-      date: parsed.date,
-      body: parsed.body,
-      body_html: parsed.body_html,
-      body_text: parsed.body_text,
-      messageId: (emailData as any).message_id,
-      threadId: (emailData as any).thread_id,
+      id: email.id,
+      from: email.from_name 
+        ? `${email.from_name} <${email.from_email}>` 
+        : email.from_email || "Unknown Sender",
+      subject: email.subject || "(No Subject)",
+      date: email.date_received || new Date().toISOString(),
+      snippet: email.snippet_text || "",
+      to: email.to_list || [],
+      cc: email.cc_list || [],
+      body_html: email.body_html_safe,
+      body_text: email.body_text_fallback,
       attachments: grouped,
-      rawData: (emailData as any).email_data_raw,
+      no_of_attachments: email.no_of_attachments || 0,
     };
 
     return { data: normalized, error: null };
