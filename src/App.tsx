@@ -10,7 +10,7 @@ import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import "./App.css";
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then(module => ({ default: module.Dashboard })));
-const Review = lazy(() => import("./pages/Review").then(module => ({ default: module.Review })));
+const Review = lazy(() => import("./pages/Review"));
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
