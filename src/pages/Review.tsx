@@ -139,7 +139,7 @@ export const Review: React.FC = () => {
 
   return (
     <div className="h-full flex overflow-hidden">
-      <div className="w-[360px] border-r border-border bg-card flex flex-col">
+      <div className="w-[360px] border-r border-border bg-card flex flex-col overflow-hidden">
         <ReviewEmailList
           selectedEmailId={selectedEmailId}
           onSelectEmail={handleSelectEmail}

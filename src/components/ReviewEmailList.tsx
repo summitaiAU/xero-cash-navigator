@@ -159,7 +159,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
   if (loading) {
     return (
-      <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
+      <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col h-full overflow-hidden">
         <div className="px-4 py-3 border-b bg-card">
           <h2 className="text-lg font-semibold">Emails</h2>
         </div>
@@ -182,9 +182,9 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   }
 
   return (
-    <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col">
+    <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col h-full overflow-hidden">
       {/* Header with count */}
-      <div className="px-4 py-3 border-b bg-card space-y-3">
+      <div className="sticky top-0 z-10 px-4 py-3 border-b bg-card space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             Emails 

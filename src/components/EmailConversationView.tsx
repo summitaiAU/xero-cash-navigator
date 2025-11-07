@@ -118,7 +118,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
       </div>
 
       {/* Email Body */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 overflow-y-auto">
         <div className="p-4">
           <div className="review-prose">
             {/* Additional Metadata (Collapsible) */}
