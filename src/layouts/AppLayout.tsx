@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Outlet, useLocation, useNavigate, useNavigation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,16 +11,12 @@ export const AppLayout: React.FC = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const navigation = useNavigation(); // Track route transitions
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     return stored === null ? true : stored === "true";
   });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [reviewCount, setReviewCount] = useState(0);
-
-  // Determine if route is loading
-  const isRouteLoading = navigation.state === "loading";
 
   // Derive current view from URL
   const searchParams = new URLSearchParams(location.search);
@@ -114,22 +110,12 @@ export const AppLayout: React.FC = () => {
         "flex-1 min-w-0 h-full relative overflow-hidden transition-all duration-300",
         sidebarCollapsed ? "pl-16" : "pl-48"
       )}>
-        {/* Route transition loading overlay */}
-        {isRouteLoading && (
-          <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">Loading...</p>
-            </div>
-          </div>
-        )}
-        
         <React.Suspense
           fallback={
             <div className="absolute inset-0 grid place-items-center bg-background">
               <div className="flex flex-col items-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading page...</p>
+                <p className="text-sm text-muted-foreground">Loading...</p>
               </div>
             </div>
           }
