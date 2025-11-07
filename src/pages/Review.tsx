@@ -138,7 +138,7 @@ export const Review: React.FC = () => {
   }, []); // Empty deps - now stable across renders
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex overflow-hidden">
       <div className="w-[360px] border-r border-border bg-card flex flex-col">
         <ReviewEmailList
           selectedEmailId={selectedEmailId}
@@ -156,12 +156,12 @@ export const Review: React.FC = () => {
         </div>
 
         {/* Attachments (Right) */}
-        <div className="w-[320px] flex-shrink-0 flex flex-col bg-card">
-          <div className="py-3 px-3 border-b border-border">
+        <div className="w-[320px] flex-shrink-0 flex flex-col bg-card overflow-hidden">
+          <div className="sticky top-0 z-10 py-3 px-3 border-b border-border bg-card">
             <h2 className="text-sm font-semibold">Attachments</h2>
           </div>
-          <div className="flex-1 overflow-hidden">
-            <AttachmentsPanel 
+          <div className="flex-1 overflow-y-auto">
+            <AttachmentsPanel
               emailId={selectedEmailId} 
               onAttachmentClick={(attachment: EmailAttachment) => {
                 setSelectedAttachmentId(attachment.id);

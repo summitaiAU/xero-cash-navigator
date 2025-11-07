@@ -269,7 +269,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
   };
 
   return (
-    <div className="h-full overflow-y-auto py-3 space-y-4">
+    <div className="h-full py-3 space-y-4">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide px-3">

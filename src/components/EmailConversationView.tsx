@@ -80,9 +80,9 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background overflow-hidden">
       {/* Compact Header */}
-      <div className="px-4 py-3 border-b bg-card">
+      <div className="sticky top-0 z-10 px-4 py-3 border-b bg-card">
         <div className="flex items-start justify-between gap-4 mb-1">
           <h2 className="text-lg font-bold text-foreground line-clamp-1 flex-1">
             {email.subject || "(No Subject)"}
