@@ -26,10 +26,11 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
   }, [toast]);
 
   useEffect(() => {
-    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState);
+    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState, 'onInvoiceUpdate stable:', !!onInvoiceUpdate);
     
+    const channelName = `invoice-changes-${viewState}`;
     const channel = supabase
-      .channel('invoice-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
