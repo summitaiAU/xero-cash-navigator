@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { fetchAttachmentById, EmailAttachment } from "@/services/emailReviewService";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AttachmentViewerProps {
   attachmentId: string | null;
@@ -188,6 +189,37 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
       toast({
         title: "Download Failed",
         description: "Unable to download the file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleIgnore = async () => {
+    if (!attachment) return;
+    
+    try {
+      const { error } = await supabase
+        .from('email_attachments' as any)
+        .update({
+          status: 'completed',
+          review_added: false,
+          attachment_added_at: new Date().toISOString(),
+        })
+        .eq('id', attachment.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Attachment Ignored",
+        description: "This attachment has been marked as ignored.",
+      });
+      
+      onClose();
+    } catch (error) {
+      console.error("Failed to ignore attachment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to ignore attachment. Please try again.",
         variant: "destructive",
       });
     }
@@ -464,11 +496,25 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
               <Button variant="outline" size="sm" onClick={loadAttachment} title="Refresh">
                 <RefreshCw className="w-3 h-3" />
               </Button>
-              {attachment && onAddInvoice && (attachment.status === "review" || (attachment.status === "completed" && attachment.error_code)) && (
-                <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)} title="Add Invoice">
-                  <Plus className="w-3 h-3 mr-1" />
-                  <span className="text-xs">Add Invoice</span>
-                </Button>
+              {attachment && attachment.status === "review" && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleIgnore}
+                    title="Ignore this attachment"
+                    className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Ignore</span>
+                  </Button>
+                  {onAddInvoice && (
+                    <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)} title="Add Invoice">
+                      <Plus className="w-3 h-3 mr-1" />
+                      <span className="text-xs">Add Invoice</span>
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
