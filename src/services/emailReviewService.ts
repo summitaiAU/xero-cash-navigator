@@ -16,7 +16,6 @@ export interface EmailListItem {
 
 export interface EmailListFilters {
   searchQuery?: string;
-  sortBy?: 'newest' | 'oldest';
 }
 
 export interface EmailAttachment {
@@ -113,10 +112,11 @@ export async function fetchReviewEmailList(
       );
     }
 
-    // Apply sorting
-    const sortOrder = filters.sortBy === 'oldest' ? { ascending: true } : { ascending: false };
+    // Apply sorting: unreviewed first (reviewed_at is null), then by newest date
     // @ts-ignore
-    query = query.order("date_received", { ...sortOrder, nullsFirst: false });
+    query = query
+      .order("reviewed_at", { ascending: true, nullsFirst: true })
+      .order("date_received", { ascending: false, nullsFirst: false });
 
     // Apply pagination
     // @ts-ignore

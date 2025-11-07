@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Mail, Paperclip, Search, X, ArrowUpDown, Check } from "lucide-react";
+import { Loader2, Mail, Paperclip, Search, X, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,9 +33,8 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   const hasAutoSelectedRef = useRef(false);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simplified filters - only search and sort
+  // Simplified filters - only search
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
 
   const fetchEmails = useCallback(
     async (page: number, append = false) => {
@@ -46,11 +45,10 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
           setLoading(true);
         }
 
-        console.log("[ReviewEmailList] Fetching emails:", { page, append, searchQuery, sortBy });
+        console.log("[ReviewEmailList] Fetching emails:", { page, append, searchQuery });
 
         const filters: EmailListFilters = {
           searchQuery: searchQuery || undefined,
-          sortBy,
         };
 
         const { data, error: fetchError, count } = await fetchReviewEmailList(page, filters);
@@ -84,15 +82,15 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         setLoadingMore(false);
       }
     },
-    [searchQuery, sortBy]
+    [searchQuery]
   );
 
-  // Fetch emails when search or sort changes
+  // Fetch emails when search changes
   useEffect(() => {
-    hasAutoSelectedRef.current = false; // Reset auto-select flag on search/sort change
+    hasAutoSelectedRef.current = false; // Reset auto-select flag on search change
     setCurrentPage(0);
     fetchEmails(0, false);
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, fetchEmails]);
 
   // Auto-select first email when list loads and nothing is selected
   useEffect(() => {
@@ -153,10 +151,6 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
     return email.from_name || email.from_email || "Unknown Sender";
   };
 
-  const toggleSort = () => {
-    setSortBy((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
-  };
-
   if (loading) {
     return (
       <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col h-full overflow-hidden">
@@ -203,38 +197,25 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
           )}
         </div>
 
-        {/* Search and Sort */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search emails..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-9 h-9 rounded-md"
-            />
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchQuery("")}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-          
-          {/* Sort Toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleSort}
-            className="flex-shrink-0 h-9"
-            title={sortBy === 'newest' ? 'Newest first' : 'Oldest first'}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search emails..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9 h-9 rounded-md"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 

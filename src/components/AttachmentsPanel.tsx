@@ -269,10 +269,10 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
   };
 
   return (
-    <div className="h-full min-h-[calc(100%+1px)] py-3 space-y-4">
+    <div className="h-full py-3 space-y-4">
         {categorized.flagged.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide px-3">
+          <div className="space-y-2 min-h-[calc(100%+1px)]">
+            <h3 className="sticky top-0 z-10 bg-card text-xs font-semibold text-destructive uppercase tracking-wide px-3 py-2">
               Flagged · {categorized.flagged.length}
             </h3>
             <div className="space-y-2">
@@ -282,8 +282,8 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
         )}
 
         {categorized.added.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-success uppercase tracking-wide px-3">
+          <div className="space-y-2 min-h-[calc(100%+1px)]">
+            <h3 className="sticky top-0 z-10 bg-card text-xs font-semibold text-success uppercase tracking-wide px-3 py-2">
               Added · {categorized.added.length}
             </h3>
             <div className="space-y-2">
@@ -293,8 +293,8 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
         )}
 
         {categorized.neutral.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3">
+          <div className="space-y-2 min-h-[calc(100%+1px)]">
+            <h3 className="sticky top-0 z-10 bg-card text-xs font-semibold text-muted-foreground uppercase tracking-wide px-3 py-2">
               Neutral · {categorized.neutral.length}
             </h3>
             <div className="space-y-2">
