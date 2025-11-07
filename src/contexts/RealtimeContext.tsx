@@ -37,6 +37,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
   const { user } = useAuth();
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [currentChannel, setCurrentChannel] = useState<RealtimeChannel | null>(null);
+  const currentUserId = user?.id;
 
   useEffect(() => {
     if (!user) return;
@@ -88,7 +89,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
     };
   }, [user]);
 
-  const updatePresence = async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
+  const updatePresence = React.useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
     if (!currentChannel || !user) return;
 
     await currentChannel.track({
@@ -98,22 +99,22 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
       last_activity: new Date().toISOString(),
       status
     });
-  };
+  }, [currentChannel, user]);
 
-  const getUsersOnInvoice = (invoiceId: string) => {
-    return activeUsers.filter(user => 
-      user.current_invoice_id === invoiceId && 
-      user.user_id !== user.user_id // Exclude current user
+  const getUsersOnInvoice = React.useCallback((invoiceId: string) => {
+    return activeUsers.filter(u => 
+      u.current_invoice_id === invoiceId && 
+      u.user_id !== currentUserId // Exclude current user
     );
-  };
+  }, [activeUsers, currentUserId]);
 
-  const isInvoiceBeingEdited = (invoiceId: string) => {
-    return activeUsers.some(user => 
-      user.current_invoice_id === invoiceId && 
-      user.status === 'editing' &&
-      user.user_id !== user.user_id // Exclude current user
+  const isInvoiceBeingEdited = React.useCallback((invoiceId: string) => {
+    return activeUsers.some(u => 
+      u.current_invoice_id === invoiceId && 
+      u.status === 'editing' &&
+      u.user_id !== currentUserId // Exclude current user
     );
-  };
+  }, [activeUsers, currentUserId]);
 
   const value: RealtimeContextType = {
     activeUsers,

@@ -79,7 +79,7 @@ export const Review: React.FC = () => {
     }
   };
 
-  const handleSelectEmail = (email: EmailListItem) => {
+  const handleSelectEmail = React.useCallback((email: EmailListItem) => {
     // Save scroll position if re-selecting same email
     if (selectedEmailId === email.id) {
       // Same email - preserve scroll
@@ -92,7 +92,7 @@ export const Review: React.FC = () => {
     
     setSelectedEmailId(email.id);
     setSelectedAttachmentId(null); // Clear attachment selection on new email
-  };
+  }, [selectedEmailId]);
 
   return (
     <div className="h-full flex">
