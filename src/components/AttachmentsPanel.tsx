@@ -177,7 +177,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
 
   if (!emailId) {
     return (
-      <div className="flex items-center justify-center h-full text-center px-4">
+      <div className="flex items-center justify-center h-full min-h-[calc(100%+1px)] text-center px-4">
         <div>
           <p className="text-sm text-muted-foreground">Select an email to view attachments</p>
         </div>
@@ -187,7 +187,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
 
   if (loading) {
     return (
-      <div className="space-y-2.5 py-3">
+      <div className="space-y-2.5 py-3 min-h-[calc(100%+1px)]">
         {[1, 2, 3].map((i) => (
           <div key={i} className="review-attachment-card">
             <div className="flex items-center gap-2.5">
@@ -205,7 +205,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
 
   if (attachments.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-center px-4">
+      <div className="flex items-center justify-center h-full min-h-[calc(100%+1px)] text-center px-4">
         <div className="review-attachment-card max-w-xs">
           <p className="text-sm text-muted-foreground">No attachments detected</p>
         </div>
@@ -269,7 +269,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
   };
 
   return (
-    <div className="h-full py-3 space-y-4">
+    <div className="h-full min-h-[calc(100%+1px)] py-3 space-y-4">
         {categorized.flagged.length > 0 && (
           <div className="space-y-2">
             <h3 className="text-xs font-semibold text-destructive uppercase tracking-wide px-3">

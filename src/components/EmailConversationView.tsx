@@ -119,7 +119,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
 
       {/* Email Body */}
       <ScrollArea className="flex-1 overflow-y-auto">
-        <div className="p-4">
+        <div className="p-4 min-h-[calc(100%+1px)]">
           <div className="review-prose">
             {/* Additional Metadata (Collapsible) */}
             {(email.reply_to || (email.headers_slim && Object.keys(email.headers_slim).length > 0)) && (

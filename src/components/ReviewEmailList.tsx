@@ -240,6 +240,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
       {/* Email List */}
       <ScrollArea className="flex-1" onScrollCapture={handleScroll} ref={scrollRef}>
+        <div className="min-h-[calc(100%+1px)]">
         {error && (
           <Alert variant="destructive" className="mx-4 mt-4">
             <AlertDescription className="flex items-center justify-between">
@@ -344,6 +345,7 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
             )}
           </div>
         )}
+        </div>
       </ScrollArea>
     </div>
   );
