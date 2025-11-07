@@ -18,12 +18,18 @@ interface UseRealtimeInvoicesProps {
 export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeInvoicesProps) => {
   const { toast } = useToast();
   const toastRef = useRef(toast);
+  const onUpdateRef = useRef(onInvoiceUpdate);
   const [realtimeUpdates, setRealtimeUpdates] = useState<RealtimeInvoiceUpdate[]>([]);
 
   // Keep toast ref updated
   useEffect(() => {
     toastRef.current = toast;
   }, [toast]);
+
+  // Keep onInvoiceUpdate ref updated
+  useEffect(() => {
+    onUpdateRef.current = onInvoiceUpdate;
+  }, [onInvoiceUpdate]);
 
   useEffect(() => {
     console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState, 'onInvoiceUpdate stable:', !!onInvoiceUpdate);
@@ -112,7 +118,7 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           }
 
           setRealtimeUpdates(prev => [...prev, update]);
-          onInvoiceUpdate?.(update);
+          onUpdateRef.current?.(update);
         }
       )
       .subscribe();
@@ -121,7 +127,7 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
       console.log('[useRealtimeInvoices] Cleaning up channel for viewState:', viewState);
       supabase.removeChannel(channel);
     };
-  }, [viewState, onInvoiceUpdate]);
+  }, [viewState]);
 
   return { realtimeUpdates };
 };

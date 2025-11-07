@@ -145,6 +145,11 @@ export const Dashboard: React.FC = () => {
     }
   }, [viewState, toast]);
 
+  // Stable callback for real-time updates
+  const handleRealtimeListUpdate = useCallback(() => {
+    loadInvoices(true);
+  }, [loadInvoices]);
+
   // Load all invoices for search functionality
   const loadAllInvoices = async () => {
     try {
@@ -748,7 +753,7 @@ export const Dashboard: React.FC = () => {
       <UserPresenceIndicator invoiceId={currentInvoice?.id} />
 
       {/* Real-time notifications */}
-      <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={() => loadInvoices(true)} />
+      <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={handleRealtimeListUpdate} />
 
       {/* Conflict warning if another user is editing */}
       {currentInvoice && (
