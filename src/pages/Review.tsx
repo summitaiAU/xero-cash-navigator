@@ -35,6 +35,7 @@ export const Review: React.FC = () => {
   const conversationScrollRef = React.useRef<number>(0);
   const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const selectedEmailIdRef = React.useRef<string | null>(null);
+  const refetchAttachmentsRef = React.useRef<(() => Promise<void>) | null>(null);
 
   const { toast } = useToast();
 
@@ -169,6 +170,9 @@ export const Review: React.FC = () => {
                 setInvoiceAttachment(attachment);
                 setInvoiceDrawerOpen(true);
               }}
+              onRefetch={(refetch) => {
+                refetchAttachmentsRef.current = refetch;
+              }}
             />
           </div>
         </div>
@@ -182,6 +186,9 @@ export const Review: React.FC = () => {
           setInvoiceAttachment(attachment);
           setInvoiceDrawerOpen(true);
         }}
+        onAttachmentUpdated={() => {
+          refetchAttachmentsRef.current?.();
+        }}
       />
 
       {/* Add Invoice Drawer */}
@@ -194,7 +201,7 @@ export const Review: React.FC = () => {
         selectedAttachment={invoiceAttachment}
         onSaved={(invoiceId) => {
           console.log("Invoice saved:", invoiceId);
-          // Optionally refresh email list or show updated state
+          refetchAttachmentsRef.current?.();
         }}
         onWebhookResult={(ok) => {
           console.log("Webhook result:", ok);

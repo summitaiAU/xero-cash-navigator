@@ -15,6 +15,7 @@ interface AttachmentViewerProps {
   attachmentId: string | null;
   onClose: () => void;
   onAddInvoice?: (attachment: EmailAttachment) => void;
+  onAttachmentUpdated?: () => void;
 }
 
 // Whitelist of supported attachment types
@@ -58,7 +59,7 @@ const createBlobUrl = (base64url: string, mimeType: string): string => {
   return URL.createObjectURL(blob);
 };
 
-export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: AttachmentViewerProps) => {
+export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttachmentUpdated }: AttachmentViewerProps) => {
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
   const [zoom, setZoom] = useState(100);
@@ -214,6 +215,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
         description: "This attachment has been marked as ignored.",
       });
       
+      onAttachmentUpdated?.();
       onClose();
     } catch (error) {
       console.error("Failed to ignore attachment:", error);

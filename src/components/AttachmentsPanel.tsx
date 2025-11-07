@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { FileIcon, AlertCircle, CheckCircle, Clock, Plus } from "lucide-react";
 import { fetchEmailAttachments, EmailAttachment } from "@/services/emailReviewService";
 import { attachmentCacheService } from "@/services/attachmentCache";
@@ -6,11 +6,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AttachmentsPanelProps {
   emailId: string | null;
   onAttachmentClick?: (attachment: EmailAttachment) => void;
   onAddInvoice?: (attachment: EmailAttachment) => void;
+  onRefetch?: (refetchFn: () => Promise<void>) => void;
 }
 
 const getFileIcon = (mimeType: string) => {
@@ -52,11 +54,35 @@ const categorizeAttachments = (attachments: EmailAttachment[]): CategorizedAttac
   return { flagged, added, neutral };
 };
 
-export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: AttachmentsPanelProps) => {
+export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onRefetch }: AttachmentsPanelProps) => {
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAttachment, setSelectedAttachment] = useState<EmailAttachment | null>(null);
   const prevEmailIdRef = useRef<string | null>(null);
+
+  const refetchAttachments = useCallback(async () => {
+    if (!emailId) return;
+    
+    console.log(`[AttachmentsPanel] Manual refetch for email ${emailId}`);
+    setLoading(true);
+    
+    try {
+      const { data, error } = await fetchEmailAttachments(emailId);
+      if (error) {
+        console.error("Failed to refetch attachments:", error);
+      } else {
+        setAttachments(data);
+        console.log(`[AttachmentsPanel] Refetch complete: ${data.length} attachments`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [emailId]);
+
+  // Expose refetch function to parent
+  useEffect(() => {
+    onRefetch?.(refetchAttachments);
+  }, [refetchAttachments, onRefetch]);
 
   useEffect(() => {
     if (!emailId) {
@@ -106,6 +132,35 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
       abortController.abort();
     };
   }, [emailId]);
+
+  // Realtime subscription for attachment updates
+  useEffect(() => {
+    if (!emailId) return;
+    
+    console.log(`[AttachmentsPanel] Setting up realtime for email ${emailId}`);
+    
+    const channel = supabase
+      .channel(`attachments-${emailId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'email_attachments',
+          filter: `email_id=eq.${emailId}`,
+        },
+        (payload) => {
+          console.log('[AttachmentsPanel] Realtime update:', payload);
+          refetchAttachments();
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      console.log(`[AttachmentsPanel] Cleaning up realtime for email ${emailId}`);
+      supabase.removeChannel(channel);
+    };
+  }, [emailId, refetchAttachments]);
 
   if (!emailId) {
     return (
