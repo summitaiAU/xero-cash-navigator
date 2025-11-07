@@ -10,9 +10,10 @@ export const AppLayout: React.FC = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
-    localStorage.getItem("sidebar-collapsed") === "true"
-  );
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const stored = localStorage.getItem("sidebar-collapsed");
+    return stored === null ? true : stored === "true";
+  });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   // Derive current view from URL
