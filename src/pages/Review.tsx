@@ -160,7 +160,7 @@ export const Review: React.FC = () => {
           <div className="sticky top-0 z-10 py-3 px-3 border-b border-border bg-card">
             <h2 className="text-sm font-semibold">Attachments</h2>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto [overscroll-behavior-y:contain] [-webkit-overflow-scrolling:touch]">
             <AttachmentsPanel
               emailId={selectedEmailId} 
               onAttachmentClick={(attachment: EmailAttachment) => {
