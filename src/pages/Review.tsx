@@ -34,6 +34,7 @@ export const Review: React.FC = () => {
   const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
   const conversationScrollRef = React.useRef<number>(0);
   const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const selectedEmailIdRef = React.useRef<string | null>(null);
 
   const { toast } = useToast();
 
@@ -63,36 +64,54 @@ export const Review: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedAttachmentId]);
 
-  // Load selected email content when selection changes
+  // Sync ref with state
   useEffect(() => {
-    if (selectedEmailId) {
-      loadEmailContent(selectedEmailId);
-    } else {
-      setEmailContent(null);
-    }
+    selectedEmailIdRef.current = selectedEmailId;
   }, [selectedEmailId]);
 
-  const loadEmailContent = async (emailId: string) => {
-    try {
-      setLoadingContent(true);
-      const { data, error: fetchError } = await fetchEmailContent(emailId);
-
-      if (fetchError) {
-        throw fetchError;
-      }
-
-      setEmailContent(data);
-    } catch (err) {
-      console.error("Failed to load email content:", err);
-      toast({
-        title: "Unable to load email content",
-        description: "Please retry.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingContent(false);
+  // Load selected email content when selection changes
+  useEffect(() => {
+    if (!selectedEmailId) {
+      setEmailContent(null);
+      return;
     }
-  };
+
+    const abortController = new AbortController();
+    
+    const loadEmailContentWithCancel = async (emailId: string) => {
+      try {
+        setLoadingContent(true);
+        const { data, error: fetchError } = await fetchEmailContent(emailId);
+
+        // Don't update state if aborted
+        if (abortController.signal.aborted) return;
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        setEmailContent(data);
+      } catch (err) {
+        if (abortController.signal.aborted) return;
+        console.error("Failed to load email content:", err);
+        toast({
+          title: "Unable to load email content",
+          description: "Please retry.",
+          variant: "destructive",
+        });
+      } finally {
+        if (!abortController.signal.aborted) {
+          setLoadingContent(false);
+        }
+      }
+    };
+    
+    loadEmailContentWithCancel(selectedEmailId);
+    
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedEmailId, toast]);
 
   const handleSelectEmail = React.useCallback((email: EmailListItem) => {
     // Debounce to prevent rapid switching
@@ -101,8 +120,8 @@ export const Review: React.FC = () => {
     }
     
     debounceTimeoutRef.current = setTimeout(() => {
-      // Save scroll position if re-selecting same email
-      if (selectedEmailId === email.id) {
+      // Use ref for comparison instead of state to keep callback stable
+      if (selectedEmailIdRef.current === email.id) {
         // Same email - preserve scroll
         setPreviousEmailId(email.id);
       } else {
@@ -111,10 +130,11 @@ export const Review: React.FC = () => {
         conversationScrollRef.current = 0;
       }
       
+      selectedEmailIdRef.current = email.id;
       setSelectedEmailId(email.id);
       setSelectedAttachmentId(null); // Clear attachment selection on new email
     }, 150); // 150ms debounce
-  }, [selectedEmailId]);
+  }, []); // Empty deps - now stable across renders
 
   return (
     <div className="h-full flex">

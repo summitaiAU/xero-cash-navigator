@@ -31,16 +31,20 @@ export const useRealtime = () => {
 
 interface RealtimeProviderProps {
   children: React.ReactNode;
+  enabled?: boolean; // Default true for backward compatibility
 }
 
-export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) => {
+export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ 
+  children, 
+  enabled = true 
+}) => {
   const { user } = useAuth();
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [currentChannel, setCurrentChannel] = useState<RealtimeChannel | null>(null);
   const currentUserId = user?.id;
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !enabled) return;
 
     const channel = supabase.channel('user-presence', {
       config: {
@@ -87,7 +91,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({ children }) 
     return () => {
       channel.unsubscribe();
     };
-  }, [user]);
+  }, [user, enabled]);
 
   const updatePresence = React.useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
     if (!currentChannel || !user) return;

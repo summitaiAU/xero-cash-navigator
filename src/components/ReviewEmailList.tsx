@@ -30,6 +30,8 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasAutoSelectedRef = useRef(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Simplified filters - only search and sort
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,19 +89,28 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
 
   // Fetch emails when search or sort changes
   useEffect(() => {
+    hasAutoSelectedRef.current = false; // Reset auto-select flag on search/sort change
     setCurrentPage(0);
     fetchEmails(0, false);
   }, [searchQuery, sortBy]);
 
   // Auto-select first email when list loads and nothing is selected
   useEffect(() => {
-    if (emails.length > 0 && !selectedEmailId) {
+    if (emails.length > 0 && !selectedEmailId && !hasAutoSelectedRef.current) {
+      hasAutoSelectedRef.current = true;
       onSelectEmail(emails[0]);
     }
-  }, [emails, selectedEmailId, onSelectEmail]);
+  }, [emails, selectedEmailId]);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
+      // Throttle scroll events
+      if (scrollTimeoutRef.current) return;
+      
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollTimeoutRef.current = null;
+      }, 100);
+
       const target = e.currentTarget;
       const bottom = target.scrollHeight - target.scrollTop <= target.clientHeight + 100;
 
@@ -109,8 +120,17 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         fetchEmails(nextPage, true);
       }
     },
-    [hasMore, loadingMore, loading, currentPage]
+    [hasMore, loadingMore, loading, currentPage, fetchEmails]
   );
+
+  // Cleanup scroll timeout
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const formatDate = (email: EmailListItem) => {
     const dateStr = email.display_date_local || email.date_received;
