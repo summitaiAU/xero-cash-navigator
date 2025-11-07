@@ -29,12 +29,14 @@ export interface EmailAttachment {
   previewable: boolean | null;
   viewer_kind: string | null;
   unsupported_reason: string | null;
-  text_excerpt: string | null;
-  data_base64url: string | null;
-  safe_html: string | null;
-  eml_headers: any;
   created_at: string;
   updated_at: string;
+  
+  // These are now optional - only loaded on-demand for performance
+  text_excerpt?: string | null;
+  data_base64url?: string | null;
+  safe_html?: string | null;
+  eml_headers?: any;
 }
 
 export interface NormalizedEmail {
@@ -370,11 +372,13 @@ export async function fetchEmailAttachments(
   emailId: string
 ): Promise<{ data: EmailAttachment[]; error: Error | null }> {
   try {
+    console.log(`[fetchEmailAttachments] Fetching metadata only for email ${emailId}`);
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data, error } = await (supabase as any)
       .from("email_attachments")
       .select(
-        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at"
+        // Only fetch metadata - exclude heavy fields for performance
+        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, created_at, updated_at"
       )
       .eq("email_id", emailId)
       .order("status", { ascending: true }) // review first, then completed
@@ -385,6 +389,7 @@ export async function fetchEmailAttachments(
       return { data: [], error };
     }
 
+    console.log(`[fetchEmailAttachments] Loaded ${data?.length || 0} attachments (metadata only)`);
     return { data: (data as any[]) || [], error: null };
   } catch (error) {
     console.error("Unexpected error in fetchEmailAttachments:", error);
@@ -396,16 +401,29 @@ export async function fetchEmailAttachments(
 }
 
 /**
- * Fetch a single attachment by ID
+ * Fetch a single attachment by ID (with caching)
  */
 export async function fetchAttachmentById(
   attachmentId: string
 ): Promise<{ data: EmailAttachment | null; error: Error | null }> {
   try {
+    // Import cache service locally to avoid circular dependencies
+    const { attachmentCacheService } = await import('./attachmentCache');
+    
+    // Check cache first
+    const cached = attachmentCacheService.get(attachmentId);
+    if (cached) {
+      console.log(`[Cache HIT] Attachment ${attachmentId}`);
+      return { data: cached, error: null };
+    }
+
+    console.log(`[Cache MISS] Fetching attachment ${attachmentId} with full data`);
+    
     // @ts-ignore - Supabase type inference has issues with complex queries
     const { data, error } = await (supabase as any)
       .from("email_attachments")
       .select(
+        // Fetch ALL fields including heavy ones
         "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at"
       )
       .eq("id", attachmentId)
@@ -420,7 +438,12 @@ export async function fetchAttachmentById(
       return { data: null, error: new Error("Attachment not found") };
     }
 
-    return { data: data as EmailAttachment, error: null };
+    // Cache the result
+    const attachmentData = data as EmailAttachment;
+    attachmentCacheService.set(attachmentId, attachmentData);
+    console.log(`[Cache SET] Cached attachment ${attachmentId} (${(attachmentData.data_base64url?.length || 0) / 1024}KB)`);
+
+    return { data: attachmentData, error: null };
   } catch (error) {
     console.error("Unexpected error in fetchAttachmentById:", error);
     return {

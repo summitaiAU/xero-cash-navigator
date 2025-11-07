@@ -14,6 +14,7 @@ import {
   EmailContent,
   EmailAttachment,
 } from "@/services/emailReviewService";
+import { attachmentCacheService } from "@/services/attachmentCache";
 import { ReviewEmailList } from "@/components/ReviewEmailList";
 import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
@@ -34,6 +35,14 @@ export const Review: React.FC = () => {
   const conversationScrollRef = React.useRef<number>(0);
 
   const { toast } = useToast();
+
+  // Clear attachment cache when leaving Review page
+  useEffect(() => {
+    return () => {
+      console.log("[Review] Clearing attachment cache on unmount");
+      attachmentCacheService.clear();
+    };
+  }, []);
 
   // Keyboard handlers for Review page
   useEffect(() => {

@@ -63,6 +63,10 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
     }
 
     const loadAttachments = async () => {
+      // Clear cache for previous email's attachments when switching emails
+      const { attachmentCacheService } = await import("@/services/attachmentCache");
+      attachmentCacheService.clearForEmail(emailId);
+      
       setLoading(true);
       const { data, error } = await fetchEmailAttachments(emailId);
       

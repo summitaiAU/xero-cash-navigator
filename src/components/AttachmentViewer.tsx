@@ -220,15 +220,24 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice }: Attach
       );
     }
 
-    // No data available
+    // No data available (still loading or missing)
     if (!attachment.data_base64url && !attachment.safe_html) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 text-muted-foreground">
-          <p>No preview available. Try Download.</p>
-          <Button onClick={handleDownload} variant="outline" disabled={!attachment.data_base64url}>
-            <Download className="w-4 h-4 mr-2" />
-            Download
-          </Button>
+          {loading ? (
+            <>
+              <RefreshCw className="w-8 h-8 animate-spin" />
+              <p>Loading preview data...</p>
+            </>
+          ) : (
+            <>
+              <p>No preview available. Try Download.</p>
+              <Button onClick={handleDownload} variant="outline" disabled={!attachment.data_base64url}>
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+            </>
+          )}
         </div>
       );
     }
