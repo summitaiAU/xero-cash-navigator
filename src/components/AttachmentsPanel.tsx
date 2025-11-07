@@ -43,11 +43,24 @@ const categorizeAttachments = (attachments: EmailAttachment[]): CategorizedAttac
 
   for (const att of attachments) {
     if (att.status === "review") {
+      // Still being processed/reviewed
       flagged.push(att);
-    } else if (att.status === "completed" && !att.error_code) {
-      added.push(att);
-    } else if (att.status === "completed" && att.error_code) {
-      neutral.push(att);
+    } else if (att.status === "completed") {
+      // Use review_added field to determine category
+      if (att.review_added === true) {
+        // Invoice was added from this attachment
+        added.push(att);
+      } else if (att.review_added === false) {
+        // Explicitly ignored or marked as not invoice
+        neutral.push(att);
+      } else {
+        // Legacy data (review_added is null) - use old logic
+        if (!att.error_code) {
+          added.push(att);
+        } else {
+          neutral.push(att);
+        }
+      }
     }
   }
 
