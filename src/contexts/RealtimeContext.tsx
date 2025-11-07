@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -40,70 +40,110 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
 }) => {
   const { user } = useAuth();
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
-  const [currentChannel, setCurrentChannel] = useState<RealtimeChannel | null>(null);
   const currentUserId = user?.id;
 
+  // Refs for stable subscription lifecycle
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const userRef = useRef<{ id: string; email: string } | null>(null);
+  const lastPresenceRef = useRef<{ invoiceId?: string; status?: 'viewing' | 'editing' | 'idle' }>({});
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Keep user ref in sync
   useEffect(() => {
-    if (!user || !enabled) return;
+    userRef.current = user ? { id: user.id, email: user.email ?? '' } : null;
+  }, [user?.id, user?.email]);
 
-    const channel = supabase.channel('user-presence', {
-      config: {
-        presence: {
-          key: user.id,
+  // Stable presence channel subscription (only re-subscribes when user.id or enabled changes)
+  useEffect(() => {
+    if (!enabled || !user?.id) return;
+
+    // Only create if not already created
+    if (!channelRef.current) {
+      const channel = supabase.channel('user-presence', {
+        config: {
+          presence: {
+            key: user.id,
+          },
         },
-      },
-    });
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState();
-        const users: UserPresence[] = [];
-        
-        Object.keys(presenceState).forEach((key) => {
-          const presences = presenceState[key] as any[];
-          presences.forEach((presence) => {
-            users.push(presence);
-          });
-        });
-        
-        setActiveUsers(users);
-      })
-      .on('presence', { event: 'join' }, ({ newPresences }) => {
-        console.log('User joined:', newPresences);
-      })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        console.log('User left:', leftPresences);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            user_email: user.email,
-            user_id: user.id,
-            last_activity: new Date().toISOString(),
-            status: 'idle'
-          });
-        }
       });
 
-    setCurrentChannel(channel);
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          const presenceState = channel.presenceState();
+          const users: UserPresence[] = [];
+          
+          Object.keys(presenceState).forEach((key) => {
+            const presences = presenceState[key] as any[];
+            presences.forEach((presence) => {
+              users.push(presence);
+            });
+          });
+          
+          setActiveUsers(users);
+        })
+        .on('presence', { event: 'join' }, ({ newPresences }) => {
+          // Reduced logging - only log when significant
+          if (newPresences.length > 0) {
+            console.log('[presence] user joined', { count: newPresences.length, t: new Date().toISOString() });
+          }
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          if (leftPresences.length > 0) {
+            console.log('[presence] user left', { count: leftPresences.length, t: new Date().toISOString() });
+          }
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED' && userRef.current) {
+            await channel.track({
+              user_email: userRef.current.email,
+              user_id: userRef.current.id,
+              last_activity: new Date().toISOString(),
+              status: 'idle'
+            });
+            console.log('[presence] subscribed', { userId: user.id, t: new Date().toISOString() });
+          }
+        });
 
-    // Cleanup on unmount
+      channelRef.current = channel;
+    }
+
     return () => {
-      channel.unsubscribe();
+      // Cleanup only when user.id or enabled changes (or unmount)
+      if (channelRef.current) {
+        console.log('[presence] unsubscribing', { userId: user?.id, t: new Date().toISOString() });
+        channelRef.current.unsubscribe();
+        channelRef.current = null;
+      }
     };
-  }, [user, enabled]);
+  }, [user?.id, enabled]);
 
-  const updatePresence = React.useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
-    if (!currentChannel || !user) return;
+  const updatePresence = useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
+    const channel = channelRef.current;
+    const usr = userRef.current;
+    if (!channel || !usr) return;
 
-    await currentChannel.track({
-      user_email: user.email,
-      user_id: user.id,
-      current_invoice_id: invoiceId,
-      last_activity: new Date().toISOString(),
-      status
-    });
-  }, [currentChannel, user]);
+    // Only track when something changed
+    const changed = lastPresenceRef.current.invoiceId !== invoiceId || lastPresenceRef.current.status !== status;
+    if (!changed) return;
+
+    lastPresenceRef.current = { invoiceId, status };
+
+    // Debounce to batch rapid calls during navigation
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      await channel.track({
+        user_email: usr.email,
+        user_id: usr.id,
+        current_invoice_id: invoiceId,
+        last_activity: new Date().toISOString(),
+        status,
+      });
+      console.log('[presence] track', { invoiceId, status, t: new Date().toISOString() });
+    }, 100);
+  }, []);
 
   const getUsersOnInvoice = React.useCallback((invoiceId: string) => {
     return activeUsers.filter(u => 
@@ -122,7 +162,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
 
   const value: RealtimeContextType = {
     activeUsers,
-    currentChannel,
+    currentChannel: channelRef.current,
     updatePresence,
     getUsersOnInvoice,
     isInvoiceBeingEdited
