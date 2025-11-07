@@ -23,16 +23,21 @@ export const AppLayout: React.FC = () => {
 
   // Fetch all invoices for counts
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchInvoices = async () => {
       try {
         const { data, error } = await supabase
           .from("invoices")
           .select("*")
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .abortSignal(abortController.signal);
 
+        if (abortController.signal.aborted) return;
         if (error) throw error;
         setInvoices((data as any) || []);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error("Error fetching invoices:", error);
       }
     };
@@ -42,17 +47,24 @@ export const AppLayout: React.FC = () => {
         const { count, error } = await supabase
           .from("email_queue")
           .select("*", { count: "exact", head: true })
-          .eq("status", "review");
+          .eq("status", "review")
+          .abortSignal(abortController.signal);
 
+        if (abortController.signal.aborted) return;
         if (error) throw error;
         setReviewCount(count || 0);
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return;
         console.error("Error fetching review count:", error);
       }
     };
 
     fetchInvoices();
     fetchReviewCount();
+
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   // Calculate counts

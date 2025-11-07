@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -17,9 +17,17 @@ interface UseRealtimeInvoicesProps {
 
 export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeInvoicesProps) => {
   const { toast } = useToast();
+  const toastRef = useRef(toast);
   const [realtimeUpdates, setRealtimeUpdates] = useState<RealtimeInvoiceUpdate[]>([]);
 
+  // Keep toast ref updated
   useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
+  useEffect(() => {
+    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState);
+    
     const channel = supabase
       .channel('invoice-changes')
       .on(
@@ -30,7 +38,7 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           table: 'invoices'
         },
         async (payload: RealtimePostgresChangesPayload<any>) => {
-          console.log('Invoice change detected:', payload);
+          console.log('[useRealtimeInvoices] Invoice change detected:', payload);
           
           let invoice: Invoice;
           
@@ -81,22 +89,21 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           };
 
           // Show toast notification for changes made by other users
-          // Note: In a real implementation, you'd want to track who made the change
-          // This could be done through the audit logs or additional metadata
+          // Use toastRef to avoid dependency issues
           if (payload.eventType === 'UPDATE') {
-            toast({
+            toastRef.current({
               title: "Invoice Updated",
               description: `Invoice ${invoice.invoice_number} was updated by another user`,
               duration: 3000,
             });
           } else if (payload.eventType === 'INSERT') {
-            toast({
+            toastRef.current({
               title: "New Invoice Added",
               description: `Invoice ${invoice.invoice_number} was added by another user`,
               duration: 3000,
             });
           } else if (payload.eventType === 'DELETE') {
-            toast({
+            toastRef.current({
               title: "Invoice Deleted",
               description: `Invoice ${invoice.invoice_number} was deleted by another user`,
               duration: 3000,
@@ -110,9 +117,10 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
       .subscribe();
 
     return () => {
+      console.log('[useRealtimeInvoices] Cleaning up channel for viewState:', viewState);
       supabase.removeChannel(channel);
     };
-  }, [viewState, onInvoiceUpdate, toast]);
+  }, [viewState, onInvoiceUpdate]);
 
   return { realtimeUpdates };
 };
