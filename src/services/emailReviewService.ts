@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { startOfDay, endOfDay } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 
 export interface EmailListItem {
   id: string;
@@ -9,6 +11,7 @@ export interface EmailListItem {
   no_of_attachments: number;
   display_date_local: string | null;
   date_received: string | null;
+  reviewed_at: string | null;
 }
 
 export interface EmailListFilters {
@@ -29,6 +32,7 @@ export interface EmailAttachment {
   previewable: boolean | null;
   viewer_kind: string | null;
   unsupported_reason: string | null;
+  review_added: boolean | null;
   created_at: string;
   updated_at: string;
   
@@ -72,22 +76,30 @@ export async function fetchReviewEmailList(
     
     const offset = page * PAGE_SIZE;
     
-    const baseSelect = `id,
-      from_name,
-      from_email,
-      subject,
-      snippet_text,
-      no_of_attachments,
-      display_date_local,
-      date_received`;
+  const baseSelect = `id,
+    from_name,
+    from_email,
+    subject,
+    snippet_text,
+    no_of_attachments,
+    display_date_local,
+    date_received,
+    reviewed_at`;
 
-    // Start with base query - only review emails that have been processed
-    // @ts-ignore
-    let query = supabase
-      .from("email_queue")
-      .select(baseSelect, { count: "exact" })
-      .eq("status", "review")
-      .eq("review_status_processed", true);
+  // Get today's date range in Sydney timezone
+  const nowInSydney = toZonedTime(new Date(), "Australia/Sydney");
+  const todayStart = startOfDay(nowInSydney).toISOString();
+  const todayEnd = endOfDay(nowInSydney).toISOString();
+
+  // Start with base query - include:
+  // 1. Emails with status='review' (not yet reviewed)
+  // 2. Emails reviewed today in Sydney timezone
+  // @ts-ignore
+  let query = supabase
+    .from("email_queue")
+    .select(baseSelect, { count: "exact" })
+    .eq("review_status_processed", true)
+    .or(`status.eq.review,and(reviewed_at.gte.${todayStart},reviewed_at.lte.${todayEnd})`);
 
     console.log("[emailReviewService] Base query configured");
 
@@ -136,6 +148,7 @@ export async function fetchReviewEmailList(
       no_of_attachments: item.no_of_attachments || 0,
       display_date_local: item.display_date_local,
       date_received: item.date_received,
+      reviewed_at: item.reviewed_at,
     }));
 
     console.log("[emailReviewService] Successfully mapped data:", mappedData.length, "emails");
@@ -178,6 +191,7 @@ function groupAttachments(attachments: any[]): {
       previewable: att.previewable,
       viewer_kind: att.viewer_kind,
       unsupported_reason: att.unsupported_reason,
+      review_added: att.review_added || null,
       text_excerpt: att.text_excerpt || null,
       data_base64url: att.data_base64url || null,
       safe_html: att.safe_html || null,
@@ -378,7 +392,7 @@ export async function fetchEmailAttachments(
       .from("email_attachments")
       .select(
         // Only fetch metadata - exclude heavy fields for performance
-        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, created_at, updated_at"
+        "id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, review_added, created_at, updated_at"
       )
       .eq("email_id", emailId)
       .order("status", { ascending: true }) // review first, then completed

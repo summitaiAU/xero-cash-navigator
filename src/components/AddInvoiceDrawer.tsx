@@ -38,6 +38,7 @@ import { EmailAttachment } from "@/services/emailReviewService";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { checkAndMarkEmailReviewed } from "@/services/emailReviewCompletionService";
 
 interface AddInvoiceDrawerProps {
   open: boolean;
@@ -554,6 +555,9 @@ export const AddInvoiceDrawer = ({
         title: "✓ Invoice Saved",
         description: "Invoice has been saved successfully.",
       });
+      
+      // Check if email is fully reviewed
+      await checkAndMarkEmailReviewed(selectedAttachment.email_id);
 
       onSaved?.(invoiceId);
 

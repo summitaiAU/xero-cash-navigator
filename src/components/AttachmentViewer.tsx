@@ -10,6 +10,7 @@ import { fetchAttachmentById, EmailAttachment } from "@/services/emailReviewServ
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { checkAndMarkEmailReviewed } from "@/services/emailReviewCompletionService";
 
 interface AttachmentViewerProps {
   attachmentId: string | null;
@@ -214,6 +215,9 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
         title: "Attachment Ignored",
         description: "This attachment has been marked as ignored.",
       });
+      
+      // Check if email is fully reviewed
+      await checkAndMarkEmailReviewed(attachment.email_id);
       
       onAttachmentUpdated?.();
       onClose();

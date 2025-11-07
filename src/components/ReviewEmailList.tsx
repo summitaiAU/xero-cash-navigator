@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Mail, Paperclip, Search, X, ArrowUpDown } from "lucide-react";
+import { Loader2, Mail, Paperclip, Search, X, ArrowUpDown, Check } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,8 +188,19 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
             Emails 
-            {totalCount > 0 && <span className="text-muted-foreground ml-2">({totalCount})</span>}
+            {totalCount > 0 && (
+              <span className="text-muted-foreground ml-2">
+                ({emails.filter(e => !e.reviewed_at).length} pending)
+              </span>
+            )}
           </h2>
+          
+          {emails.filter(e => e.reviewed_at).length > 0 && (
+            <Badge variant="secondary" className="bg-green-100 text-green-700">
+              <Check className="h-3 w-3 mr-1" />
+              {emails.filter(e => e.reviewed_at).length} reviewed
+            </Badge>
+          )}
         </div>
 
         {/* Search and Sort */}
@@ -267,12 +278,23 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
                 <button
                   key={email.id}
                   onClick={() => onSelectEmail(email)}
-                  className={`review-email-row ${isSelected ? "active" : ""}`}
+                  className={`review-email-row ${isSelected ? "active" : ""} ${
+                    email.reviewed_at ? "reviewed" : ""
+                  }`}
                 >
                   <div className="flex gap-3">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-sm font-semibold text-primary">
-                      {getDisplayName(email).slice(0, 2).toUpperCase()}
+                    {/* Avatar with optional checkmark overlay */}
+                    <div className="relative w-10 h-10 flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                        {getDisplayName(email).slice(0, 2).toUpperCase()}
+                      </div>
+                      
+                      {/* Checkmark indicator for reviewed emails */}
+                      {email.reviewed_at && (
+                        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-green-500 flex items-center justify-center border-2 border-white">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      )}
                     </div>
 
                     {/* Content */}
