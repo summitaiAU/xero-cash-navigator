@@ -19,7 +19,7 @@ import { ReviewEmailList } from "@/components/ReviewEmailList";
 import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { AttachmentViewer } from "@/components/AttachmentViewer";
-import { AddInvoiceDrawer } from "@/components/AddInvoiceDrawer";
+import { AddInvoiceWorkspace } from "@/components/AddInvoiceWorkspace";
 
 type View = "payable" | "paid" | "flagged";
 
@@ -29,7 +29,7 @@ export const Review: React.FC = () => {
   const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
   const [selectedAttachmentId, setSelectedAttachmentId] = useState<string | null>(null);
-  const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
+  const [invoiceWorkspaceOpen, setInvoiceWorkspaceOpen] = useState(false);
   const [invoiceAttachment, setInvoiceAttachment] = useState<EmailAttachment | null>(null);
   const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -185,7 +185,7 @@ export const Review: React.FC = () => {
               }}
               onAddInvoice={(attachment: EmailAttachment) => {
                 setInvoiceAttachment(attachment);
-                setInvoiceDrawerOpen(true);
+                setInvoiceWorkspaceOpen(true);
               }}
               onRefetch={(refetch) => {
                 refetchAttachmentsRef.current = refetch;
@@ -201,18 +201,18 @@ export const Review: React.FC = () => {
         onClose={() => setSelectedAttachmentId(null)}
         onAddInvoice={(attachment) => {
           setInvoiceAttachment(attachment);
-          setInvoiceDrawerOpen(true);
+          setInvoiceWorkspaceOpen(true);
         }}
         onAttachmentUpdated={() => {
           refetchAttachmentsRef.current?.();
         }}
       />
 
-      {/* Add Invoice Drawer */}
-      <AddInvoiceDrawer
-        open={invoiceDrawerOpen}
+      {/* Add Invoice Workspace */}
+      <AddInvoiceWorkspace
+        open={invoiceWorkspaceOpen}
         onClose={() => {
-          setInvoiceDrawerOpen(false);
+          setInvoiceWorkspaceOpen(false);
           setInvoiceAttachment(null);
         }}
         selectedAttachment={invoiceAttachment}
