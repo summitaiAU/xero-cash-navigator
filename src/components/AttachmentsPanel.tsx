@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FileIcon, AlertCircle, CheckCircle, Clock, Plus } from "lucide-react";
 import { fetchEmailAttachments, EmailAttachment } from "@/services/emailReviewService";
+import { attachmentCacheService } from "@/services/attachmentCache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -55,6 +56,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
   const [attachments, setAttachments] = useState<EmailAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedAttachment, setSelectedAttachment] = useState<EmailAttachment | null>(null);
+  const prevEmailIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!emailId) {
@@ -62,29 +64,47 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice }: A
       return;
     }
 
+    const abortController = new AbortController();
+
     const loadAttachments = async () => {
-      // Clear cache for previous email's attachments when switching emails
-      const { attachmentCacheService } = await import("@/services/attachmentCache");
-      attachmentCacheService.clearForEmail(emailId);
+      // Clear PREVIOUS email's cache, not current
+      if (prevEmailIdRef.current && prevEmailIdRef.current !== emailId) {
+        console.log(`[AttachmentsPanel] Clearing cache for previous email: ${prevEmailIdRef.current}`);
+        attachmentCacheService.clearForEmail(prevEmailIdRef.current);
+      }
+      prevEmailIdRef.current = emailId;
       
       setLoading(true);
-      const { data, error } = await fetchEmailAttachments(emailId);
       
-      if (error) {
-        console.error("Failed to load attachments:", error);
-        toast({
-          title: "Error",
-          description: "Unable to load attachments for this email.",
-          variant: "destructive",
-        });
-      } else {
-        setAttachments(data);
+      try {
+        const { data, error } = await fetchEmailAttachments(emailId);
+        
+        // Don't update state if request was aborted
+        if (abortController.signal.aborted) return;
+        
+        if (error) {
+          console.error("Failed to load attachments:", error);
+          toast({
+            title: "Error",
+            description: "Unable to load attachments for this email.",
+            variant: "destructive",
+          });
+        } else {
+          setAttachments(data);
+        }
+      } finally {
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
-      
-      setLoading(false);
     };
 
     loadAttachments();
+
+    // Cleanup: cancel request if emailId changes
+    return () => {
+      abortController.abort();
+    };
   }, [emailId]);
 
   if (!emailId) {

@@ -33,6 +33,7 @@ export const Review: React.FC = () => {
   const [invoiceAttachment, setInvoiceAttachment] = useState<EmailAttachment | null>(null);
   const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
   const conversationScrollRef = React.useRef<number>(0);
+  const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
 
@@ -41,6 +42,11 @@ export const Review: React.FC = () => {
     return () => {
       console.log("[Review] Clearing attachment cache on unmount");
       attachmentCacheService.clear();
+      
+      // Clear debounce timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -89,18 +95,25 @@ export const Review: React.FC = () => {
   };
 
   const handleSelectEmail = React.useCallback((email: EmailListItem) => {
-    // Save scroll position if re-selecting same email
-    if (selectedEmailId === email.id) {
-      // Same email - preserve scroll
-      setPreviousEmailId(email.id);
-    } else {
-      // Different email - reset scroll
-      setPreviousEmailId(null);
-      conversationScrollRef.current = 0;
+    // Debounce to prevent rapid switching
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
     
-    setSelectedEmailId(email.id);
-    setSelectedAttachmentId(null); // Clear attachment selection on new email
+    debounceTimeoutRef.current = setTimeout(() => {
+      // Save scroll position if re-selecting same email
+      if (selectedEmailId === email.id) {
+        // Same email - preserve scroll
+        setPreviousEmailId(email.id);
+      } else {
+        // Different email - reset scroll
+        setPreviousEmailId(null);
+        conversationScrollRef.current = 0;
+      }
+      
+      setSelectedEmailId(email.id);
+      setSelectedAttachmentId(null); // Clear attachment selection on new email
+    }, 150); // 150ms debounce
   }, [selectedEmailId]);
 
   return (
