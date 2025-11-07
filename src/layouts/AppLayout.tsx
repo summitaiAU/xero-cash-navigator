@@ -63,7 +63,7 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex bg-background">
+    <div className="h-screen w-full flex bg-background overflow-hidden">
       <SimpleSidebar
         viewState={viewState}
         onViewStateChange={() => {}} // Navigation handled by SimpleSidebar internally
@@ -76,7 +76,7 @@ export const AppLayout: React.FC = () => {
         userName={user?.email}
       />
       <main className={cn(
-        "flex-1 min-w-0 h-full relative transition-all duration-300",
+        "flex-1 min-w-0 h-full relative overflow-hidden transition-all duration-300",
         sidebarCollapsed ? "pl-16" : "pl-48"
       )}>
         <React.Suspense

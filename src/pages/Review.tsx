@@ -147,7 +147,7 @@ export const Review: React.FC = () => {
       </div>
 
       {/* Right side - Conversation and Attachments */}
-      <div className="flex-1 min-w-0 flex">
+      <div className="flex-1 min-w-0 flex overflow-hidden">
         <div className="flex-1 min-w-0 border-r border-border">
           <EmailConversationView
             email={emailContent}
