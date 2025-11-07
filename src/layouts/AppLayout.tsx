@@ -15,6 +15,7 @@ export const AppLayout: React.FC = () => {
     return stored === null ? true : stored === "true";
   });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [reviewCount, setReviewCount] = useState(0);
 
   // Derive current view from URL
   const searchParams = new URLSearchParams(location.search);
@@ -30,13 +31,28 @@ export const AppLayout: React.FC = () => {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setInvoices(data as any as Invoice[] || []);
+        setInvoices((data as any) || []);
       } catch (error) {
         console.error("Error fetching invoices:", error);
       }
     };
 
+    const fetchReviewCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from("email_queue")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "review");
+
+        if (error) throw error;
+        setReviewCount(count || 0);
+      } catch (error) {
+        console.error("Error fetching review count:", error);
+      }
+    };
+
     fetchInvoices();
+    fetchReviewCount();
   }, []);
 
   // Calculate counts
@@ -71,6 +87,7 @@ export const AppLayout: React.FC = () => {
         payableCount={payableCount}
         paidCount={paidCount}
         flaggedCount={flaggedCount}
+        reviewCount={reviewCount}
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
         onSignOut={handleSignOut}

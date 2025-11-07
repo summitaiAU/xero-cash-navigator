@@ -18,6 +18,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   payableCount = 0,
   paidCount = 0,
   flaggedCount = 0,
+  reviewCount = 0,
   isCollapsed = false,
   onToggleCollapse,
   onSignOut,
@@ -28,6 +29,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   payableCount?: number;
   paidCount?: number;
   flaggedCount?: number;
+  reviewCount?: number;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   onSignOut?: () => void;
@@ -56,29 +58,29 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
         aria-pressed={active}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300",
+          "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300 relative",
           active
             ? "bg-primary text-primary-foreground"
             : "hover:bg-muted text-foreground",
           isCollapsed ? "justify-center" : "justify-between"
         )}
       >
-        <div className={cn("flex items-center gap-3 min-w-0 flex-1", isCollapsed && "relative")}>
+        <div className={cn("flex items-center gap-3 min-w-0 flex-1")}>
           <Icon className="h-4 w-4 flex-shrink-0" />
           {!isCollapsed && <span className="truncate">{label}</span>}
-          {isCollapsed && count > 0 && (
-            <span
-              className={cn(
-                "absolute -top-1 -right-1 text-[10px] px-1 min-w-[16px] h-4 flex items-center justify-center rounded-full",
-                active
-                  ? "bg-primary-foreground text-primary"
-                  : "bg-primary text-primary-foreground"
-              )}
-            >
-              {count}
-            </span>
-          )}
         </div>
+        {isCollapsed && count > 0 && (
+          <span
+            className={cn(
+              "absolute top-1 right-1 text-[10px] px-1 min-w-[16px] h-4 flex items-center justify-center rounded-full",
+              active
+                ? "bg-primary-foreground text-primary"
+                : "bg-primary text-primary-foreground"
+            )}
+          >
+            {count}
+          </span>
+        )}
         {!isCollapsed && count > 0 && (
           <span
             className={cn(
@@ -175,23 +177,13 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
 
           {/* Review Page Link */}
           <div className="pt-4 mt-4 border-t border-border">
-            <button
-              type="button"
+            <Btn
+              icon={Mail}
+              label="Review"
+              count={reviewCount}
+              active={location.pathname === "/review"}
               onClick={() => navigate("/review")}
-              aria-current={location.pathname === "/review" ? "page" : undefined}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 rounded-md text-sm font-medium transition-all duration-300",
-                location.pathname === "/review"
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted text-foreground",
-                isCollapsed ? "justify-center" : "justify-start"
-              )}
-            >
-              <div className={cn("flex items-center gap-3")}>
-                <Mail className="h-4 w-4 flex-shrink-0" />
-                {!isCollapsed && <span>Review</span>}
-              </div>
-            </button>
+            />
           </div>
         </div>
 
