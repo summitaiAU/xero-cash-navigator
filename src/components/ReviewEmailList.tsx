@@ -16,11 +16,13 @@ import { format, isToday, isThisWeek, parseISO } from "date-fns";
 interface ReviewEmailListProps {
   selectedEmailId: string | null;
   onSelectEmail: (email: EmailListItem) => void;
+  isInitialLoad?: boolean;
 }
 
 export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
   selectedEmailId,
   onSelectEmail,
+  isInitialLoad = false,
 }) => {
   const [emails, setEmails] = useState<EmailListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,12 +87,14 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
     [searchQuery]
   );
 
-  // Fetch emails when search changes
+  // Fetch emails when search changes (only after initial load)
   useEffect(() => {
+    if (isInitialLoad) return; // Don't fetch during initial transition period
+    
     hasAutoSelectedRef.current = false; // Reset auto-select flag on search change
     setCurrentPage(0);
     fetchEmails(0, false);
-  }, [searchQuery, fetchEmails]);
+  }, [searchQuery, fetchEmails, isInitialLoad]);
 
   // Auto-select first email when list loads and nothing is selected
   useEffect(() => {
@@ -151,21 +155,28 @@ export const ReviewEmailList: React.FC<ReviewEmailListProps> = ({
     return email.from_name || email.from_email || "Unknown Sender";
   };
 
-  if (loading) {
+  // Show loading state during initial transition or when fetching
+  if (loading || isInitialLoad) {
     return (
-      <div className="w-[360px] flex-shrink-0 border-r bg-[hsl(246_8%_97%)] flex flex-col h-full overflow-hidden">
+      <div className="w-full flex-shrink-0 flex flex-col h-full overflow-hidden">
         <div className="px-4 py-3 border-b bg-card">
-          <h2 className="text-lg font-semibold">Emails</h2>
+          <Skeleton className="h-6 w-32" />
         </div>
-        <div className="flex-1 py-4 space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="review-email-row">
+        <div className="px-4 py-3 border-b bg-card">
+          <Skeleton className="h-9 w-full rounded-md" />
+        </div>
+        <div className="flex-1 py-2 space-y-1">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="px-4 py-3">
               <div className="flex gap-3">
                 <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-3 w-12" />
+                  </div>
                   <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
+                  <Skeleton className="h-3 w-3/4" />
                 </div>
               </div>
             </div>

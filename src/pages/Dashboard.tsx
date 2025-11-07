@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
@@ -116,7 +116,7 @@ export const Dashboard: React.FC = () => {
   };
 
   // Load invoices from Supabase on mount and when filter changes
-  const loadInvoices = async (showToast = false) => {
+  const loadInvoices = useCallback(async (showToast = false) => {
     console.log("Loading invoices...", viewState);
     try {
       setLoading(true);
@@ -143,7 +143,7 @@ export const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [viewState, toast]);
 
   // Load all invoices for search functionality
   const loadAllInvoices = async () => {

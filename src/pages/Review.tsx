@@ -32,12 +32,27 @@ export const Review: React.FC = () => {
   const [invoiceDrawerOpen, setInvoiceDrawerOpen] = useState(false);
   const [invoiceAttachment, setInvoiceAttachment] = useState<EmailAttachment | null>(null);
   const [previousEmailId, setPreviousEmailId] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const conversationScrollRef = React.useRef<number>(0);
   const debounceTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const selectedEmailIdRef = React.useRef<string | null>(null);
   const refetchAttachmentsRef = React.useRef<(() => Promise<void>) | null>(null);
+  const mountTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
+
+  // Defer initial data fetching to allow Dashboard cleanup
+  useEffect(() => {
+    mountTimeoutRef.current = setTimeout(() => {
+      setIsInitialLoad(false);
+    }, 250); // 250ms delay for graceful transition
+
+    return () => {
+      if (mountTimeoutRef.current) {
+        clearTimeout(mountTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Clear attachment cache when leaving Review page
   useEffect(() => {
@@ -70,9 +85,10 @@ export const Review: React.FC = () => {
     selectedEmailIdRef.current = selectedEmailId;
   }, [selectedEmailId]);
 
-  // Load selected email content when selection changes
+  // Load selected email content when selection changes (only after initial delay)
   useEffect(() => {
-    if (!selectedEmailId) {
+    // Don't fetch during initial load period
+    if (isInitialLoad || !selectedEmailId) {
       setEmailContent(null);
       return;
     }
@@ -112,7 +128,7 @@ export const Review: React.FC = () => {
     return () => {
       abortController.abort();
     };
-  }, [selectedEmailId, toast]);
+  }, [selectedEmailId, toast, isInitialLoad]);
 
   const handleSelectEmail = React.useCallback((email: EmailListItem) => {
     // Debounce to prevent rapid switching
@@ -143,6 +159,7 @@ export const Review: React.FC = () => {
         <ReviewEmailList
           selectedEmailId={selectedEmailId}
           onSelectEmail={handleSelectEmail}
+          isInitialLoad={isInitialLoad}
         />
       </div>
 
