@@ -1,3 +1,15 @@
+import React from "react";
+
+export default function PaidInvoices() {
+  return (
+    <div className="h-screen flex items-center justify-center">
+      <h1 className="text-2xl font-bold">Paid Invoices - Loading...</h1>
+    </div>
+  );
+}
+
+/*
+// TEMPORARILY DISABLED TO DEBUG
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
@@ -12,7 +24,7 @@ import {
 } from "@/services/paidInvoicesService";
 import { paidInvoicesCacheService } from "@/services/paidInvoicesCache";
 
-export default function PaidInvoices() {
+function PaidInvoicesFull() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -263,3 +275,4 @@ export default function PaidInvoices() {
     </div>
   );
 }
+*/
