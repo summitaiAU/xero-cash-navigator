@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Download, RefreshCw, Plus, Trash2, AlertCircle } from "lucide-react";
+import { X, Download, RefreshCw, Plus, Trash2, AlertCircle, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -328,6 +328,26 @@ export const AddInvoiceWorkspace = ({
     setDraftInvoice({
       ...draftInvoice,
       list_items: [...draftInvoice.list_items, newItem],
+    });
+  };
+
+  const toggleAllGstExempt = () => {
+    if (!draftInvoice) return;
+    
+    // Check if all items are already exempt
+    const allExempt = draftInvoice.list_items.every(item => item.gst_exempt);
+    
+    // Toggle: if all exempt, make none exempt; otherwise make all exempt
+    const updatedItems = draftInvoice.list_items.map(item => 
+      calculateLineItem({
+        ...item,
+        gst_exempt: !allExempt,
+      })
+    );
+
+    setDraftInvoice({
+      ...draftInvoice,
+      list_items: updatedItems,
     });
   };
 
@@ -943,15 +963,31 @@ export const AddInvoiceWorkspace = ({
                     <div className="space-y-4">
                       <div className="flex items-center justify-between border-b pb-2">
                         <h3 className="text-sm font-semibold">Line Items</h3>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={addLineItem}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Line
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={toggleAllGstExempt}
+                            title={draftInvoice.list_items.every(item => item.gst_exempt) 
+                              ? "Mark all as taxable" 
+                              : "Mark all as GST exempt"}
+                          >
+                            <CheckSquare className="w-3 h-3 mr-1" />
+                            {draftInvoice.list_items.every(item => item.gst_exempt) 
+                              ? "Clear GST Exempt" 
+                              : "GST Exempt All"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addLineItem}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Line
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-3">
                         {draftInvoice.list_items.map((item, idx) => (
