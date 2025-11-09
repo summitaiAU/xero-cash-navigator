@@ -147,6 +147,7 @@ export const AddInvoiceDrawer = ({
   const [zoom, setZoom] = useState(100);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [webhookRetryCount, setWebhookRetryCount] = useState(0);
+  const [savedInvoiceId, setSavedInvoiceId] = useState<string | null>(null);
 
   // Cleanup blob URL
   useEffect(() => {
@@ -400,7 +401,7 @@ export const AddInvoiceDrawer = ({
     return false;
   };
 
-  const callWebhook = async (attachmentId: string, isRetry = false): Promise<boolean> => {
+  const callWebhook = async (attachmentId: string, invoiceId: string, isRetry = false): Promise<boolean> => {
     try {
       const response = await fetch(
         "https://sodhipg.app.n8n.cloud/webhook/4175ced6-167b-4180-9aeb-00fba65c9350",
@@ -409,7 +410,10 @@ export const AddInvoiceDrawer = ({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ id: attachmentId }),
+          body: JSON.stringify({ 
+            attachment_id: attachmentId,
+            invoice_id: invoiceId
+          }),
         }
       );
 
@@ -439,7 +443,7 @@ export const AddInvoiceDrawer = ({
         // Auto-retry after 10 seconds
         setTimeout(async () => {
           setWebhookRetryCount(1);
-          const retrySuccess = await callWebhook(attachmentId, true);
+          const retrySuccess = await callWebhook(attachmentId, invoiceId, true);
           if (!retrySuccess) {
             toast({
               title: "Webhook Failed",
@@ -455,10 +459,10 @@ export const AddInvoiceDrawer = ({
   };
 
   const handleRetryWebhook = async () => {
-    if (!selectedAttachment) return;
+    if (!selectedAttachment || !savedInvoiceId) return;
     
     setRetryingWebhook(true);
-    const success = await callWebhook(selectedAttachment.id, true);
+    const success = await callWebhook(selectedAttachment.id, savedInvoiceId, true);
     setRetryingWebhook(false);
     
     onWebhookResult?.(success);
@@ -524,6 +528,7 @@ export const AddInvoiceDrawer = ({
       }
 
       const invoiceId = data.id;
+      setSavedInvoiceId(invoiceId);
 
       // Step 3: Update attachment status to completed with review_added = true
       const { error: updateError } = await supabase
@@ -562,7 +567,7 @@ export const AddInvoiceDrawer = ({
       onSaved?.(invoiceId);
 
       // Step 4: Call webhook
-      const webhookSuccess = await callWebhook(selectedAttachment.id);
+      const webhookSuccess = await callWebhook(selectedAttachment.id, invoiceId);
 
       if (webhookSuccess) {
         toast({
@@ -581,7 +586,7 @@ export const AddInvoiceDrawer = ({
               size="sm"
               onClick={async () => {
                 dismiss();
-                const retrySuccess = await callWebhook(selectedAttachment.id);
+                const retrySuccess = await callWebhook(selectedAttachment.id, invoiceId);
                 if (retrySuccess) {
                   toast({
                     title: "Success",

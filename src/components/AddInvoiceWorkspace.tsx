@@ -440,14 +440,17 @@ export const AddInvoiceWorkspace = ({
     return false;
   };
 
-  const callWebhook = async (attachmentId: string, isRetry = false): Promise<boolean> => {
+  const callWebhook = async (attachmentId: string, invoiceId: string, isRetry = false): Promise<boolean> => {
     try {
       const response = await fetch(
         "https://sodhipg.app.n8n.cloud/webhook/4175ced6-167b-4180-9aeb-00fba65c9350",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: attachmentId }),
+          body: JSON.stringify({ 
+            attachment_id: attachmentId,
+            invoice_id: invoiceId
+          }),
         }
       );
 
@@ -475,7 +478,7 @@ export const AddInvoiceWorkspace = ({
 
         setTimeout(async () => {
           setWebhookRetryCount(1);
-          const retrySuccess = await callWebhook(attachmentId, true);
+          const retrySuccess = await callWebhook(attachmentId, invoiceId, true);
           if (!retrySuccess) {
             toast({
               title: "Webhook Failed",
@@ -580,7 +583,7 @@ export const AddInvoiceWorkspace = ({
 
       onSaved?.(invoiceId);
 
-      const webhookSuccess = await callWebhook(selectedAttachment.id);
+      const webhookSuccess = await callWebhook(selectedAttachment.id, invoiceId);
       onWebhookResult?.(webhookSuccess);
 
       if (webhookSuccess) {
