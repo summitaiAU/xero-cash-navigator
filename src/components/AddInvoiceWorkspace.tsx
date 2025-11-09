@@ -70,8 +70,6 @@ interface DraftInvoice {
   subtotal: number;
   gst: number;
   total_amount: number;
-  amount_paid: number;
-  amount_due: number;
   payment_ref: string;
   google_drive_link: string;
   sender_email: string;
@@ -168,20 +166,18 @@ export const AddInvoiceWorkspace = ({
 
   // Calculate amounts dynamically from line items
   const calculatedAmounts = useMemo(() => {
-    if (!draftInvoice) return { subtotal: 0, gst: 0, total: 0, amountDue: 0 };
+    if (!draftInvoice) return { subtotal: 0, gst: 0, total: 0 };
 
     const subtotal = draftInvoice.list_items.reduce((sum, item) => sum + item.line_total_ex_gst, 0);
     const gst = draftInvoice.list_items.reduce((sum, item) => sum + item.line_gst, 0);
     const total = draftInvoice.list_items.reduce((sum, item) => sum + item.line_total_inc_gst, 0);
-    const amountDue = total - (draftInvoice.amount_paid || 0);
 
     return {
       subtotal: Math.round(subtotal * 100) / 100,
       gst: Math.round(gst * 100) / 100,
       total: Math.round(total * 100) / 100,
-      amountDue: Math.round(amountDue * 100) / 100,
     };
-  }, [draftInvoice?.list_items, draftInvoice?.amount_paid]);
+  }, [draftInvoice?.list_items]);
 
   // Sync calculated amounts back to draft invoice state
   useEffect(() => {
@@ -193,11 +189,10 @@ export const AddInvoiceWorkspace = ({
           subtotal: calculatedAmounts.subtotal,
           gst: calculatedAmounts.gst,
           total_amount: calculatedAmounts.total,
-          amount_due: calculatedAmounts.amountDue,
         };
       });
     }
-  }, [calculatedAmounts.subtotal, calculatedAmounts.gst, calculatedAmounts.total, calculatedAmounts.amountDue]);
+  }, [calculatedAmounts.subtotal, calculatedAmounts.gst, calculatedAmounts.total]);
 
   // Cleanup blob URL
   useEffect(() => {
@@ -268,8 +263,6 @@ export const AddInvoiceWorkspace = ({
           subtotal: (selectedAttachment as any).subtotal || 0,
           gst: (selectedAttachment as any).gst || 0,
           total_amount: (selectedAttachment as any).total_amount || 0,
-          amount_paid: (selectedAttachment as any).amount_paid || 0,
-          amount_due: 0,
           payment_ref: (selectedAttachment as any).payment_ref || "",
           google_drive_link: (selectedAttachment as any).google_drive_link || "",
           sender_email: senderEmail,
@@ -289,8 +282,6 @@ export const AddInvoiceWorkspace = ({
             }),
           ];
         }
-
-        prefillData.amount_due = prefillData.total_amount - prefillData.amount_paid;
 
         setDraftInvoice(prefillData);
         setInitialDraft(JSON.stringify(prefillData));
@@ -528,13 +519,12 @@ export const AddInvoiceWorkspace = ({
         subtotal: calculatedAmounts.subtotal,
         gst: calculatedAmounts.gst,
         total_amount: calculatedAmounts.total,
-        amount_paid: Number(draftInvoice.amount_paid) || 0,
-        amount_due: calculatedAmounts.amountDue,
         payment_ref: draftInvoice.payment_ref?.trim() || null,
         google_drive_link: draftInvoice.google_drive_link || null,
         sender_email: draftInvoice.sender_email || null,
         supplier_email_on_invoice: draftInvoice.supplier_email_on_invoice?.trim() || null,
         list_items: draftInvoice.list_items as any,
+        status: "READY",
       };
 
       const { data, error } = await supabase
@@ -1142,28 +1132,6 @@ export const AddInvoiceWorkspace = ({
                             id="total_amount"
                             type="text"
                             value={calculatedAmounts.total.toFixed(2)}
-                            readOnly
-                            className="bg-muted"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="amount_paid">Amount Paid</Label>
-                          <Input
-                            id="amount_paid"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.amount_paid === 0 ? "" : draftInvoice.amount_paid}
-                            onChange={(e) => updateField("amount_paid", parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-
-                        <div className="space-y-2 col-span-2">
-                          <Label htmlFor="amount_due">Amount Due</Label>
-                          <Input
-                            id="amount_due"
-                            type="text"
-                            value={calculatedAmounts.amountDue.toFixed(2)}
                             readOnly
                             className="bg-muted"
                           />
