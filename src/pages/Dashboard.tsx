@@ -328,18 +328,22 @@ export const Dashboard: React.FC = () => {
     if (!currentInvoice) return;
 
     try {
+      // Store the current invoice ID to maintain position after refresh
+      const currentInvoiceId = currentInvoice.id;
+      
       // Refresh the entire invoice list to get the latest data from the database
       const refreshedInvoices = await fetchInvoices(viewState);
       setInvoices(refreshedInvoices);
 
-      // Find the updated invoice in the refreshed list to ensure we have the latest version
-      const latestInvoice = refreshedInvoices.find((inv) => inv.id === updatedInvoice.id);
-
-      if (latestInvoice) {
-        // Update local state with the fresh data from database
-        setInvoices((prevInvoices) =>
-          prevInvoices.map((invoice) => (invoice.id === latestInvoice.id ? latestInvoice : invoice)),
-        );
+      // Find the updated invoice's new position in the refreshed list
+      const newIndex = refreshedInvoices.findIndex((inv) => inv.id === currentInvoiceId);
+      
+      // Update currentIndex to maintain the user's position (or reset to 0 if not found)
+      if (newIndex !== -1) {
+        setCurrentIndex(newIndex);
+      } else {
+        // If the invoice is no longer in this view (e.g., moved to a different status), reset to 0
+        setCurrentIndex(0);
       }
 
       setProcessingStatus((prev) => ({ ...prev, xeroSynced: true }));
