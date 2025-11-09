@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ZoomIn, ZoomOut, Download, RefreshCw, Plus, X, AlertCircle } from "lucide-react";
+import { Download, RefreshCw, Plus, X, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +63,6 @@ const createBlobUrl = (base64url: string, mimeType: string): string => {
 export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttachmentUpdated }: AttachmentViewerProps) => {
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
-  const [zoom, setZoom] = useState(100);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [blobError, setBlobError] = useState(false);
 
@@ -99,7 +98,6 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
   useEffect(() => {
     if (attachmentId) {
       loadAttachment();
-      setZoom(100);
       setBlobUrl(null);
       setBlobError(false);
     } else {
@@ -143,10 +141,6 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
 
       if (e.key === "Escape") {
         onClose();
-      } else if (e.key === "=" || e.key === "+") {
-        setZoom((prev) => Math.min(prev + 25, 200));
-      } else if (e.key === "-") {
-        setZoom((prev) => Math.max(prev - 25, 50));
       }
     };
 
@@ -306,7 +300,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
         <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto" }}>
           {blobUrl ? (
             <iframe
-              src={`${blobUrl}#zoom=${zoom}`}
+              src={blobUrl}
               className="w-full border-0 rounded-lg"
               style={{ minHeight: "70vh", width: "100%" }}
               title={attachment.filename}
@@ -357,11 +351,6 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
               src={blobUrl}
               alt={attachment.filename}
               className="max-w-full h-auto rounded shadow-sm"
-              style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "center",
-                transition: "transform 0.2s ease",
-              }}
               onError={() => {
                 setBlobError(true);
                 toast({
@@ -458,38 +447,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
           
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              {!loading && attachment && (getViewerKind() === "pdf" || getViewerKind() === "image") && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom((prev) => Math.max(prev - 25, 50))}
-                    disabled={zoom <= 50}
-                    title="Zoom out (-)"
-                  >
-                    <ZoomOut className="w-3 h-3" />
-                  </Button>
-                  <span className="text-xs text-muted-foreground w-12 text-center">{zoom}%</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom((prev) => Math.min(prev + 25, 200))}
-                    disabled={zoom >= 200}
-                    title="Zoom in (+)"
-                  >
-                    <ZoomIn className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom(100)}
-                    disabled={zoom === 100}
-                    className="text-xs"
-                  >
-                    100%
-                  </Button>
-                </>
-              )}
+              {/* Zoom controls removed - use native PDF viewer zoom */}
             </div>
             
             <div className="flex items-center gap-3">

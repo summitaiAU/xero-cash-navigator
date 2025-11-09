@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, ZoomIn, ZoomOut, Download, RefreshCw, Plus, Trash2, AlertCircle } from "lucide-react";
+import { X, Download, RefreshCw, Plus, Trash2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -138,7 +138,6 @@ export const AddInvoiceWorkspace = ({
   const [saving, setSaving] = useState(false);
   const [draftInvoice, setDraftInvoice] = useState<DraftInvoice | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [zoom, setZoom] = useState(100);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [webhookRetryCount, setWebhookRetryCount] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -170,12 +169,6 @@ export const AddInvoiceWorkspace = ({
       if (e.key === "Escape" && !saving) {
         e.preventDefault();
         handleCloseAttempt();
-      } else if (e.key === "-" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setZoom((prev) => Math.max(prev - 25, 50));
-      } else if ((e.key === "=" || e.key === "+") && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        setZoom((prev) => Math.min(prev + 25, 200));
       }
     };
 
@@ -188,7 +181,6 @@ export const AddInvoiceWorkspace = ({
     if (open && selectedAttachment) {
       setLoading(true);
       setBlobUrl(null);
-      setZoom(100);
       setWebhookRetryCount(0);
       setValidationErrors({});
       setHasUnsavedChanges(false);
@@ -628,11 +620,6 @@ export const AddInvoiceWorkspace = ({
               src={blobUrl}
               alt={selectedAttachment.filename}
               className="max-w-full h-auto rounded shadow-sm"
-              style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "center",
-                transition: "transform 0.2s ease",
-              }}
             />
           ) : (
             <Skeleton className="w-96 h-96" />
@@ -655,7 +642,7 @@ export const AddInvoiceWorkspace = ({
         <div className="w-full h-full bg-white overflow-auto">
           {blobUrl ? (
             <iframe
-              src={`${blobUrl}#zoom=${zoom}`}
+              src={blobUrl}
               className="w-full h-full border-0"
               title={selectedAttachment.filename}
             />
@@ -731,25 +718,6 @@ export const AddInvoiceWorkspace = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setZoom((prev) => Math.max(prev - 25, 50))}
-                    disabled={zoom <= 50}
-                    title="Zoom out (-)"
-                  >
-                    <ZoomOut className="w-3 h-3" />
-                  </Button>
-                  <span className="text-xs w-12 text-center">{zoom}%</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setZoom((prev) => Math.min(prev + 25, 200))}
-                    disabled={zoom >= 200}
-                    title="Zoom in (+)"
-                  >
-                    <ZoomIn className="w-3 h-3" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
                     onClick={handleDownload}
                     title="Download"
                   >
@@ -760,7 +728,6 @@ export const AddInvoiceWorkspace = ({
                     size="sm"
                     onClick={() => {
                       setBlobUrl(null);
-                      setZoom(100);
                     }}
                     title="Refresh"
                   >

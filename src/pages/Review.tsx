@@ -200,6 +200,7 @@ export const Review: React.FC = () => {
         attachmentId={selectedAttachmentId}
         onClose={() => setSelectedAttachmentId(null)}
         onAddInvoice={(attachment) => {
+          setSelectedAttachmentId(null); // Close viewer smoothly before opening workspace
           setInvoiceAttachment(attachment);
           setInvoiceWorkspaceOpen(true);
         }}

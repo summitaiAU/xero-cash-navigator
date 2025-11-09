@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 
 interface PDFViewerProps {
@@ -9,42 +9,16 @@ interface PDFViewerProps {
 
 export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [pdfError, setPdfError] = useState(false);
-  const [zoom, setZoom] = useState(100);
 
-  // Reset zoom when invoice changes
+  // Reset error when invoice changes
   useEffect(() => {
-    setZoom(100);
     setPdfError(false);
   }, [invoice.id]);
-
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
 
   return (
     <div className="dashboard-card p-4 flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="section-header mb-0">Invoice PDF</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomOut}
-            disabled={zoom <= 50}
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
-            {zoom}%
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomIn}
-            disabled={zoom >= 200}
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
@@ -52,12 +26,6 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
           <iframe
             src={invoice.drive_embed_url}
             className="w-full h-full"
-            style={{ 
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top left',
-              width: `${100 / (zoom / 100)}%`,
-              height: `${100 / (zoom / 100)}%`
-            }}
             frameBorder="0"
             loading="lazy"
             onError={() => setPdfError(true)}
