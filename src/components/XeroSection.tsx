@@ -32,6 +32,16 @@ interface XeroSectionProps {
   loading?: boolean;
 }
 
+// Generate unique ID for line items
+const genLineItemId = () => {
+  try {
+    if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
+      return (crypto as any).randomUUID();
+    }
+  } catch {}
+  return `li_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+};
+
 // Process Supabase data for display
 const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
   // Parse list_items if it's a string
@@ -395,6 +405,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         const lineTotalIncGst = lineAmount + lineGst;
         
         return {
+          id: item.id || genLineItemId(),
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unitAmount,
