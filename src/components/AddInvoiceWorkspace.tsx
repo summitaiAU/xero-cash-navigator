@@ -74,6 +74,7 @@ interface DraftInvoice {
   payment_ref: string;
   google_drive_link: string;
   sender_email: string;
+  supplier_email_on_invoice: string;
   list_items: LineItem[];
 }
 
@@ -218,7 +219,22 @@ export const AddInvoiceWorkspace = ({
       setValidationErrors({});
       setHasUnsavedChanges(false);
 
-      setTimeout(() => {
+      // Fetch sender_email from email_queue
+      const initializeDraft = async () => {
+        let senderEmail = "";
+        
+        try {
+          const { data: emailData } = await supabase
+            .from('email_queue')
+            .select('sender_email')
+            .eq('id', selectedAttachment.email_id)
+            .single();
+          
+          senderEmail = emailData?.sender_email || "";
+        } catch (error) {
+          console.error("Failed to fetch sender email:", error);
+        }
+
         const prefillData: DraftInvoice = {
           attachment_id: selectedAttachment.id,
           supplier_name: (selectedAttachment as any).supplier_name || "",
@@ -235,7 +251,8 @@ export const AddInvoiceWorkspace = ({
           amount_due: 0,
           payment_ref: (selectedAttachment as any).payment_ref || "",
           google_drive_link: (selectedAttachment as any).google_drive_link || "",
-          sender_email: (selectedAttachment as any).sender_email || "",
+          sender_email: senderEmail,
+          supplier_email_on_invoice: "",
           list_items: ((selectedAttachment as any).list_items || []).map(
             (item: any) => calculateLineItem(item)
           ),
@@ -256,7 +273,9 @@ export const AddInvoiceWorkspace = ({
         setDraftInvoice(prefillData);
         setInitialDraft(JSON.stringify(prefillData));
         setLoading(false);
-      }, 300);
+      };
+
+      initializeDraft();
     }
   }, [open, selectedAttachment]);
 
@@ -457,7 +476,7 @@ export const AddInvoiceWorkspace = ({
         entity: draftInvoice.entity?.trim(),
         project: draftInvoice.project?.trim() || null,
         invoice_no: draftInvoice.invoice_no?.trim(),
-        invoice_date: draftInvoice.invoice_date,
+        invoice_date: draftInvoice.invoice_date || null,
         due_date: draftInvoice.due_date || null,
         currency: draftInvoice.currency || "AUD",
         subtotal: calculatedAmounts.subtotal,
@@ -468,6 +487,7 @@ export const AddInvoiceWorkspace = ({
         payment_ref: draftInvoice.payment_ref?.trim() || null,
         google_drive_link: draftInvoice.google_drive_link || null,
         sender_email: draftInvoice.sender_email || null,
+        supplier_email_on_invoice: draftInvoice.supplier_email_on_invoice?.trim() || null,
         list_items: draftInvoice.list_items as any,
       };
 
@@ -956,7 +976,7 @@ export const AddInvoiceWorkspace = ({
                                   id={`qty_${idx}`}
                                   type="number"
                                   step="0.01"
-                                  value={item.quantity}
+                                  value={item.quantity === 0 ? "" : item.quantity}
                                   onChange={(e) => updateLineItem(idx, "quantity", parseFloat(e.target.value) || 0)}
                                   className={validationErrors[`line_${idx}_quantity`] ? "border-destructive" : ""}
                                 />
@@ -968,7 +988,7 @@ export const AddInvoiceWorkspace = ({
                                   id={`price_${idx}`}
                                   type="number"
                                   step="0.01"
-                                  value={item.unit_price}
+                                  value={item.unit_price === 0 ? "" : item.unit_price}
                                   onChange={(e) => updateLineItem(idx, "unit_price", parseFloat(e.target.value) || 0)}
                                   className={validationErrors[`line_${idx}_unit_price`] ? "border-destructive" : ""}
                                 />
@@ -1015,8 +1035,7 @@ export const AddInvoiceWorkspace = ({
                           <Label htmlFor="subtotal">Subtotal</Label>
                           <Input
                             id="subtotal"
-                            type="number"
-                            step="0.01"
+                            type="text"
                             value={calculatedAmounts.subtotal.toFixed(2)}
                             readOnly
                             className="bg-muted"
@@ -1027,8 +1046,7 @@ export const AddInvoiceWorkspace = ({
                           <Label htmlFor="gst">GST</Label>
                           <Input
                             id="gst"
-                            type="number"
-                            step="0.01"
+                            type="text"
                             value={calculatedAmounts.gst.toFixed(2)}
                             readOnly
                             className="bg-muted"
@@ -1039,8 +1057,7 @@ export const AddInvoiceWorkspace = ({
                           <Label htmlFor="total_amount">Total Amount</Label>
                           <Input
                             id="total_amount"
-                            type="number"
-                            step="0.01"
+                            type="text"
                             value={calculatedAmounts.total.toFixed(2)}
                             readOnly
                             className="bg-muted"
@@ -1053,7 +1070,7 @@ export const AddInvoiceWorkspace = ({
                             id="amount_paid"
                             type="number"
                             step="0.01"
-                            value={draftInvoice.amount_paid}
+                            value={draftInvoice.amount_paid === 0 ? "" : draftInvoice.amount_paid}
                             onChange={(e) => updateField("amount_paid", parseFloat(e.target.value) || 0)}
                           />
                         </div>
@@ -1062,8 +1079,7 @@ export const AddInvoiceWorkspace = ({
                           <Label htmlFor="amount_due">Amount Due</Label>
                           <Input
                             id="amount_due"
-                            type="number"
-                            step="0.01"
+                            type="text"
                             value={calculatedAmounts.amountDue.toFixed(2)}
                             readOnly
                             className="bg-muted"
@@ -1087,23 +1103,24 @@ export const AddInvoiceWorkspace = ({
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="google_drive_link">Google Drive Link</Label>
+                          <Label htmlFor="sender_email">Sender Email</Label>
                           <Input
-                            id="google_drive_link"
-                            value={draftInvoice.google_drive_link}
-                            onChange={(e) => updateField("google_drive_link", e.target.value)}
-                            placeholder="Optional"
+                            id="sender_email"
+                            type="text"
+                            value={draftInvoice.sender_email}
+                            readOnly
+                            className="bg-muted"
                           />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="sender_email">Sender Email</Label>
+                          <Label htmlFor="supplier_email_on_invoice">Supplier Email</Label>
                           <Input
-                            id="sender_email"
+                            id="supplier_email_on_invoice"
                             type="email"
-                            value={draftInvoice.sender_email}
-                            onChange={(e) => updateField("sender_email", e.target.value)}
-                            placeholder="Optional"
+                            value={draftInvoice.supplier_email_on_invoice}
+                            onChange={(e) => updateField("supplier_email_on_invoice", e.target.value)}
+                            placeholder="Email address from invoice (optional)"
                           />
                         </div>
                       </div>
