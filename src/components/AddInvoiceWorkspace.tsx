@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Download, RefreshCw, Plus, Trash2, AlertCircle, CheckSquare } from "lucide-react";
+import { X, Download, RefreshCw, Plus, Trash2, AlertCircle, SquareCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -973,7 +973,7 @@ export const AddInvoiceWorkspace = ({
                               ? "Mark all as taxable" 
                               : "Mark all as GST exempt"}
                           >
-                            <CheckSquare className="w-3 h-3 mr-1" />
+                            <SquareCheck className="w-3 h-3 mr-1" />
                             {draftInvoice.list_items.every(item => item.gst_exempt) 
                               ? "Clear GST Exempt" 
                               : "GST Exempt All"}
