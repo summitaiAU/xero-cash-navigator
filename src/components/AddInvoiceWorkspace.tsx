@@ -144,6 +144,39 @@ export const AddInvoiceWorkspace = ({
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [initialDraft, setInitialDraft] = useState<string>("");
 
+  // Calculate amounts dynamically from line items
+  const calculatedAmounts = useMemo(() => {
+    if (!draftInvoice) return { subtotal: 0, gst: 0, total: 0, amountDue: 0 };
+
+    const subtotal = draftInvoice.list_items.reduce((sum, item) => sum + item.line_total_ex_gst, 0);
+    const gst = draftInvoice.list_items.reduce((sum, item) => sum + item.line_gst, 0);
+    const total = draftInvoice.list_items.reduce((sum, item) => sum + item.line_total_inc_gst, 0);
+    const amountDue = total - (draftInvoice.amount_paid || 0);
+
+    return {
+      subtotal: Math.round(subtotal * 100) / 100,
+      gst: Math.round(gst * 100) / 100,
+      total: Math.round(total * 100) / 100,
+      amountDue: Math.round(amountDue * 100) / 100,
+    };
+  }, [draftInvoice?.list_items, draftInvoice?.amount_paid]);
+
+  // Sync calculated amounts back to draft invoice state
+  useEffect(() => {
+    if (draftInvoice && calculatedAmounts) {
+      setDraftInvoice(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          subtotal: calculatedAmounts.subtotal,
+          gst: calculatedAmounts.gst,
+          total_amount: calculatedAmounts.total,
+          amount_due: calculatedAmounts.amountDue,
+        };
+      });
+    }
+  }, [calculatedAmounts.subtotal, calculatedAmounts.gst, calculatedAmounts.total, calculatedAmounts.amountDue]);
+
   // Cleanup blob URL
   useEffect(() => {
     return () => {
@@ -237,14 +270,7 @@ export const AddInvoiceWorkspace = ({
 
   const updateField = (field: keyof DraftInvoice, value: any) => {
     if (!draftInvoice) return;
-
-    const updated = { ...draftInvoice, [field]: value };
-
-    if (field === "total_amount" || field === "amount_paid") {
-      updated.amount_due = updated.total_amount - updated.amount_paid;
-    }
-
-    setDraftInvoice(updated);
+    setDraftInvoice({ ...draftInvoice, [field]: value });
   };
 
   const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
@@ -290,28 +316,6 @@ export const AddInvoiceWorkspace = ({
     if (!draftInvoice.invoice_no?.trim()) errors.invoice_no = "Required";
     if (!draftInvoice.invoice_date) errors.invoice_date = "Required";
     if (!draftInvoice.currency?.trim()) errors.currency = "Required";
-
-    const checkNumber = (val: any, field: string) => {
-      const num = Number(val);
-      if (isNaN(num) || !isFinite(num)) {
-        errors[field] = "Must be a valid number";
-      } else if (num < 0) {
-        errors[field] = "Cannot be negative";
-      }
-    };
-
-    checkNumber(draftInvoice.subtotal, "subtotal");
-    checkNumber(draftInvoice.gst, "gst");
-    checkNumber(draftInvoice.total_amount, "total_amount");
-
-    const totalAmount = Number(draftInvoice.total_amount) || 0;
-    const amountPaid = Number(draftInvoice.amount_paid) || 0;
-    const amountDue = Number(draftInvoice.amount_due) || 0;
-    const expectedAmountDue = totalAmount - amountPaid;
-
-    if (Math.abs(amountDue - expectedAmountDue) > tolerance) {
-      errors.amount_due = `Should be ${expectedAmountDue.toFixed(2)}`;
-    }
 
     draftInvoice.list_items.forEach((item, idx) => {
       if (!item.description?.trim()) {
@@ -456,11 +460,11 @@ export const AddInvoiceWorkspace = ({
         invoice_date: draftInvoice.invoice_date,
         due_date: draftInvoice.due_date || null,
         currency: draftInvoice.currency || "AUD",
-        subtotal: Number(draftInvoice.subtotal),
-        gst: Number(draftInvoice.gst),
-        total_amount: Number(draftInvoice.total_amount),
+        subtotal: calculatedAmounts.subtotal,
+        gst: calculatedAmounts.gst,
+        total_amount: calculatedAmounts.total,
         amount_paid: Number(draftInvoice.amount_paid) || 0,
-        amount_due: Number(draftInvoice.amount_due),
+        amount_due: calculatedAmounts.amountDue,
         payment_ref: draftInvoice.payment_ref?.trim() || null,
         google_drive_link: draftInvoice.google_drive_link || null,
         sender_email: draftInvoice.sender_email || null,
@@ -546,13 +550,7 @@ export const AddInvoiceWorkspace = ({
       draftInvoice.entity?.trim() &&
       draftInvoice.invoice_no?.trim() &&
       draftInvoice.invoice_date &&
-      draftInvoice.currency?.trim() &&
-      isFinite(draftInvoice.subtotal) &&
-      draftInvoice.subtotal >= 0 &&
-      isFinite(draftInvoice.gst) &&
-      draftInvoice.gst >= 0 &&
-      isFinite(draftInvoice.total_amount) &&
-      draftInvoice.total_amount >= 0
+      draftInvoice.currency?.trim()
     );
   }, [draftInvoice]);
 
@@ -895,8 +893,6 @@ export const AddInvoiceWorkspace = ({
                             <SelectContent>
                               <SelectItem value="AUD">AUD</SelectItem>
                               <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                              <SelectItem value="GBP">GBP</SelectItem>
                             </SelectContent>
                           </Select>
                           {validationErrors.currency && (
@@ -904,83 +900,6 @@ export const AddInvoiceWorkspace = ({
                               <AlertCircle className="h-3 w-3" />
                               {validationErrors.currency}
                             </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Amounts */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold border-b pb-2">Amounts</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="subtotal">Subtotal *</Label>
-                          <Input
-                            id="subtotal"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.subtotal}
-                            onChange={(e) => updateField("subtotal", parseFloat(e.target.value) || 0)}
-                            className={validationErrors.subtotal ? "border-destructive" : ""}
-                          />
-                          {validationErrors.subtotal && (
-                            <p className="text-xs text-destructive">{validationErrors.subtotal}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="gst">GST *</Label>
-                          <Input
-                            id="gst"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.gst}
-                            onChange={(e) => updateField("gst", parseFloat(e.target.value) || 0)}
-                            className={validationErrors.gst ? "border-destructive" : ""}
-                          />
-                          {validationErrors.gst && (
-                            <p className="text-xs text-destructive">{validationErrors.gst}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="total_amount">Total Amount *</Label>
-                          <Input
-                            id="total_amount"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.total_amount}
-                            onChange={(e) => updateField("total_amount", parseFloat(e.target.value) || 0)}
-                            className={validationErrors.total_amount ? "border-destructive" : ""}
-                          />
-                          {validationErrors.total_amount && (
-                            <p className="text-xs text-destructive">{validationErrors.total_amount}</p>
-                          )}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="amount_paid">Amount Paid</Label>
-                          <Input
-                            id="amount_paid"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.amount_paid}
-                            onChange={(e) => updateField("amount_paid", parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-
-                        <div className="space-y-2 col-span-2">
-                          <Label htmlFor="amount_due">Amount Due</Label>
-                          <Input
-                            id="amount_due"
-                            type="number"
-                            step="0.01"
-                            value={draftInvoice.amount_due}
-                            readOnly
-                            className="bg-muted"
-                          />
-                          {validationErrors.amount_due && (
-                            <p className="text-xs text-destructive">{validationErrors.amount_due}</p>
                           )}
                         </div>
                       </div>
@@ -1085,6 +1004,71 @@ export const AddInvoiceWorkspace = ({
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Amounts */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold border-b pb-2">Amounts</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="subtotal">Subtotal</Label>
+                          <Input
+                            id="subtotal"
+                            type="number"
+                            step="0.01"
+                            value={calculatedAmounts.subtotal.toFixed(2)}
+                            readOnly
+                            className="bg-muted"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="gst">GST</Label>
+                          <Input
+                            id="gst"
+                            type="number"
+                            step="0.01"
+                            value={calculatedAmounts.gst.toFixed(2)}
+                            readOnly
+                            className="bg-muted"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="total_amount">Total Amount</Label>
+                          <Input
+                            id="total_amount"
+                            type="number"
+                            step="0.01"
+                            value={calculatedAmounts.total.toFixed(2)}
+                            readOnly
+                            className="bg-muted"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="amount_paid">Amount Paid</Label>
+                          <Input
+                            id="amount_paid"
+                            type="number"
+                            step="0.01"
+                            value={draftInvoice.amount_paid}
+                            onChange={(e) => updateField("amount_paid", parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+
+                        <div className="space-y-2 col-span-2">
+                          <Label htmlFor="amount_due">Amount Due</Label>
+                          <Input
+                            id="amount_due"
+                            type="number"
+                            step="0.01"
+                            value={calculatedAmounts.amountDue.toFixed(2)}
+                            readOnly
+                            className="bg-muted"
+                          />
+                        </div>
                       </div>
                     </div>
 
