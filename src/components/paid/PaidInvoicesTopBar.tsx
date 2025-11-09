@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Search, SlidersHorizontal, ChevronDown, X } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronDown, X, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ interface PaidInvoicesTopBarProps {
   pageSize: number;
   onPageSizeChange: (size: number) => void;
   onOpenFilters: () => void;
+  onOpenExport?: () => void;
   activeFiltersCount?: number;
   activeFilterChips?: Array<{ key: string; label: string; value: string }>;
   onRemoveFilter?: (key: string, value: string) => void;
@@ -53,6 +54,7 @@ export function PaidInvoicesTopBar({
   pageSize,
   onPageSizeChange,
   onOpenFilters,
+  onOpenExport,
   activeFiltersCount = 0,
   activeFilterChips = [],
   onRemoveFilter,
@@ -164,6 +166,18 @@ export function PaidInvoicesTopBar({
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue rounded-full border-2 border-card" />
           )}
         </Button>
+
+        {/* Export button */}
+        {onOpenExport && (
+          <Button 
+            variant="outline"
+            onClick={onOpenExport} 
+            className="gap-2 rounded-lg hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 active:translate-y-0"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        )}
       </div>
 
       {/* Active Filter Chips */}

@@ -5,6 +5,7 @@ import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
 import { PaidInvoicesTable } from "@/components/paid/PaidInvoicesTable";
 import { PaidInvoicesFilterDrawer } from "@/components/paid/PaidInvoicesFilterDrawer";
 import { PaidInvoiceViewer } from "@/components/paid/PaidInvoiceViewer";
+import { ExportDialog } from "@/components/paid/ExportDialog";
 import { Invoice } from "@/types/invoice";
 import {
   fetchPaidInvoices,
@@ -12,6 +13,12 @@ import {
   PaidInvoicesFilters,
 } from "@/services/paidInvoicesService";
 import { paidInvoicesCacheService } from "@/services/paidInvoicesCache";
+import { 
+  exportToCSV, 
+  exportToExcel, 
+  ExportColumn,
+  generateFilename
+} from "@/services/exportService";
 
 export default function PaidInvoices() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,6 +27,7 @@ export default function PaidInvoices() {
   const [loading, setLoading] = useState(true);
   const [isChangingPage, setIsChangingPage] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -314,6 +322,54 @@ export default function PaidInvoices() {
     [searchParams]
   );
 
+  const handleExport = useCallback(
+    async (format: 'csv' | 'xlsx', columns: ExportColumn[], dateRange: { from?: string; to?: string }) => {
+      try {
+        toast.info('Preparing export...', {
+          description: 'Fetching all invoices for export',
+        });
+
+        // Fetch all invoices with current filters (no pagination)
+        const result = await fetchPaidInvoices({
+          page: 0,
+          pageSize: 10000, // Large number to get all
+          searchQuery,
+          sortField,
+          sortDirection,
+          filters: {
+            ...filters,
+            invoiceDateFrom: dateRange.from || filters.invoiceDateFrom,
+            invoiceDateTo: dateRange.to || filters.invoiceDateTo,
+          },
+        });
+
+        if (result.error) {
+          toast.error('Export failed', {
+            description: result.error.message,
+          });
+          return;
+        }
+
+        const filename = generateFilename(format, dateRange);
+        
+        if (format === 'csv') {
+          exportToCSV(result.data, columns, filename);
+        } else {
+          exportToExcel(result.data, columns, filename);
+        }
+
+        toast.success('Export successful', {
+          description: `Downloaded ${result.data.length} invoices as ${format.toUpperCase()}`,
+        });
+      } catch (err: any) {
+        toast.error('Export failed', {
+          description: err.message || 'An unexpected error occurred',
+        });
+      }
+    },
+    [searchQuery, sortField, sortDirection, filters]
+  );
+
   const totalPages = Math.ceil(totalCount / pageSize);
   const invoiceIds = invoices.map((inv) => inv.id);
 
@@ -328,6 +384,7 @@ export default function PaidInvoices() {
         pageSize={pageSize}
         onPageSizeChange={handlePageSizeChange}
         onOpenFilters={() => setFilterDrawerOpen(true)}
+        onOpenExport={() => setExportDialogOpen(true)}
         activeFiltersCount={activeFiltersCount}
         activeFilterChips={activeFilterChips}
         onRemoveFilter={handleRemoveFilter}
@@ -362,6 +419,17 @@ export default function PaidInvoices() {
         onOpenChange={(open) => !open && handleCloseViewer()}
         invoiceIds={invoiceIds}
         onNavigate={handleNavigateInvoice}
+      />
+
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleExport}
+        totalCount={totalCount}
+        currentFilters={{
+          invoiceDateFrom: filters.invoiceDateFrom,
+          invoiceDateTo: filters.invoiceDateTo,
+        }}
       />
     </div>
   );
