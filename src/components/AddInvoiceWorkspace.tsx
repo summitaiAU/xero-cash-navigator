@@ -94,6 +94,15 @@ const base64urlToBase64 = (base64url: string): string => {
   return base64;
 };
 
+const genLineItemId = () => {
+  try {
+    if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
+      return (crypto as any).randomUUID();
+    }
+  } catch {}
+  return `li_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+};
+
 const calculateLineItem = (item: Partial<LineItem>): LineItem => {
   const quantity = item.quantity || 0;
   const unitPrice = item.unit_price || 0;
@@ -123,7 +132,7 @@ const calculateLineItem = (item: Partial<LineItem>): LineItem => {
   }
 
   return {
-    id: item.id || crypto.randomUUID(),
+    id: item.id || genLineItemId(),
     description: item.description || "",
     quantity,
     unit_price: unitPrice,
