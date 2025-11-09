@@ -1,15 +1,3 @@
-import React from "react";
-
-export default function PaidInvoices() {
-  return (
-    <div className="h-screen flex items-center justify-center">
-      <h1 className="text-2xl font-bold">Paid Invoices - Loading...</h1>
-    </div>
-  );
-}
-
-/*
-// TEMPORARILY DISABLED TO DEBUG
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
@@ -24,7 +12,7 @@ import {
 } from "@/services/paidInvoicesService";
 import { paidInvoicesCacheService } from "@/services/paidInvoicesCache";
 
-function PaidInvoicesFull() {
+export default function PaidInvoices() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -111,6 +99,8 @@ function PaidInvoicesFull() {
           sortDirection,
           filters,
         });
+      } else {
+        console.error("Error fetching paid invoices:", result.error);
       }
 
       setLoading(false);
@@ -234,7 +224,7 @@ function PaidInvoicesFull() {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background">
       <PaidInvoicesTopBar
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
@@ -275,4 +265,3 @@ function PaidInvoicesFull() {
     </div>
   );
 }
-*/
