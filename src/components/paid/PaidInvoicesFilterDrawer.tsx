@@ -12,6 +12,13 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PaidInvoicesFilters } from "@/services/paidInvoicesService";
 import {
   fetchUniqueEntities,
@@ -33,6 +40,15 @@ const STATUS_OPTIONS = [
   { value: "READY", label: "Ready" },
 ];
 
+const DATE_PRESETS = [
+  { value: "last7", label: "Last 7 days" },
+  { value: "last30", label: "Last 30 days" },
+  { value: "thisMonth", label: "This month" },
+  { value: "lastMonth", label: "Last month" },
+  { value: "thisQuarter", label: "This quarter" },
+  { value: "custom", label: "Custom range" },
+];
+
 export function PaidInvoicesFilterDrawer({
   open,
   onOpenChange,
@@ -40,13 +56,12 @@ export function PaidInvoicesFilterDrawer({
   onApply,
   onClear,
 }: PaidInvoicesFilterDrawerProps) {
-  const [localFilters, setLocalFilters] =
-    useState<PaidInvoicesFilters>(filters);
+  const [localFilters, setLocalFilters] = useState<PaidInvoicesFilters>(filters);
   const [entities, setEntities] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [supplierSearch, setSupplierSearch] = useState("");
+  const [datePreset, setDatePreset] = useState("custom");
 
-  // Load entities and suppliers when drawer opens
   useEffect(() => {
     if (open) {
       fetchUniqueEntities().then(setEntities);
@@ -54,10 +69,41 @@ export function PaidInvoicesFilterDrawer({
     }
   }, [open]);
 
-  // Sync local filters with prop filters
   useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
+
+  const handleDatePresetChange = (preset: string) => {
+    setDatePreset(preset);
+    const today = new Date();
+    let from = "";
+    let to = today.toISOString().split("T")[0];
+
+    switch (preset) {
+      case "last7":
+        from = new Date(today.setDate(today.getDate() - 7)).toISOString().split("T")[0];
+        break;
+      case "last30":
+        from = new Date(today.setDate(today.getDate() - 30)).toISOString().split("T")[0];
+        break;
+      case "thisMonth":
+        from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+        break;
+      case "lastMonth":
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        from = lastMonth.toISOString().split("T")[0];
+        to = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0];
+        break;
+      case "thisQuarter":
+        const quarter = Math.floor(today.getMonth() / 3);
+        from = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split("T")[0];
+        break;
+      case "custom":
+        return;
+    }
+
+    setLocalFilters({ ...localFilters, invoiceDateFrom: from, invoiceDateTo: to });
+  };
 
   const handleApply = () => {
     onApply(localFilters);
@@ -98,110 +144,108 @@ export function PaidInvoicesFilterDrawer({
     s.toLowerCase().includes(supplierSearch.toLowerCase())
   );
 
+  const selectedEntities = localFilters.entities || [];
+  const selectedSuppliers = localFilters.suppliers || [];
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-96 p-0 flex flex-col">
-        <SheetHeader className="p-6 pb-4 border-b">
-          <SheetTitle>Filters</SheetTitle>
+      <SheetContent side="right" className="w-[420px] p-0 flex flex-col data-[state=open]:animate-slide-in-right">
+        <SheetHeader className="px-6 py-4 border-b border-border bg-card">
+          <SheetTitle className="text-lg font-semibold text-foreground">Filter Invoices</SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-6">
+        <ScrollArea className="flex-1 px-6 py-4">
           <div className="space-y-6">
             {/* Status */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Status</Label>
-              {STATUS_OPTIONS.map((option) => (
-                <div key={option.value} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`status-${option.value}`}
-                    checked={(localFilters.statuses || ["PAID"]).includes(
-                      option.value
-                    )}
-                    onCheckedChange={() => toggleStatus(option.value)}
-                  />
-                  <Label
-                    htmlFor={`status-${option.value}`}
-                    className="font-normal cursor-pointer"
-                  >
-                    {option.label}
-                  </Label>
-                </div>
-              ))}
+              <Label className="text-sm font-semibold text-foreground">Status</Label>
+              <div className="space-y-2">
+                {STATUS_OPTIONS.map((option) => (
+                  <label key={option.value} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
+                    <Checkbox
+                      id={`status-${option.value}`}
+                      checked={(localFilters.statuses || ["PAID"]).includes(option.value)}
+                      onCheckedChange={() => toggleStatus(option.value)}
+                    />
+                    <span className="text-sm text-foreground">{option.label}</span>
+                  </label>
+                ))}
+              </div>
             </div>
 
-            {/* Invoice Date Range */}
+            {/* Invoice Date Range with Presets */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Invoice Date</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="invoice-date-from" className="text-xs">
-                    From
-                  </Label>
-                  <Input
-                    id="invoice-date-from"
-                    type="date"
-                    value={localFilters.invoiceDateFrom || ""}
-                    onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        invoiceDateFrom: e.target.value,
-                      })
-                    }
-                  />
+              <Label className="text-sm font-semibold text-foreground">Invoice Date</Label>
+              
+              <Select value={datePreset} onValueChange={handleDatePresetChange}>
+                <SelectTrigger className="rounded-lg">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {datePreset === "custom" && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <Label htmlFor="invoice-date-from" className="text-xs text-muted-foreground">From</Label>
+                    <Input
+                      id="invoice-date-from"
+                      type="date"
+                      value={localFilters.invoiceDateFrom || ""}
+                      onChange={(e) =>
+                        setLocalFilters({ ...localFilters, invoiceDateFrom: e.target.value })
+                      }
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="invoice-date-to" className="text-xs text-muted-foreground">To</Label>
+                    <Input
+                      id="invoice-date-to"
+                      type="date"
+                      value={localFilters.invoiceDateTo || ""}
+                      onChange={(e) =>
+                        setLocalFilters({ ...localFilters, invoiceDateTo: e.target.value })
+                      }
+                      className="rounded-lg"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="invoice-date-to" className="text-xs">
-                    To
-                  </Label>
-                  <Input
-                    id="invoice-date-to"
-                    type="date"
-                    value={localFilters.invoiceDateTo || ""}
-                    onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        invoiceDateTo: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Date Paid Range */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Date Paid</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label className="text-sm font-semibold text-foreground">Date Paid</Label>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="paid-date-from" className="text-xs">
-                    From
-                  </Label>
+                  <Label htmlFor="paid-date-from" className="text-xs text-muted-foreground">From</Label>
                   <Input
                     id="paid-date-from"
                     type="date"
                     value={localFilters.paidDateFrom || ""}
                     onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        paidDateFrom: e.target.value,
-                      })
+                      setLocalFilters({ ...localFilters, paidDateFrom: e.target.value })
                     }
+                    className="rounded-lg"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="paid-date-to" className="text-xs">
-                    To
-                  </Label>
+                  <Label htmlFor="paid-date-to" className="text-xs text-muted-foreground">To</Label>
                   <Input
                     id="paid-date-to"
                     type="date"
                     value={localFilters.paidDateTo || ""}
                     onChange={(e) =>
-                      setLocalFilters({
-                        ...localFilters,
-                        paidDateTo: e.target.value,
-                      })
+                      setLocalFilters({ ...localFilters, paidDateTo: e.target.value })
                     }
+                    className="rounded-lg"
                   />
                 </div>
               </div>
@@ -209,12 +253,10 @@ export function PaidInvoicesFilterDrawer({
 
             {/* Price Range */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Price Range</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label className="text-sm font-semibold text-foreground">Price Range</Label>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="price-min" className="text-xs">
-                    Min
-                  </Label>
+                  <Label htmlFor="price-min" className="text-xs text-muted-foreground">Min</Label>
                   <Input
                     id="price-min"
                     type="number"
@@ -227,12 +269,11 @@ export function PaidInvoicesFilterDrawer({
                         priceMin: e.target.value ? Number(e.target.value) : undefined,
                       })
                     }
+                    className="rounded-lg"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="price-max" className="text-xs">
-                    Max
-                  </Label>
+                  <Label htmlFor="price-max" className="text-xs text-muted-foreground">Max</Label>
                   <Input
                     id="price-max"
                     type="number"
@@ -245,76 +286,90 @@ export function PaidInvoicesFilterDrawer({
                         priceMax: e.target.value ? Number(e.target.value) : undefined,
                       })
                     }
+                    className="rounded-lg"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Entity */}
+            {/* Entity with Chips */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Entity</Label>
-              <ScrollArea className="h-32 border rounded-md p-3">
+              <Label className="text-sm font-semibold text-foreground">Entity</Label>
+              
+              {selectedEntities.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 bg-blue-light/50 rounded-lg border border-blue/10">
+                  {selectedEntities.map((entity) => (
+                    <button
+                      key={entity}
+                      onClick={() => toggleEntity(entity)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-light text-blue text-xs font-medium hover:bg-blue-hover/20 transition-colors"
+                    >
+                      {entity}
+                      <X className="w-3 h-3" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <ScrollArea className="h-32 border border-border rounded-lg p-2">
                 {entities.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No entities found
-                  </p>
+                  <p className="text-sm text-muted-foreground p-2">No entities found</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {entities.map((entity) => (
-                      <div key={entity} className="flex items-center gap-2">
+                      <label key={entity} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
                         <Checkbox
-                          id={`entity-${entity}`}
-                          checked={(localFilters.entities || []).includes(
-                            entity
-                          )}
+                          checked={selectedEntities.includes(entity)}
                           onCheckedChange={() => toggleEntity(entity)}
                         />
-                        <Label
-                          htmlFor={`entity-${entity}`}
-                          className="font-normal cursor-pointer text-sm"
-                        >
-                          {entity}
-                        </Label>
-                      </div>
+                        <span className="text-sm text-foreground">{entity}</span>
+                      </label>
                     ))}
                   </div>
                 )}
               </ScrollArea>
             </div>
 
-            {/* Supplier */}
+            {/* Supplier with Chips */}
             <div className="space-y-3">
-              <Label className="text-sm font-semibold">Supplier</Label>
+              <Label className="text-sm font-semibold text-foreground">Supplier</Label>
+              
               <Input
                 type="search"
                 placeholder="Search suppliers..."
                 value={supplierSearch}
                 onChange={(e) => setSupplierSearch(e.target.value)}
-                className="mb-2"
+                className="rounded-lg"
               />
-              <ScrollArea className="h-32 border rounded-md p-3">
+
+              {selectedSuppliers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 bg-blue-light/50 rounded-lg border border-blue/10">
+                  {selectedSuppliers.map((supplier) => (
+                    <button
+                      key={supplier}
+                      onClick={() => toggleSupplier(supplier)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-light text-blue text-xs font-medium hover:bg-blue-hover/20 transition-colors"
+                    >
+                      {supplier}
+                      <X className="w-3 h-3" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <ScrollArea className="h-32 border border-border rounded-lg p-2">
                 {filteredSuppliers.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No suppliers found
-                  </p>
+                  <p className="text-sm text-muted-foreground p-2">No suppliers found</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {filteredSuppliers.map((supplier) => (
-                      <div key={supplier} className="flex items-center gap-2">
+                      <label key={supplier} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
                         <Checkbox
-                          id={`supplier-${supplier}`}
-                          checked={(localFilters.suppliers || []).includes(
-                            supplier
-                          )}
+                          checked={selectedSuppliers.includes(supplier)}
                           onCheckedChange={() => toggleSupplier(supplier)}
                         />
-                        <Label
-                          htmlFor={`supplier-${supplier}`}
-                          className="font-normal cursor-pointer text-sm"
-                        >
-                          {supplier}
-                        </Label>
-                      </div>
+                        <span className="text-sm text-foreground">{supplier}</span>
+                      </label>
                     ))}
                   </div>
                 )}
@@ -323,13 +378,22 @@ export function PaidInvoicesFilterDrawer({
           </div>
         </ScrollArea>
 
-        <SheetFooter className="p-6 pt-4 border-t flex gap-2">
-          <Button variant="outline" onClick={handleClear} className="flex-1">
-            Clear
-          </Button>
-          <Button onClick={handleApply} className="flex-1">
-            Apply
-          </Button>
+        <SheetFooter className="px-6 py-4 border-t border-border bg-muted/30">
+          <div className="flex gap-3 w-full">
+            <Button 
+              variant="outline" 
+              onClick={handleClear} 
+              className="flex-1 rounded-lg border-border hover:bg-muted"
+            >
+              Clear All
+            </Button>
+            <Button 
+              onClick={handleApply}
+              className="flex-1 rounded-lg bg-primary hover:bg-primary/90 shadow-sm hover:shadow-md transition-all"
+            >
+              Apply Filters
+            </Button>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>

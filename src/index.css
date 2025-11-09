@@ -42,6 +42,11 @@ All colors MUST be HSL.
     --info: 211 96% 48%;
     --info-foreground: 0 0% 100%;
     
+    /* Blue for links and secondary actions */
+    --blue-primary: 217 91% 60%;
+    --blue-hover: 217 91% 55%;
+    --blue-light: 217 91% 96%;
+    
     --border: 220 15% 88%;
     --input: 220 15% 90%;
     --ring: 25 85% 50%;
@@ -54,11 +59,12 @@ All colors MUST be HSL.
     --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 15%, 98%));
     --gradient-orange-glow: radial-gradient(circle at center, hsl(25, 85%, 50%, 0.15), transparent 70%);
     
-    /* Soft shadows for floating cards */
+    /* Enhanced shadow system */
     --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
     --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
     --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
     --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06);
+    --shadow-elevated: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
     
     /* Smooth transitions */
     --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -123,6 +129,11 @@ All colors MUST be HSL.
     
     --info: 211 96% 55%;
     --info-foreground: 0 0% 100%;
+    
+    /* Blue for links and secondary actions (dark mode) */
+    --blue-primary: 217 91% 65%;
+    --blue-hover: 217 91% 60%;
+    --blue-light: 217 91% 20%;
     
     --border: 220 20% 22%;
     --input: 220 20% 22%;

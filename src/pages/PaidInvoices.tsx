@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
 import { PaidInvoicesTable } from "@/components/paid/PaidInvoicesTable";
 import { PaidInvoicesFilterDrawer } from "@/components/paid/PaidInvoicesFilterDrawer";
@@ -17,7 +18,9 @@ export default function PaidInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isChangingPage, setIsChangingPage] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Parse URL params
@@ -48,6 +51,31 @@ export default function PaidInvoices() {
     suppliers: searchParams.get("suppliers")?.split(",").filter(Boolean) || undefined,
   };
 
+  // Calculate active filters count
+  const activeFiltersCount = [
+    filters.invoiceDateFrom,
+    filters.invoiceDateTo,
+    filters.paidDateFrom,
+    filters.paidDateTo,
+    filters.priceMin,
+    filters.priceMax,
+    filters.entities?.length,
+    (filters.statuses && filters.statuses.length !== 1) ? filters.statuses.length : 0,
+    filters.suppliers?.length,
+  ].filter((v) => v).length;
+
+  // Generate filter chips
+  const activeFilterChips: Array<{ key: string; label: string; value: string }> = [];
+  if (filters.entities) {
+    filters.entities.forEach(e => activeFilterChips.push({ key: "entities", label: "Entity", value: e }));
+  }
+  if (filters.suppliers) {
+    filters.suppliers.forEach(s => activeFilterChips.push({ key: "suppliers", label: "Supplier", value: s }));
+  }
+  if (filters.statuses && filters.statuses.length > 0 && !(filters.statuses.length === 1 && filters.statuses[0] === "PAID")) {
+    filters.statuses.forEach(st => activeFilterChips.push({ key: "statuses", label: "Status", value: st }));
+  }
+
   // Generate cache key
   const cacheKey = paidInvoicesCacheService.generateCacheKey({
     page,
@@ -60,38 +88,22 @@ export default function PaidInvoices() {
 
   // Fetch invoices with caching
   const loadInvoices = useCallback(
-    async (showLoading = true) => {
-      if (showLoading) setLoading(true);
+    async (showLoading = true, isPageChange = false) => {
+      if (showLoading && !isPageChange) setLoading(true);
+      if (isPageChange) setIsChangingPage(true);
+      setError(null);
 
       // Check cache first
       const cached = paidInvoicesCacheService.getCachedList(cacheKey);
       if (cached) {
         setInvoices(cached.data);
         setTotalCount(cached.totalCount);
-        if (showLoading) setLoading(false);
+        if (showLoading && !isPageChange) setLoading(false);
       }
 
-      // Fetch fresh data (stale-while-revalidate)
-      const result = await fetchPaidInvoices({
-        page,
-        pageSize,
-        searchQuery,
-        sortField,
-        sortDirection,
-        filters,
-      });
-
-      if (!result.error) {
-        setInvoices(result.data);
-        setTotalCount(result.totalCount);
-        paidInvoicesCacheService.setCachedList(
-          cacheKey,
-          result.data,
-          result.totalCount
-        );
-
-        // Prefetch next page
-        prefetchPaidInvoicesPage({
+      // Fetch fresh data
+      try {
+        const result = await fetchPaidInvoices({
           page,
           pageSize,
           searchQuery,
@@ -99,11 +111,40 @@ export default function PaidInvoices() {
           sortDirection,
           filters,
         });
-      } else {
-        console.error("Error fetching paid invoices:", result.error);
+
+        if (!result.error) {
+          setInvoices(result.data);
+          setTotalCount(result.totalCount);
+          paidInvoicesCacheService.setCachedList(
+            cacheKey,
+            result.data,
+            result.totalCount
+          );
+
+          // Prefetch next page
+          prefetchPaidInvoicesPage({
+            page,
+            pageSize,
+            searchQuery,
+            sortField,
+            sortDirection,
+            filters,
+          });
+        } else {
+          setError(result.error.message || "Failed to load invoices");
+          toast.error("Failed to load data", {
+            description: result.error.message,
+          });
+        }
+      } catch (err: any) {
+        setError(err.message || "An unexpected error occurred");
+        toast.error("Failed to load data", {
+          description: err.message,
+        });
       }
 
       setLoading(false);
+      setIsChangingPage(false);
     },
     [cacheKey, page, pageSize, searchQuery, sortField, sortDirection, filters]
   );
@@ -121,7 +162,7 @@ export default function PaidInvoices() {
     }
   }, [cacheKey]);
 
-  // Save scroll position on unmount or navigation
+  // Save scroll position
   useEffect(() => {
     return () => {
       if (scrollContainerRef.current) {
@@ -132,6 +173,35 @@ export default function PaidInvoices() {
       }
     };
   }, [cacheKey]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isInputFocused = target.matches("input, textarea, select");
+
+      // Focus search: / or Ctrl+K
+      if ((e.key === "/" || (e.ctrlKey && e.key === "k")) && !isInputFocused) {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>("[data-search-input]")?.focus();
+      }
+
+      // Open filters: F
+      if (e.key === "f" && !isInputFocused) {
+        e.preventDefault();
+        setFilterDrawerOpen(true);
+      }
+
+      // Close drawer/viewer: Escape
+      if (e.key === "Escape") {
+        if (filterDrawerOpen) setFilterDrawerOpen(false);
+        if (invoiceId) handleCloseViewer();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filterDrawerOpen, invoiceId]);
 
   // Update URL params
   const updateParams = (updates: Record<string, string | null>) => {
@@ -172,8 +242,9 @@ export default function PaidInvoices() {
   const handlePageChange = useCallback(
     (newPage: number) => {
       updateParams({ page: newPage.toString() });
+      loadInvoices(true, true);
     },
-    [searchParams]
+    [searchParams, loadInvoices]
   );
 
   const handleApplyFilters = useCallback(
@@ -191,6 +262,9 @@ export default function PaidInvoices() {
         suppliers: newFilters.suppliers?.join(",") || null,
       };
       updateParams(updates);
+      toast.success("Filters applied", {
+        description: `Showing filtered results`,
+      });
     },
     [searchParams]
   );
@@ -208,7 +282,19 @@ export default function PaidInvoices() {
       statuses: null,
       suppliers: null,
     });
+    toast.info("Filters cleared");
   }, [searchParams]);
+
+  const handleRemoveFilter = useCallback(
+    (key: string, value: string) => {
+      const current = filters[key as keyof PaidInvoicesFilters];
+      if (Array.isArray(current)) {
+        const updated = current.filter((v) => v !== value);
+        updateParams({ [key]: updated.length > 0 ? updated.join(",") : null, page: "0" });
+      }
+    },
+    [filters, searchParams]
+  );
 
   const handleInvoiceClick = useCallback(
     (id: string) => {
@@ -221,7 +307,15 @@ export default function PaidInvoices() {
     updateParams({ invoiceId: null });
   }, [searchParams]);
 
+  const handleNavigateInvoice = useCallback(
+    (id: string) => {
+      updateParams({ invoiceId: id });
+    },
+    [searchParams]
+  );
+
   const totalPages = Math.ceil(totalCount / pageSize);
+  const invoiceIds = invoices.map((inv) => inv.id);
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -234,6 +328,9 @@ export default function PaidInvoices() {
         pageSize={pageSize}
         onPageSizeChange={handlePageSizeChange}
         onOpenFilters={() => setFilterDrawerOpen(true)}
+        activeFiltersCount={activeFiltersCount}
+        activeFilterChips={activeFilterChips}
+        onRemoveFilter={handleRemoveFilter}
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
@@ -246,6 +343,8 @@ export default function PaidInvoices() {
           pageSize={pageSize}
           onPageChange={handlePageChange}
           onInvoiceClick={handleInvoiceClick}
+          isChangingPage={isChangingPage}
+          onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
         />
       </div>
 
@@ -261,6 +360,8 @@ export default function PaidInvoices() {
         invoiceId={invoiceId}
         open={!!invoiceId}
         onOpenChange={(open) => !open && handleCloseViewer()}
+        invoiceIds={invoiceIds}
+        onNavigate={handleNavigateInvoice}
       />
     </div>
   );
