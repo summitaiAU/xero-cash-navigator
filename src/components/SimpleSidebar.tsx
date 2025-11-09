@@ -164,8 +164,8 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
             icon={CheckCircle}
             label="Paid"
             count={paidCount}
-            active={viewState === "paid" && location.pathname === "/dashboard"}
-            onClick={() => navigate("/dashboard?view=paid")}
+            active={location.pathname === "/invoices/paid"}
+            onClick={() => navigate("/invoices/paid")}
           />
           <Btn
             icon={Flag}

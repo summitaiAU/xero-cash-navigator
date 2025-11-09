@@ -13,6 +13,7 @@ import { AppLayout } from "./layouts/AppLayout";
 
 const Dashboard = lazy(() => import("./pages/Dashboard").then(module => ({ default: module.Dashboard })));
 const Review = lazy(() => import("./pages/Review"));
+const PaidInvoices = lazy(() => import("./pages/PaidInvoices"));
 const Index = lazy(() => import("./pages/Index"));
 const Auth = lazy(() => import("./pages/Auth"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
@@ -46,6 +47,7 @@ function App() {
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<Dashboard />} />
                   <Route path="review" element={<Review />} />
+                  <Route path="invoices/paid" element={<PaidInvoices />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
