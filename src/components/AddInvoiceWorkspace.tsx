@@ -51,6 +51,7 @@ interface LineItem {
   quantity: number;
   unit_price: number;
   gst_included: boolean;
+  gst_exempt: boolean;
   account_code: string;
   line_total_ex_gst: number;
   line_gst: number;
@@ -97,17 +98,27 @@ const calculateLineItem = (item: Partial<LineItem>): LineItem => {
   const quantity = item.quantity || 0;
   const unitPrice = item.unit_price || 0;
   const gstIncluded = item.gst_included ?? true;
+  const gstExempt = item.gst_exempt ?? false;
 
   let line_total_inc_gst = quantity * unitPrice;
   let line_gst = 0;
   let line_total_ex_gst = 0;
 
-  if (gstIncluded) {
-    line_gst = line_total_inc_gst / 11;
+  // Priority 1: Check if GST Exempt
+  if (gstExempt) {
+    // GST Exempt: No GST, ex-GST = inc-GST
+    line_gst = 0;
+    line_total_ex_gst = line_total_inc_gst;
+  }
+  // Priority 2: Check if GST Included (only if not exempt)
+  else if (gstIncluded) {
+    // GST is included in the price
+    line_gst = line_total_inc_gst / 11; // 10% of ex-GST amount
     line_total_ex_gst = line_total_inc_gst - line_gst;
   } else {
+    // GST is NOT included in the price
     line_total_ex_gst = line_total_inc_gst;
-    line_gst = line_total_ex_gst * 0.1;
+    line_gst = line_total_ex_gst * 0.1; // 10% GST
     line_total_inc_gst = line_total_ex_gst + line_gst;
   }
 
@@ -117,6 +128,7 @@ const calculateLineItem = (item: Partial<LineItem>): LineItem => {
     quantity,
     unit_price: unitPrice,
     gst_included: gstIncluded,
+    gst_exempt: gstExempt,
     account_code: item.account_code || "",
     line_total_ex_gst: Math.round(line_total_ex_gst * 100) / 100,
     line_gst: Math.round(line_gst * 100) / 100,
@@ -264,6 +276,7 @@ export const AddInvoiceWorkspace = ({
               quantity: 1,
               unit_price: 0,
               gst_included: true,
+              gst_exempt: false,
             }),
           ];
         }
@@ -309,6 +322,7 @@ export const AddInvoiceWorkspace = ({
       quantity: 1,
       unit_price: 0,
       gst_included: true,
+      gst_exempt: false,
     });
 
     setDraftInvoice({
@@ -995,33 +1009,54 @@ export const AddInvoiceWorkspace = ({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              <Checkbox
-                                id={`gst_${idx}`}
-                                checked={item.gst_included}
-                                onCheckedChange={(checked) =>
-                                  updateLineItem(idx, "gst_included", checked === true)
-                                }
-                              />
-                              <Label htmlFor={`gst_${idx}`} className="text-xs cursor-pointer">
-                                GST Included
-                              </Label>
-                            </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`gst_${idx}`}
+                        checked={item.gst_included}
+                        disabled={item.gst_exempt}
+                        onCheckedChange={(checked) =>
+                          updateLineItem(idx, "gst_included", checked === true)
+                        }
+                      />
+                      <Label htmlFor={`gst_${idx}`} className="text-xs cursor-pointer">
+                        GST Included
+                      </Label>
+                    </div>
 
-                            <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
-                              <div className="flex justify-between">
-                                <span>Ex GST:</span>
-                                <span>${item.line_total_ex_gst.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>GST:</span>
-                                <span>${item.line_gst.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between font-medium">
-                                <span>Inc GST:</span>
-                                <span>${item.line_total_inc_gst.toFixed(2)}</span>
-                              </div>
-                            </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id={`gst_exempt_${idx}`}
+                        checked={item.gst_exempt}
+                        onCheckedChange={(checked) =>
+                          updateLineItem(idx, "gst_exempt", checked === true)
+                        }
+                      />
+                      <Label htmlFor={`gst_exempt_${idx}`} className="text-xs cursor-pointer">
+                        GST Exempt
+                      </Label>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground space-y-1 pt-2 border-t">
+                    {item.gst_exempt && (
+                      <div className="text-amber-600 font-medium mb-1">
+                        GST Exempt
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span>Ex GST:</span>
+                      <span>${item.line_total_ex_gst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>GST:</span>
+                      <span>${item.line_gst.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-medium">
+                      <span>Inc GST:</span>
+                      <span>${item.line_total_inc_gst.toFixed(2)}</span>
+                    </div>
+                  </div>
                           </div>
                         ))}
                       </div>
