@@ -25,8 +25,7 @@ export const FlagInvoiceButton: React.FC<FlagInvoiceButtonProps> = ({
       <Button
         onClick={() => setShowModal(true)}
         variant="outline"
-        size="lg"
-        className="w-full border-destructive/30 text-destructive hover:bg-destructive/10 hover:border-destructive/50"
+        className="w-full border-amber-200 text-amber-700 hover:bg-amber-50"
       >
         <Flag className="h-4 w-4 mr-2" />
         Flag Invoice

@@ -8,83 +8,83 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Microsoft/Stripe-inspired calm, professional palette */
-    --background: 220 14% 98%;  /* #F9FAFB */
-    --foreground: 220 15% 10%;  /* #111827 */
+    /* Modern calming palette with purple accents */
+    --background: 220 15% 97%;
+    --foreground: 220 15% 15%;
     
-    --card: 0 0% 100%;  /* #FFFFFF */
-    --card-foreground: 220 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 220 15% 10%;
+    --popover-foreground: 220 15% 15%;
     
-    --primary: 217 91% 60%;  /* #2563EB - Primary blue for actions */
+    --primary: 25 85% 50%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 220 14% 96%;  /* #F3F4F6 */
-    --secondary-foreground: 220 9% 46%;  /* #6B7280 */
+    --secondary: 25 20% 96%;
+    --secondary-foreground: 25 85% 25%;
     
-    --muted: 220 14% 96%;  /* #F3F4F6 */
-    --muted-foreground: 220 9% 46%;  /* #6B7280 */
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 50%;
     
-    --accent: 25 95% 53%;  /* #F97316 - Accent orange for payment emphasis */
+    --accent: 25 85% 50%;
     --accent-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;  /* #EF4444 */
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
     
-    --success: 142 76% 36%;  /* #10B981 */
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     
-    --warning: 38 92% 50%;  /* #FBBF24 */
-    --warning-foreground: 220 15% 10%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     
-    --info: 217 91% 60%;  /* #2563EB */
+    --info: 211 96% 48%;
     --info-foreground: 0 0% 100%;
     
     /* Blue for links and secondary actions */
-    --blue-primary: 217 91% 60%;  /* #2563EB */
-    --blue-hover: 217 91% 70%;  /* #3B82F6 */
-    --blue-light: 214 95% 93%;  /* #DBEAFE */
+    --blue-primary: 217 91% 60%;
+    --blue-hover: 217 91% 55%;
+    --blue-light: 217 91% 96%;
     
-    --border: 220 13% 91%;  /* #E5E7EB */
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --border: 220 15% 88%;
+    --input: 220 15% 90%;
+    --ring: 25 85% 50%;
     
     --radius: 0.75rem;
     --radius-lg: 1rem;
     
-    /* Professional gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(25, 95%, 53%), hsl(25, 95%, 58%));  /* #F97316 to #FB923C */
-    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 14%, 98%));
-    --gradient-orange-glow: radial-gradient(circle at center, hsl(25, 95%, 53%, 0.15), transparent 70%);
+    /* Orange-themed gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(25, 85%, 50%), hsl(25, 85%, 40%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0, 0%, 100%), hsl(220, 15%, 98%));
+    --gradient-orange-glow: radial-gradient(circle at center, hsl(25, 85%, 50%, 0.15), transparent 70%);
     
-    /* Refined shadow system - subtle and professional */
-    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-medium: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-large: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    /* Enhanced shadow system */
+    --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+    --shadow-large: 0 12px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+    --shadow-hover: 0 8px 20px rgba(0, 0, 0, 0.12), 0 3px 6px rgba(0, 0, 0, 0.06);
+    --shadow-elevated: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.03);
     
     /* Smooth transitions */
     --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     
-    /* Navigation rail - using accent orange */
-    --nav-rail: 25 95% 53%;
-    --nav-rail-foreground: 0 0% 100%;
-    --nav-rail-hover: 25 95% 58%;
+    /* Navigation rail */
+    --nav-rail: 25 85% 35%;
+    --nav-rail-foreground: 25 20% 95%;
+    --nav-rail-hover: 25 85% 45%;
     
     /* Console workspace colors */
-    --console-bg: 220 14% 98%;  /* #F9FAFB */
-    --pdf-bg: 0 0% 100%;  /* #FFFFFF */
-    --section-border: 220 13% 91%;  /* #E5E7EB */
+    --console-bg: 220 15% 97%;
+    --pdf-bg: 220 15% 96%;
+    --section-border: 220 15% 88%;
     
     /* Status colors */
-    --status-paid: 142 76% 36%;  /* #10B981 */
-    --status-review: 38 92% 50%;  /* #FBBF24 */
-    --status-ready: 217 91% 60%;  /* #2563EB */
-    --status-flagged: 0 84% 60%;  /* #EF4444 */
+    --status-paid: 142 71% 45%;
+    --status-review: 38 92% 50%;
+    --status-ready: 25 85% 50%;
+    --status-flagged: 0 72% 51%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -106,7 +106,7 @@ All colors MUST be HSL.
     --popover: 220 20% 15%;
     --popover-foreground: 220 15% 95%;
     
-    --primary: 217 91% 65%;  /* Lighter blue for dark mode */
+    --primary: 25 85% 55%;
     --primary-foreground: 0 0% 100%;
     
     --secondary: 220 20% 18%;
@@ -115,25 +115,25 @@ All colors MUST be HSL.
     --muted: 220 20% 18%;
     --muted-foreground: 220 10% 60%;
     
-    --accent: 25 95% 60%;  /* Lighter orange for dark mode */
+    --accent: 25 85% 55%;
     --accent-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 65%;
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
     
-    --success: 142 76% 45%;
+    --success: 142 71% 50%;
     --success-foreground: 0 0% 100%;
     
     --warning: 38 92% 55%;
     --warning-foreground: 0 0% 100%;
     
-    --info: 217 91% 65%;
+    --info: 211 96% 55%;
     --info-foreground: 0 0% 100%;
     
     /* Blue for links and secondary actions (dark mode) */
-    --blue-primary: 217 91% 70%;
-    --blue-hover: 217 91% 75%;
-    --blue-light: 217 91% 25%;
+    --blue-primary: 217 91% 65%;
+    --blue-hover: 217 91% 60%;
+    --blue-light: 217 91% 20%;
     
     --border: 220 20% 22%;
     --input: 220 20% 22%;
@@ -185,11 +185,11 @@ All colors MUST be HSL.
 
 @layer components {
   .dashboard-card {
-    @apply bg-card border border-border rounded-2xl p-6 shadow-soft transition-smooth;
+    @apply bg-card border border-border rounded-[var(--radius-lg)] shadow-medium transition-smooth;
   }
   
   .dashboard-card:hover {
-    @apply shadow-medium;
+    box-shadow: var(--shadow-hover);
   }
 
   .section-header {
@@ -213,20 +213,11 @@ All colors MUST be HSL.
   }
   
   .upload-area {
-    @apply border-2 border-dashed rounded-2xl p-8 text-center transition-smooth cursor-pointer;
-    border-color: hsl(38 92% 50% / 0.4);  /* #FBBF24 with 40% opacity */
-    background-color: hsl(48 96% 97%);  /* #FFFBEB - pale amber */
-  }
-  
-  .upload-area:hover {
-    border-color: hsl(38 92% 50% / 0.6);  /* #FBBF24 with 60% opacity */
-    transform: scale(1.01);
+    @apply border-2 border-dashed border-primary/30 rounded-[var(--radius-lg)] p-8 text-center hover:border-primary/50 hover:bg-primary/5 transition-smooth cursor-pointer;
   }
   
   .upload-area.dragover {
-    border-color: hsl(37 91% 55%);  /* #F59E0B */
-    background-color: hsl(48 96% 95%);
-    box-shadow: 0 0 0 3px hsl(37 91% 55% / 0.1);
+    @apply border-primary bg-primary/10;
   }
   
   .swipe-card {
@@ -234,12 +225,7 @@ All colors MUST be HSL.
   }
   
   .btn-primary {
-    @apply text-primary-foreground hover:shadow-md focus:ring-2 focus:ring-primary/30 transition-smooth;
-    background: linear-gradient(135deg, hsl(25, 95%, 53%), hsl(25, 95%, 58%));
-  }
-  
-  .btn-primary:hover {
-    background: linear-gradient(135deg, hsl(25, 95%, 58%), hsl(25, 95%, 63%));
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md focus:ring-2 focus:ring-primary/30 transition-smooth;
   }
   
   .btn-success {
@@ -267,12 +253,7 @@ All colors MUST be HSL.
   }
   
   .command-bar {
-    @apply flex items-center gap-2 px-6 py-3 bg-card border border-border rounded-lg shadow-soft;
-  }
-  
-  /* Focus ring styling - consistent across all interactive elements */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue focus:ring-offset-2;
+    @apply flex items-center gap-2 px-4 py-3 bg-card border border-border rounded-[var(--radius-lg)] shadow-soft;
   }
   
   /* Review page styles */
