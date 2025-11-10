@@ -133,28 +133,28 @@ export function PaidInvoicesTable({
 
       {/* Table */}
       <div className="flex-1 min-h-0 overflow-auto">
-        <Table noContainer>
+        <Table noContainer className="table-fixed">
           <TableHeader className="sticky top-0 bg-muted/95 backdrop-blur-sm border-b-2 border-border z-10">
             <TableRow>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Invoice #
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Status
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Supplier
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Entity
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Invoice Date
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Date Paid
               </TableHead>
-              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-4 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Amount
               </TableHead>
             </TableRow>
@@ -170,7 +170,7 @@ export function PaidInvoicesTable({
                   if (e.key === "Enter") onInvoiceClick(invoice.id);
                 }}
               >
-                <TableCell className="px-6 py-5">
+                <TableCell className="px-4 py-5">
                   <button 
                     className="font-semibold text-[15px] text-blue hover:text-blue-hover hover:underline underline-offset-2 transition-colors"
                     onClick={(e) => {
@@ -181,22 +181,22 @@ export function PaidInvoicesTable({
                     {invoice.invoice_no || "—"}
                   </button>
                 </TableCell>
-                <TableCell className="px-6 py-5">
+                <TableCell className="px-4 py-5">
                   {getStatusBadge(invoice.status)}
                 </TableCell>
-                <TableCell className="px-6 py-5 max-w-[240px] truncate font-semibold text-foreground">
+                <TableCell className="px-4 py-5 truncate font-semibold text-foreground">
                   {invoice.supplier_name || "—"}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-sm text-muted-foreground">
+                <TableCell className="px-4 py-5 text-sm text-muted-foreground">
                   {invoice.entity || "—"}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-right text-sm text-muted-foreground tabular-nums">
+                <TableCell className="px-4 py-5 text-right text-sm text-muted-foreground tabular-nums">
                   {formatDate(invoice.invoice_date)}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-right text-sm text-muted-foreground tabular-nums">
+                <TableCell className="px-4 py-5 text-right text-sm text-muted-foreground tabular-nums">
                   {formatDate(invoice.paid_date)}
                 </TableCell>
-                <TableCell className="px-6 py-5 text-right font-semibold text-foreground tabular-nums">
+                <TableCell className="px-4 py-5 text-right font-semibold text-foreground tabular-nums">
                   {formatCurrency(invoice.total_amount)}
                 </TableCell>
               </TableRow>
