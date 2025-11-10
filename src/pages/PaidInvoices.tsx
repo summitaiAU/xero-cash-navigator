@@ -19,17 +19,22 @@ import {
   ExportColumn,
   generateFilename
 } from "@/services/exportService";
+import { telemetry } from "@/services/telemetry";
+import { ApiErrorLogger } from "@/services/apiErrorLogger";
 
 export default function PaidInvoices() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isChangingPage, setIsChangingPage] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const requestIdRef = useRef(0);
+  const mountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Parse URL params
   const page = parseInt(searchParams.get("page") || "0", 10);
@@ -84,6 +89,20 @@ export default function PaidInvoices() {
     filters.statuses.forEach(st => activeFilterChips.push({ key: "statuses", label: "Status", value: st }));
   }
 
+  // Defer initial data fetching to allow previous page cleanup
+  useEffect(() => {
+    mountTimeoutRef.current = setTimeout(() => {
+      console.info('[PaidInvoices] Initial load delay complete');
+      setIsInitialLoad(false);
+    }, 250); // 250ms delay for graceful transition
+
+    return () => {
+      if (mountTimeoutRef.current) {
+        clearTimeout(mountTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Generate cache key
   const cacheKey = paidInvoicesCacheService.generateCacheKey({
     page,
@@ -94,9 +113,17 @@ export default function PaidInvoices() {
     filters,
   });
 
-  // Fetch invoices with caching
+  // Fetch invoices with caching and request coordination
   const loadInvoices = useCallback(
     async (showLoading = true, isPageChange = false) => {
+      // Don't fetch during initial load period
+      if (isInitialLoad) {
+        return;
+      }
+
+      const myRequestId = ++requestIdRef.current;
+      const t0 = performance.now();
+
       if (showLoading && !isPageChange) setLoading(true);
       if (isPageChange) setIsChangingPage(true);
       setError(null);
@@ -104,9 +131,29 @@ export default function PaidInvoices() {
       // Check cache first
       const cached = paidInvoicesCacheService.getCachedList(cacheKey);
       if (cached) {
+        console.info('[PaidInvoices] Using cached data', cacheKey);
+        telemetry.logUIEvent('paid_cache_hit', {
+          key: cacheKey,
+          rows: cached.data.length,
+        });
+
+        // Check if request is still valid
+        if (myRequestId !== requestIdRef.current) {
+          console.info('[PaidInvoices] Request superseded (cache)', { myRequestId });
+          telemetry.logUIEvent('paid_load_aborted', { myRequestId, reason: 'cache_superseded' });
+          return;
+        }
+
         setInvoices(cached.data);
         setTotalCount(cached.totalCount);
         if (showLoading && !isPageChange) setLoading(false);
+        
+        telemetry.logPerf('paid_load_first_data', {
+          duration: performance.now() - t0,
+          rows: cached.data.length,
+          page,
+          cached: true,
+        });
       }
 
       // Fetch fresh data
@@ -120,6 +167,13 @@ export default function PaidInvoices() {
           filters,
         });
 
+        // Check if request is still valid before updating state
+        if (myRequestId !== requestIdRef.current) {
+          console.info('[PaidInvoices] Request superseded (fetch)', { myRequestId });
+          telemetry.logUIEvent('paid_load_aborted', { myRequestId, reason: 'fetch_superseded' });
+          return;
+        }
+
         if (!result.error) {
           setInvoices(result.data);
           setTotalCount(result.totalCount);
@@ -128,6 +182,13 @@ export default function PaidInvoices() {
             result.data,
             result.totalCount
           );
+          
+          telemetry.logPerf('paid_load_first_data', {
+            duration: performance.now() - t0,
+            rows: result.data.length,
+            page,
+            cached: false,
+          });
 
           // Prefetch next page
           prefetchPaidInvoicesPage({
@@ -145,6 +206,14 @@ export default function PaidInvoices() {
           });
         }
       } catch (err: any) {
+        console.error('[PaidInvoices] Error loading invoices:', err);
+        
+        // Log error to audit system
+        await ApiErrorLogger.logSupabaseError('select', err, {
+          table: 'invoices',
+          userContext: 'paid_invoices_page',
+        });
+
         setError(err.message || "An unexpected error occurred");
         toast.error("Failed to load data", {
           description: err.message,
@@ -154,7 +223,7 @@ export default function PaidInvoices() {
       setLoading(false);
       setIsChangingPage(false);
     },
-    [cacheKey, page, pageSize, searchQuery, sortField, sortDirection, filters]
+    [cacheKey, page, pageSize, searchQuery, sortField, sortDirection, filters, isInitialLoad]
   );
 
   // Load invoices on mount and param changes
@@ -234,6 +303,7 @@ export default function PaidInvoices() {
 
   const handleSortChange = useCallback(
     (field: string, direction: "asc" | "desc") => {
+      telemetry.logUIEvent('paid_sort', { field, direction });
       updateParams({ sortBy: field, sortDir: direction, page: "0" });
     },
     [searchParams]
@@ -241,10 +311,11 @@ export default function PaidInvoices() {
 
   const handlePageSizeChange = useCallback(
     (size: number) => {
+      telemetry.logUIEvent('paid_pagesize_change', { oldSize: pageSize, newSize: size });
       localStorage.setItem("paidInvoicesPageSize", size.toString());
       updateParams({ pageSize: size.toString(), page: "0" });
     },
-    [searchParams]
+    [searchParams, pageSize]
   );
 
   const handlePageChange = useCallback(
@@ -257,6 +328,14 @@ export default function PaidInvoices() {
 
   const handleApplyFilters = useCallback(
     (newFilters: PaidInvoicesFilters) => {
+      telemetry.logUIEvent('paid_filter_apply', {
+        filters: newFilters,
+        hasDateRange: !!(newFilters.invoiceDateFrom || newFilters.invoiceDateTo),
+        hasPrice: !!(newFilters.priceMin || newFilters.priceMax),
+        entityCount: newFilters.entities?.length || 0,
+        supplierCount: newFilters.suppliers?.length || 0,
+      });
+
       const updates: Record<string, string | null> = {
         page: "0",
         invoiceDateFrom: newFilters.invoiceDateFrom || null,
@@ -325,6 +404,12 @@ export default function PaidInvoices() {
   const handleExport = useCallback(
     async (format: 'csv' | 'xlsx', columns: ExportColumn[], dateRange: { from?: string; to?: string }) => {
       try {
+        telemetry.logUIEvent('paid_export', {
+          format,
+          columnCount: columns.length,
+          hasFilters: Object.keys(filters).length > 0,
+        });
+
         toast.info('Preparing export...', {
           description: 'Fetching all invoices for export',
         });
@@ -361,7 +446,19 @@ export default function PaidInvoices() {
         toast.success('Export successful', {
           description: `Downloaded ${result.data.length} invoices as ${format.toUpperCase()}`,
         });
+
+        telemetry.logUIEvent('paid_export_success', {
+          format,
+          rowCount: result.data.length,
+        });
       } catch (err: any) {
+        console.error('[PaidInvoices] Export failed:', err);
+        
+        await ApiErrorLogger.logSupabaseError('export', err, {
+          table: 'invoices',
+          userContext: 'paid_invoices_export',
+        });
+
         toast.error('Export failed', {
           description: err.message || 'An unexpected error occurred',
         });
@@ -391,18 +488,28 @@ export default function PaidInvoices() {
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
-        <PaidInvoicesTable
-          invoices={invoices}
-          loading={loading}
-          currentPage={page}
-          totalPages={totalPages}
-          totalCount={totalCount}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onInvoiceClick={handleInvoiceClick}
-          isChangingPage={isChangingPage}
-          onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
-        />
+        {isInitialLoad ? (
+          <div className="p-8">
+            <div className="animate-pulse space-y-4">
+              <div className="h-12 bg-muted rounded" />
+              <div className="h-12 bg-muted rounded" />
+              <div className="h-12 bg-muted rounded" />
+            </div>
+          </div>
+        ) : (
+          <PaidInvoicesTable
+            invoices={invoices}
+            loading={loading}
+            currentPage={page}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onInvoiceClick={handleInvoiceClick}
+            isChangingPage={isChangingPage}
+            onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
+          />
+        )}
       </div>
 
       <PaidInvoicesFilterDrawer

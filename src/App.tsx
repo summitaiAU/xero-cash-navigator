@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,6 +7,9 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { RealtimeProvider } from "@/contexts/RealtimeContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { RoutePerfMonitor } from "@/components/RoutePerfMonitor";
+import { ApiErrorLogger } from "@/services/apiErrorLogger";
 import "./App.css";
 
 import { AppLayout } from "./layouts/AppLayout";
@@ -25,13 +28,44 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient();
 
 function App() {
+  // Global error handlers
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('[Global] Uncaught error:', event.error);
+      ApiErrorLogger.logError({
+        endpoint: 'window/error',
+        method: 'WINDOW_ERROR',
+        error: event.error,
+      }).catch(err => console.error('[Global] Failed to log error:', err));
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      console.error('[Global] Unhandled promise rejection:', event.reason);
+      ApiErrorLogger.logError({
+        endpoint: 'window/unhandledrejection',
+        method: 'PROMISE_REJECTION',
+        error: event.reason,
+      }).catch(err => console.error('[Global] Failed to log rejection:', err));
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <RealtimeProvider>
           <TooltipProvider>
             <BrowserRouter>
-              <Routes>
+              <RoutePerfMonitor />
+              <ErrorBoundary>
+                <Routes>
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPasswordVerify />} />
@@ -49,8 +83,9 @@ function App() {
                   <Route path="review" element={<Review />} />
                   <Route path="invoices/paid" element={<PaidInvoices />} />
                 </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundary>
             </BrowserRouter>
             <Toaster />
             <Sonner />

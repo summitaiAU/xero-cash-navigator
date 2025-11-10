@@ -20,6 +20,7 @@ import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { AttachmentViewer } from "@/components/AttachmentViewer";
 import { AddInvoiceWorkspace } from "@/components/AddInvoiceWorkspace";
+import { telemetry } from "@/services/telemetry";
 
 type View = "payable" | "paid" | "flagged";
 
@@ -94,6 +95,9 @@ export const Review: React.FC = () => {
     }
 
     const abortController = new AbortController();
+    const t0 = performance.now();
+    
+    telemetry.logUIEvent('review_email_load_start', { id: selectedEmailId });
     
     const loadEmailContentWithCancel = async (emailId: string) => {
       try {
@@ -101,15 +105,26 @@ export const Review: React.FC = () => {
         const { data, error: fetchError } = await fetchEmailContent(emailId);
 
         // Don't update state if aborted
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted) {
+          telemetry.logUIEvent('review_email_aborted', { id: emailId });
+          return;
+        }
 
         if (fetchError) {
           throw fetchError;
         }
 
         setEmailContent(data);
+        
+        telemetry.logPerf('review_email_first_data', {
+          duration: performance.now() - t0,
+          emailId,
+        });
       } catch (err) {
-        if (abortController.signal.aborted) return;
+        if (abortController.signal.aborted) {
+          telemetry.logUIEvent('review_email_aborted', { id: emailId });
+          return;
+        }
         console.error("Failed to load email content:", err);
         toast({
           title: "Unable to load email content",

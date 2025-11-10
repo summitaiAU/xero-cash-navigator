@@ -1,6 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types/invoice";
 import { paidInvoicesCacheService } from "./paidInvoicesCache";
+import { telemetry } from "./telemetry";
+import { ApiErrorLogger } from "./apiErrorLogger";
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
@@ -48,6 +50,8 @@ export async function fetchPaidInvoices({
   totalCount: number;
   error: Error | null;
 }> {
+  const t0 = performance.now();
+  
   try {
     const offset = page * pageSize;
 
@@ -115,12 +119,28 @@ export async function fetchPaidInvoices({
     const { data, error, count } = await query;
 
     if (error) {
+      console.error("Error fetching paid invoices:", error);
+      
+      await ApiErrorLogger.logSupabaseError('select', error, {
+        table: 'invoices',
+        userContext: 'paid_invoices_fetch',
+      });
+
       throw new Error(`Failed to fetch paid invoices: ${error.message}`);
     }
 
     if (!data) {
       return { data: [], totalCount: 0, error: null };
     }
+
+    const duration = performance.now() - t0;
+    telemetry.logPerf('paid_query', {
+      page,
+      pageSize,
+      rows: data?.length || 0,
+      duration,
+      hasFilters: Object.keys(filters).length > 0,
+    });
 
     // Map to Invoice interface
     const mappedInvoices: Invoice[] = data.map((invoice) => ({
@@ -209,6 +229,12 @@ export async function fetchPaidInvoices({
     return { data: mappedInvoices, totalCount: count || 0, error: null };
   } catch (error) {
     console.error("Error fetching paid invoices:", error);
+    
+    await ApiErrorLogger.logSupabaseError('select', error, {
+      table: 'invoices',
+      userContext: 'paid_invoices_fetch',
+    });
+
     return {
       data: [],
       totalCount: 0,
