@@ -32,10 +32,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { EmailAttachment } from "@/services/emailReviewService";
-import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { checkAndMarkEmailReviewed } from "@/services/emailReviewCompletionService";
+import { formatDateTimeShortSydney } from "@/lib/dateUtils";
 
 interface AddInvoiceWorkspaceProps {
   open: boolean;
@@ -747,7 +747,7 @@ export const AddInvoiceWorkspace = ({
                   {formatFileSize(selectedAttachment.size_bytes)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {format(new Date(selectedAttachment.created_at), "MMM d, yyyy h:mm a")}
+                  {formatDateTimeShortSydney(selectedAttachment.created_at)}
                 </span>
               </div>
             </div>

@@ -24,6 +24,7 @@ import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice'
 import { useToast } from '@/hooks/use-toast';
 import { useUserPresence } from '@/hooks/useUserPresence';
 import { ConflictWarning } from '@/components/ConflictWarning';
+import { formatDateSydney } from '@/lib/dateUtils';
 
 interface XeroSectionProps {
   invoice: Invoice;
@@ -147,12 +148,7 @@ const parseBankAccountDetails = (bankDetails?: string) => {
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric'
-  });
+  return formatDateSydney(dateString, 'dd/MM/yyyy');
 };
 
 const formatCurrency = (amount: number) => {

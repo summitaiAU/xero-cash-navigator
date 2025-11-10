@@ -8,9 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { fetchAttachmentById, EmailAttachment } from "@/services/emailReviewService";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { checkAndMarkEmailReviewed } from "@/services/emailReviewCompletionService";
+import { formatDateTimeShortSydney } from "@/lib/dateUtils";
 
 interface AttachmentViewerProps {
   attachmentId: string | null;
@@ -439,7 +439,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                   <span>•</span>
                   <span>{formatFileSize(attachment.size_bytes)}</span>
                   <span>•</span>
-                  <span>{format(new Date(attachment.created_at), "MMM d, yyyy h:mm a")}</span>
+                  <span>{formatDateTimeShortSydney(attachment.created_at)}</span>
                 </div>
               )}
             </div>

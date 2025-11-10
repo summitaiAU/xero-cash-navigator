@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { auditService } from '@/services/auditService';
 import { useAccessControl } from '@/hooks/useAccessControl';
 import { toast } from '@/components/ui/use-toast';
+import { formatDateTimeSydney } from '@/lib/dateUtils';
 
 interface AuditLog {
   id: string;
@@ -68,7 +69,7 @@ export const AuditLogViewer: React.FC = () => {
     const csv = [
       ['Timestamp', 'User', 'Action', 'Entity', 'Entity ID', 'Invoice Number', 'Details', 'IP Address'],
       ...logs.map(log => [
-        new Date(log.created_at).toLocaleString(),
+        formatDateTimeSydney(log.created_at),
         log.user_email,
         log.action_type,
         log.entity_type,
@@ -228,7 +229,7 @@ export const AuditLogViewer: React.FC = () => {
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {format(new Date(log.created_at), 'MMM dd, yyyy HH:mm:ss')}
+                      {formatDateTimeSydney(log.created_at)}
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">

@@ -5,8 +5,8 @@ import { attachmentCacheService } from "@/services/attachmentCache";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDateTimeShortSydney } from "@/lib/dateUtils";
 
 interface AttachmentsPanelProps {
   emailId: string | null;
@@ -253,9 +253,7 @@ export const AttachmentsPanel = ({ emailId, onAttachmentClick, onAddInvoice, onR
             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <span>{formatFileSize(attachment.size_bytes)}</span>
               <span>•</span>
-              <span>{format(new Date(attachment.created_at), "MMM d")}</span>
-              <span>•</span>
-              <span>{format(new Date(attachment.created_at), "h:mm a")}</span>
+              <span>{formatDateTimeShortSydney(attachment.created_at)}</span>
             </div>
             {attachment.unsupported_reason && (
               <div className="text-[10px] text-muted-foreground mt-0.5 italic truncate">

@@ -24,6 +24,7 @@ import {
   fetchUniqueEntities,
   fetchUniqueSuppliers,
 } from "@/services/paidInvoicesService";
+import { getSydneyNow, getDateStringSydney } from "@/lib/dateUtils";
 
 interface PaidInvoicesFilterDrawerProps {
   open: boolean;
@@ -76,29 +77,27 @@ export function PaidInvoicesFilterDrawer({
     if (!fromDate && !toDate) return "all";
     if (!fromDate || !toDate) return "custom";
 
-    const today = new Date();
+    const today = getSydneyNow();
     const presetRanges: Record<string, { from: string; to: string }> = {
       last7: {
-        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        to: new Date().toISOString().split("T")[0],
+        from: getDateStringSydney(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)),
+        to: getDateStringSydney(today),
       },
       last30: {
-        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        to: new Date().toISOString().split("T")[0],
+        from: getDateStringSydney(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)),
+        to: getDateStringSydney(today),
       },
       thisMonth: {
-        from: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0],
-        to: new Date().toISOString().split("T")[0],
+        from: getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 1)),
+        to: getDateStringSydney(today),
       },
       lastMonth: {
-        from: new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split("T")[0],
-        to: new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0],
+        from: getDateStringSydney(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
+        to: getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 0)),
       },
       thisQuarter: {
-        from: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1)
-          .toISOString()
-          .split("T")[0],
-        to: new Date().toISOString().split("T")[0],
+        from: getDateStringSydney(new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1)),
+        to: getDateStringSydney(today),
       },
     };
 
@@ -131,28 +130,28 @@ export function PaidInvoicesFilterDrawer({
       return;
     }
 
-    const today = new Date();
+    const today = getSydneyNow();
     let from = "";
-    let to = new Date().toISOString().split("T")[0];
+    let to = getDateStringSydney(today);
 
     switch (preset) {
       case "last7":
-        from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
         break;
       case "last30":
-        from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
         break;
       case "thisMonth":
-        from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 1));
         break;
       case "lastMonth":
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        from = lastMonth.toISOString().split("T")[0];
-        to = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0];
+        from = getDateStringSydney(lastMonth);
+        to = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
       case "thisQuarter":
         const quarter = Math.floor(today.getMonth() / 3);
-        from = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getFullYear(), quarter * 3, 1));
         break;
     }
 
@@ -171,28 +170,28 @@ export function PaidInvoicesFilterDrawer({
       return;
     }
 
-    const today = new Date();
+    const today = getSydneyNow();
     let from = "";
-    let to = new Date().toISOString().split("T")[0];
+    let to = getDateStringSydney(today);
 
     switch (preset) {
       case "last7":
-        from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000));
         break;
       case "last30":
-        from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000));
         break;
       case "thisMonth":
-        from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 1));
         break;
       case "lastMonth":
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-        from = lastMonth.toISOString().split("T")[0];
-        to = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0];
+        from = getDateStringSydney(lastMonth);
+        to = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
       case "thisQuarter":
         const quarter = Math.floor(today.getMonth() / 3);
-        from = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split("T")[0];
+        from = getDateStringSydney(new Date(today.getFullYear(), quarter * 3, 1));
         break;
     }
 
