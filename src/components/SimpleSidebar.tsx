@@ -72,7 +72,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
         {isCollapsed && count > 0 && (
           <span
             className={cn(
-              "absolute -top-0.5 -right-0.5 text-[10px] px-1 min-w-[16px] h-4 flex items-center justify-center rounded-full",
+              "absolute top-0 right-0 text-[10px] px-1 min-w-[16px] h-4 flex items-center justify-center rounded-full",
               active
                 ? "bg-primary-foreground text-primary"
                 : "bg-primary text-primary-foreground"
@@ -163,7 +163,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
           <Btn
             icon={CheckCircle}
             label="Paid"
-            count={paidCount}
+            count={0}
             active={location.pathname === "/invoices/paid"}
             onClick={() => navigate("/invoices/paid")}
           />
