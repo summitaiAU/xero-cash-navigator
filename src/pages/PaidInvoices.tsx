@@ -487,7 +487,7 @@ export default function PaidInvoices() {
         onRemoveFilter={handleRemoveFilter}
       />
 
-      <div ref={scrollContainerRef} className="flex-1">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto">
         {isInitialLoad ? (
           <div className="p-8">
             <div className="animate-pulse space-y-4">
