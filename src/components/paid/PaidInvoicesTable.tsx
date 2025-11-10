@@ -11,6 +11,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Invoice } from "@/types/invoice";
+import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
 interface PaidInvoicesTableProps {
   invoices: Invoice[];
@@ -27,11 +29,8 @@ interface PaidInvoicesTableProps {
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString("en-AU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const sydneyTime = toZonedTime(new Date(dateString), "Australia/Sydney");
+  return format(sydneyTime, "dd/MM/yyyy");
 };
 
 const formatCurrency = (amount: number) => {

@@ -8,6 +8,8 @@ import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
 import { fetchInvoiceById } from "@/services/paidInvoicesService";
+import { toZonedTime } from "date-fns-tz";
+import { format } from "date-fns";
 
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
@@ -19,11 +21,8 @@ interface PaidInvoiceViewerProps {
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return "—";
-  return new Date(dateString).toLocaleDateString("en-AU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const sydneyTime = toZonedTime(new Date(dateString), "Australia/Sydney");
+  return format(sydneyTime, "dd/MM/yyyy");
 };
 
 const formatCurrency = (amount: number) => {
@@ -117,7 +116,7 @@ export function PaidInvoiceViewer({
                   <div className="flex items-center gap-6 mt-2 text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">{invoice.supplier_name}</span>
                     <span className="text-border">|</span>
-                    <span>Paid: {formatDate(invoice.payment_made_at)}</span>
+                    <span>Paid: {formatDate(invoice.paid_date)}</span>
                     <span className="text-border">|</span>
                     <span className="font-semibold text-foreground tabular-nums">
                       {formatCurrency(invoice.total_amount)}
