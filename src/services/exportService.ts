@@ -67,7 +67,6 @@ export const DEFAULT_EXPORT_COLUMNS: ExportColumn[] = [
   { key: 'remittance_email', label: 'Remittance Email', enabled: false },
   { key: 'sender_email', label: 'Sender Email', enabled: false },
   { key: 'supplier_abn', label: 'Supplier ABN', enabled: false },
-  { key: 'xero_invoice_id', label: 'Xero Invoice ID', enabled: false },
 ];
 
 /**
