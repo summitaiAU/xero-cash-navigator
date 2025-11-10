@@ -121,7 +121,7 @@ export function PaidInvoicesTable({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden relative">
+    <div className="flex-1 flex flex-col relative min-h-0">
       {/* Pagination Loading Overlay */}
       {isChangingPage && (
         <div className="absolute inset-0 bg-card/70 backdrop-blur-[2px] flex items-center justify-center z-30 rounded-lg">
@@ -133,8 +133,8 @@ export function PaidInvoicesTable({
       )}
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <Table>
+      <div className="flex-1 min-h-0">
+        <Table noContainer>
           <TableHeader className="sticky top-0 bg-muted/95 backdrop-blur-sm border-b-2 border-border z-10">
             <TableRow>
               <TableHead className="w-[140px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
