@@ -71,16 +71,16 @@ export function PaidInvoicesFilterDrawer({
   }, [open]);
 
   useEffect(() => {
-    if (open) {
-      setLocalFilters(filters);
-      // Derive date preset from filters
-      if (!filters.invoiceDateFrom && !filters.invoiceDateTo) {
-        setDatePreset("all");
-      } else {
-        setDatePreset("custom");
-      }
+    if (!open) return;
+    
+    setLocalFilters(filters);
+    // Derive date preset from filters
+    if (!filters.invoiceDateFrom && !filters.invoiceDateTo) {
+      setDatePreset("all");
+    } else {
+      setDatePreset("custom");
     }
-  }, [open, filters]);
+  }, [open]);
 
   const handleDatePresetChange = (preset: string) => {
     setDatePreset(preset);
