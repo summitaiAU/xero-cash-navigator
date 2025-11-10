@@ -662,7 +662,7 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
             
-            <div className="h-full flex gap-6 px-4 lg:px-6 py-4">
+            <div className="h-full flex gap-6 px-8 lg:px-10 py-4">
               {hasNoInvoices ? (
                 /* No Invoices State */
                 <div className="w-full h-full flex items-center justify-center">
@@ -689,6 +689,8 @@ export const Dashboard: React.FC = () => {
                   <PDFViewer invoice={currentInvoice} />
                 </div>
 
+                {/* Subtle vertical divider */}
+                <div className="w-px h-full bg-border flex-shrink-0" />
 
                 {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
                 <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-console-bg">

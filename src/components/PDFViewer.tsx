@@ -16,9 +16,9 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   }, [invoice.id]);
 
   return (
-    <div className="dashboard-card p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="section-header mb-0">Invoice PDF</h3>
+    <div className="dashboard-card p-3 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border/50">
+        <h3 className="section-header mb-0 text-sm font-medium text-muted-foreground">Invoice PDF</h3>
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
@@ -46,7 +46,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
         )}
       </div>
 
-      <div className="mt-4 text-sm text-muted-foreground">
+      <div className="mt-3 pt-3 text-sm text-muted-foreground border-t border-border/50">
         <div className="flex justify-between">
           <span>Invoice: {invoice.invoice_number}</span>
           <span>{invoice.supplier}</span>
