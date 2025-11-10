@@ -41,6 +41,7 @@ const STATUS_OPTIONS = [
 ];
 
 const DATE_PRESETS = [
+  { value: "all", label: "Show All" },
   { value: "last7", label: "Last 7 days" },
   { value: "last30", label: "Last 30 days" },
   { value: "thisMonth", label: "This month" },
@@ -60,7 +61,7 @@ export function PaidInvoicesFilterDrawer({
   const [entities, setEntities] = useState<string[]>([]);
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [supplierSearch, setSupplierSearch] = useState("");
-  const [datePreset, setDatePreset] = useState("custom");
+  const [datePreset, setDatePreset] = useState("all");
 
   useEffect(() => {
     if (open) {
@@ -72,21 +73,37 @@ export function PaidInvoicesFilterDrawer({
   useEffect(() => {
     if (open) {
       setLocalFilters(filters);
+      // Derive date preset from filters
+      if (!filters.invoiceDateFrom && !filters.invoiceDateTo) {
+        setDatePreset("all");
+      } else {
+        setDatePreset("custom");
+      }
     }
   }, [open, filters]);
 
   const handleDatePresetChange = (preset: string) => {
     setDatePreset(preset);
+    
+    if (preset === "all") {
+      setLocalFilters({ ...localFilters, invoiceDateFrom: undefined, invoiceDateTo: undefined });
+      return;
+    }
+    
+    if (preset === "custom") {
+      return;
+    }
+
     const today = new Date();
     let from = "";
-    let to = today.toISOString().split("T")[0];
+    let to = new Date().toISOString().split("T")[0];
 
     switch (preset) {
       case "last7":
-        from = new Date(today.setDate(today.getDate() - 7)).toISOString().split("T")[0];
+        from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         break;
       case "last30":
-        from = new Date(today.setDate(today.getDate() - 30)).toISOString().split("T")[0];
+        from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
         break;
       case "thisMonth":
         from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
@@ -100,8 +117,6 @@ export function PaidInvoicesFilterDrawer({
         const quarter = Math.floor(today.getMonth() / 3);
         from = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split("T")[0];
         break;
-      case "custom":
-        return;
     }
 
     setLocalFilters({ ...localFilters, invoiceDateFrom: from, invoiceDateTo: to });
@@ -114,40 +129,49 @@ export function PaidInvoicesFilterDrawer({
 
   const handleClear = () => {
     setLocalFilters({});
+    setDatePreset("all");
+    setSupplierSearch("");
     onClear();
     onOpenChange(false);
   };
 
-  const toggleStatus = (status: string) => {
-    const current = localFilters.statuses || ["PAID"];
-    const updated = current.includes(status)
-      ? current.filter((s) => s !== status)
-      : [...current, status];
-    setLocalFilters({ ...localFilters, statuses: updated });
+  const setStatusChecked = (status: string, checked: boolean) => {
+    const current = new Set(localFilters.statuses ?? []);
+    if (checked) {
+      current.add(status);
+    } else {
+      current.delete(status);
+    }
+    setLocalFilters({ ...localFilters, statuses: Array.from(current) });
   };
 
-  const toggleEntity = (entity: string) => {
-    const current = localFilters.entities || [];
-    const updated = current.includes(entity)
-      ? current.filter((e) => e !== entity)
-      : [...current, entity];
-    setLocalFilters({ ...localFilters, entities: updated });
+  const setEntityChecked = (entity: string, checked: boolean) => {
+    const current = new Set(localFilters.entities ?? []);
+    if (checked) {
+      current.add(entity);
+    } else {
+      current.delete(entity);
+    }
+    setLocalFilters({ ...localFilters, entities: Array.from(current) });
   };
 
-  const toggleSupplier = (supplier: string) => {
-    const current = localFilters.suppliers || [];
-    const updated = current.includes(supplier)
-      ? current.filter((s) => s !== supplier)
-      : [...current, supplier];
-    setLocalFilters({ ...localFilters, suppliers: updated });
+  const setSupplierChecked = (supplier: string, checked: boolean) => {
+    const current = new Set(localFilters.suppliers ?? []);
+    if (checked) {
+      current.add(supplier);
+    } else {
+      current.delete(supplier);
+    }
+    setLocalFilters({ ...localFilters, suppliers: Array.from(current) });
   };
 
   const filteredSuppliers = suppliers.filter((s) =>
     s.toLowerCase().includes(supplierSearch.toLowerCase())
   );
 
-  const selectedEntities = localFilters.entities || [];
-  const selectedSuppliers = localFilters.suppliers || [];
+  const selectedStatuses = localFilters.statuses ?? [];
+  const selectedEntities = localFilters.entities ?? [];
+  const selectedSuppliers = localFilters.suppliers ?? [];
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -166,8 +190,8 @@ export function PaidInvoicesFilterDrawer({
                   <label key={option.value} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
                     <Checkbox
                       id={`status-${option.value}`}
-                      checked={(localFilters.statuses || ["PAID"]).includes(option.value)}
-                      onCheckedChange={() => toggleStatus(option.value)}
+                      checked={selectedStatuses.includes(option.value)}
+                      onCheckedChange={(checked) => setStatusChecked(option.value, checked === true)}
                     />
                     <span className="text-sm text-foreground">{option.label}</span>
                   </label>
@@ -303,7 +327,7 @@ export function PaidInvoicesFilterDrawer({
                   {selectedEntities.map((entity) => (
                     <button
                       key={entity}
-                      onClick={() => toggleEntity(entity)}
+                      onClick={() => setEntityChecked(entity, false)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-light text-blue text-xs font-medium hover:bg-blue-hover/20 transition-colors"
                     >
                       {entity}
@@ -322,7 +346,7 @@ export function PaidInvoicesFilterDrawer({
                       <label key={entity} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
                         <Checkbox
                           checked={selectedEntities.includes(entity)}
-                          onCheckedChange={() => toggleEntity(entity)}
+                          onCheckedChange={(checked) => setEntityChecked(entity, checked === true)}
                         />
                         <span className="text-sm text-foreground">{entity}</span>
                       </label>
@@ -349,7 +373,7 @@ export function PaidInvoicesFilterDrawer({
                   {selectedSuppliers.map((supplier) => (
                     <button
                       key={supplier}
-                      onClick={() => toggleSupplier(supplier)}
+                      onClick={() => setSupplierChecked(supplier, false)}
                       className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-light text-blue text-xs font-medium hover:bg-blue-hover/20 transition-colors"
                     >
                       {supplier}
@@ -368,7 +392,7 @@ export function PaidInvoicesFilterDrawer({
                       <label key={supplier} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded cursor-pointer">
                         <Checkbox
                           checked={selectedSuppliers.includes(supplier)}
-                          onCheckedChange={() => toggleSupplier(supplier)}
+                          onCheckedChange={(checked) => setSupplierChecked(supplier, checked === true)}
                         />
                         <span className="text-sm text-foreground">{supplier}</span>
                       </label>
