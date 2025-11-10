@@ -132,29 +132,29 @@ export function PaidInvoicesTable({
       )}
 
       {/* Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-auto">
         <Table noContainer>
           <TableHeader className="sticky top-0 bg-muted/95 backdrop-blur-sm border-b-2 border-border z-10">
             <TableRow>
-              <TableHead className="min-w-[120px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Invoice #
               </TableHead>
-              <TableHead className="min-w-[110px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Status
               </TableHead>
-              <TableHead className="min-w-[180px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Supplier
               </TableHead>
-              <TableHead className="min-w-[140px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground">
                 Entity
               </TableHead>
-              <TableHead className="min-w-[110px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Invoice Date
               </TableHead>
-              <TableHead className="min-w-[110px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Date Paid
               </TableHead>
-              <TableHead className="min-w-[120px] px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
+              <TableHead className="px-6 py-3 text-xs uppercase tracking-wider font-semibold text-muted-foreground text-right">
                 Amount
               </TableHead>
             </TableRow>
