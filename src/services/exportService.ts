@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Invoice } from '@/types/invoice';
+import { formatDateSydney } from '@/lib/dateUtils';
 
 export interface ExportColumn {
   key: string;
@@ -17,19 +18,19 @@ export const DEFAULT_EXPORT_COLUMNS: ExportColumn[] = [
     key: 'invoice_date', 
     label: 'Invoice Date', 
     enabled: true,
-    format: (value) => value ? new Date(value).toLocaleDateString('en-AU') : ''
+    format: (value) => value ? formatDateSydney(value) : ''
   },
   { 
     key: 'due_date', 
     label: 'Due Date', 
     enabled: true,
-    format: (value) => value ? new Date(value).toLocaleDateString('en-AU') : ''
+    format: (value) => value ? formatDateSydney(value) : ''
   },
   { 
-    key: 'payment_made_at', 
+    key: 'paid_date', 
     label: 'Date Paid', 
     enabled: true,
-    format: (value) => value ? new Date(value).toLocaleDateString('en-AU') : ''
+    format: (value) => value ? formatDateSydney(value) : ''
   },
   { 
     key: 'total_amount', 
@@ -122,7 +123,7 @@ export function exportToExcel(invoices: Invoice[], columns: ExportColumn[], file
       }
       
       // For dates, convert to Date objects
-      if (col.key === 'invoice_date' || col.key === 'due_date' || col.key === 'payment_made_at') {
+      if (col.key === 'invoice_date' || col.key === 'due_date' || col.key === 'paid_date') {
         return value ? new Date(value as string) : '';
       }
       
@@ -146,7 +147,7 @@ export function exportToExcel(invoices: Invoice[], columns: ExportColumn[], file
   // Format date columns
   const dateColumns = enabledColumns
     .map((col, idx) => ({ col, idx }))
-    .filter(({ col }) => col.key === 'invoice_date' || col.key === 'due_date' || col.key === 'payment_made_at')
+    .filter(({ col }) => col.key === 'invoice_date' || col.key === 'due_date' || col.key === 'paid_date')
     .map(({ idx }) => idx);
   
   // Apply date format to date columns
