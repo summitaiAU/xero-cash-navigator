@@ -132,7 +132,7 @@ export function PaidInvoicesTable({
       )}
 
       {/* Table */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-x-auto">
         <Table noContainer>
           <TableHeader className="sticky top-0 bg-muted/95 backdrop-blur-sm border-b-2 border-border z-10">
             <TableRow>
