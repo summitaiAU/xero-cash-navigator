@@ -646,9 +646,6 @@ export const Dashboard: React.FC = () => {
             canGoBack={currentIndex > 0}
             canGoNext={currentIndex < invoices.length - 1}
           />
-          <div className="px-4 py-1 text-xs text-muted-foreground">
-            Showing: {viewState.charAt(0).toUpperCase() + viewState.slice(1)} • {invoices.length} invoices
-          </div>
 
           {/* Content Area */}
           <div className="flex-1 overflow-hidden relative">
@@ -662,7 +659,7 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
             
-            <div className="h-full flex gap-6 px-8 lg:px-10 py-4">
+            <div className="h-full flex gap-1.5 px-2 lg:px-2.5 py-1">
               {hasNoInvoices ? (
                 /* No Invoices State */
                 <div className="w-full h-full flex items-center justify-center">
@@ -754,9 +751,6 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
           </div>
-
-      {/* User Presence */}
-      <UserPresenceIndicator invoiceId={currentInvoice?.id} />
 
       {/* Real-time notifications */}
       <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={handleRealtimeListUpdate} />
