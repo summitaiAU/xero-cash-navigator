@@ -188,6 +188,7 @@ export async function fetchPaidInvoices({
 
       // Timestamp fields
       payment_made_at: (invoice as any).payment_made_at || undefined,
+      paid_date: invoice.paid_date || undefined,
       partial_payment_made_at:
         (invoice as any).partial_payment_made_at || undefined,
       remittance_sent_at: (invoice as any).remittance_sent_at || undefined,
@@ -338,6 +339,7 @@ export async function fetchInvoiceById(
       invoice_date: data.invoice_date || "",
       currency: (data as any).currency || "AUD",
       payment_made_at: (data as any).payment_made_at || undefined,
+      paid_date: data.paid_date || undefined,
       partial_payment_made_at: (data as any).partial_payment_made_at || undefined,
       remittance_sent_at: (data as any).remittance_sent_at || undefined,
       flag_email_sent_at: (data as any).flag_email_sent_at || undefined,
