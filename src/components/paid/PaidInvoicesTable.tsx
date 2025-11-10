@@ -207,7 +207,7 @@ export function PaidInvoicesTable({
       </div>
 
       {/* Pagination */}
-      <div className="border-t bg-card p-4 flex items-center justify-between shadow-soft">
+      <div className="sticky bottom-0 z-20 border-t bg-card p-4 flex items-center justify-between shadow-soft">
         <div className="text-sm text-muted-foreground">
           Showing {startIndex} to {endIndex} of {totalCount} invoices
         </div>

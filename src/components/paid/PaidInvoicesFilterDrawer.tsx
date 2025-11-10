@@ -70,8 +70,10 @@ export function PaidInvoicesFilterDrawer({
   }, [open]);
 
   useEffect(() => {
-    setLocalFilters(filters);
-  }, [filters]);
+    if (open) {
+      setLocalFilters(filters);
+    }
+  }, [open, filters]);
 
   const handleDatePresetChange = (preset: string) => {
     setDatePreset(preset);
