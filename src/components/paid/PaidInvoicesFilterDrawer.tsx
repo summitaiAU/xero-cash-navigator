@@ -62,6 +62,7 @@ export function PaidInvoicesFilterDrawer({
   const [suppliers, setSuppliers] = useState<string[]>([]);
   const [supplierSearch, setSupplierSearch] = useState("");
   const [datePreset, setDatePreset] = useState("all");
+  const [paidDatePreset, setPaidDatePreset] = useState("all");
 
   useEffect(() => {
     if (open) {
@@ -70,16 +71,52 @@ export function PaidInvoicesFilterDrawer({
     }
   }, [open]);
 
+  // Helper to detect which preset matches the given dates
+  const detectPresetFromDates = (fromDate?: string, toDate?: string): string => {
+    if (!fromDate && !toDate) return "all";
+    if (!fromDate || !toDate) return "custom";
+
+    const today = new Date();
+    const presetRanges: Record<string, { from: string; to: string }> = {
+      last7: {
+        from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        to: new Date().toISOString().split("T")[0],
+      },
+      last30: {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        to: new Date().toISOString().split("T")[0],
+      },
+      thisMonth: {
+        from: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0],
+        to: new Date().toISOString().split("T")[0],
+      },
+      lastMonth: {
+        from: new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split("T")[0],
+        to: new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0],
+      },
+      thisQuarter: {
+        from: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1)
+          .toISOString()
+          .split("T")[0],
+        to: new Date().toISOString().split("T")[0],
+      },
+    };
+
+    for (const [preset, range] of Object.entries(presetRanges)) {
+      if (fromDate === range.from && toDate === range.to) {
+        return preset;
+      }
+    }
+
+    return "custom";
+  };
+
   useEffect(() => {
     if (!open) return;
     
     setLocalFilters(filters);
-    // Derive date preset from filters
-    if (!filters.invoiceDateFrom && !filters.invoiceDateTo) {
-      setDatePreset("all");
-    } else {
-      setDatePreset("custom");
-    }
+    setDatePreset(detectPresetFromDates(filters.invoiceDateFrom, filters.invoiceDateTo));
+    setPaidDatePreset(detectPresetFromDates(filters.paidDateFrom, filters.paidDateTo));
   }, [open]);
 
   const handleDatePresetChange = (preset: string) => {
@@ -122,6 +159,46 @@ export function PaidInvoicesFilterDrawer({
     setLocalFilters({ ...localFilters, invoiceDateFrom: from, invoiceDateTo: to });
   };
 
+  const handlePaidDatePresetChange = (preset: string) => {
+    setPaidDatePreset(preset);
+    
+    if (preset === "all") {
+      setLocalFilters({ ...localFilters, paidDateFrom: undefined, paidDateTo: undefined });
+      return;
+    }
+    
+    if (preset === "custom") {
+      return;
+    }
+
+    const today = new Date();
+    let from = "";
+    let to = new Date().toISOString().split("T")[0];
+
+    switch (preset) {
+      case "last7":
+        from = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        break;
+      case "last30":
+        from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+        break;
+      case "thisMonth":
+        from = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
+        break;
+      case "lastMonth":
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        from = lastMonth.toISOString().split("T")[0];
+        to = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split("T")[0];
+        break;
+      case "thisQuarter":
+        const quarter = Math.floor(today.getMonth() / 3);
+        from = new Date(today.getFullYear(), quarter * 3, 1).toISOString().split("T")[0];
+        break;
+    }
+
+    setLocalFilters({ ...localFilters, paidDateFrom: from, paidDateTo: to });
+  };
+
   const handleApply = () => {
     onApply(localFilters);
     onOpenChange(false);
@@ -130,6 +207,7 @@ export function PaidInvoicesFilterDrawer({
   const handleClear = () => {
     setLocalFilters({});
     setDatePreset("all");
+    setPaidDatePreset("all");
     setSupplierSearch("");
     onClear();
     onOpenChange(false);
@@ -246,35 +324,51 @@ export function PaidInvoicesFilterDrawer({
               )}
             </div>
 
-            {/* Date Paid Range */}
+            {/* Date Paid Range with Presets */}
             <div className="space-y-3">
               <Label className="text-sm font-semibold text-foreground">Date Paid</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label htmlFor="paid-date-from" className="text-xs text-muted-foreground">From</Label>
-                  <Input
-                    id="paid-date-from"
-                    type="date"
-                    value={localFilters.paidDateFrom || ""}
-                    onChange={(e) =>
-                      setLocalFilters({ ...localFilters, paidDateFrom: e.target.value })
-                    }
-                    className="rounded-lg"
-                  />
+              
+              <Select value={paidDatePreset} onValueChange={handlePaidDatePresetChange}>
+                <SelectTrigger className="rounded-lg">
+                  <SelectValue placeholder="Select range" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {paidDatePreset === "custom" && (
+                <div className="grid grid-cols-2 gap-3 mt-3">
+                  <div>
+                    <Label htmlFor="paid-date-from" className="text-xs text-muted-foreground">From</Label>
+                    <Input
+                      id="paid-date-from"
+                      type="date"
+                      value={localFilters.paidDateFrom || ""}
+                      onChange={(e) =>
+                        setLocalFilters({ ...localFilters, paidDateFrom: e.target.value })
+                      }
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="paid-date-to" className="text-xs text-muted-foreground">To</Label>
+                    <Input
+                      id="paid-date-to"
+                      type="date"
+                      value={localFilters.paidDateTo || ""}
+                      onChange={(e) =>
+                        setLocalFilters({ ...localFilters, paidDateTo: e.target.value })
+                      }
+                      className="rounded-lg"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="paid-date-to" className="text-xs text-muted-foreground">To</Label>
-                  <Input
-                    id="paid-date-to"
-                    type="date"
-                    value={localFilters.paidDateTo || ""}
-                    onChange={(e) =>
-                      setLocalFilters({ ...localFilters, paidDateTo: e.target.value })
-                    }
-                    className="rounded-lg"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Price Range */}

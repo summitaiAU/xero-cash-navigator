@@ -195,7 +195,7 @@ export function PaidInvoicesTable({
                   {formatDate(invoice.invoice_date)}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right text-sm text-muted-foreground tabular-nums">
-                  {formatDate(invoice.payment_made_at)}
+                  {formatDate(invoice.paid_date)}
                 </TableCell>
                 <TableCell className="px-6 py-5 text-right font-semibold text-foreground tabular-nums">
                   {formatCurrency(invoice.total_amount)}
