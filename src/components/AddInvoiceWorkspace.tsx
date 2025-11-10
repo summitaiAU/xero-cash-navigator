@@ -74,6 +74,7 @@ interface DraftInvoice {
   google_drive_link: string;
   sender_email: string;
   supplier_email_on_invoice: string;
+  supplier_abn: string;
   list_items: LineItem[];
 }
 
@@ -267,6 +268,7 @@ export const AddInvoiceWorkspace = ({
           google_drive_link: (selectedAttachment as any).google_drive_link || "",
           sender_email: senderEmail,
           supplier_email_on_invoice: "",
+          supplier_abn: (selectedAttachment as any).supplier_abn || "",
           list_items: ((selectedAttachment as any).list_items || []).map(
             (item: any) => calculateLineItem(item)
           ),
@@ -523,6 +525,7 @@ export const AddInvoiceWorkspace = ({
         google_drive_link: draftInvoice.google_drive_link || null,
         sender_email: draftInvoice.sender_email || null,
         supplier_email_on_invoice: draftInvoice.supplier_email_on_invoice?.trim() || null,
+        supplier_abn: draftInvoice.supplier_abn?.trim() || null,
         list_items: draftInvoice.list_items as any,
         status: "READY",
       };
@@ -1172,6 +1175,16 @@ export const AddInvoiceWorkspace = ({
                             value={draftInvoice.supplier_email_on_invoice}
                             onChange={(e) => updateField("supplier_email_on_invoice", e.target.value)}
                             placeholder="Email address from invoice (optional)"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="supplier_abn">Supplier ABN</Label>
+                          <Input
+                            id="supplier_abn"
+                            value={draftInvoice.supplier_abn}
+                            onChange={(e) => updateField("supplier_abn", e.target.value)}
+                            placeholder="Australian Business Number (optional)"
                           />
                         </div>
                       </div>
