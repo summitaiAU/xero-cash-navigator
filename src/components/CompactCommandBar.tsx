@@ -83,7 +83,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
   }, [searchValue, allInvoices]);
 
   return (
-    <div className="sticky top-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-4 bg-card border-b border-border">
+    <div className="sticky top-0 z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-6 bg-card border-b border-border shadow-soft">
       {/* Search Field with Results Dropdown */}
       <div className="flex-1 min-w-0 relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
@@ -92,7 +92,7 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
           placeholder="Search invoices…"
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
-          className="pl-10 h-9 bg-background"
+          className="pl-10 h-9 bg-background border-input focus:ring-2 focus:ring-blue focus:border-blue rounded-lg"
         />
         
         {/* Search Results Dropdown */}
@@ -142,9 +142,9 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
                 size="sm"
                 onClick={onRefresh}
                 disabled={loading}
-                className="hover:bg-muted"
+                className="hover:bg-muted/50"
               >
-                <RefreshCw className={cn('h-4 w-4 sm:mr-2', loading && 'animate-spin')} />
+                <RefreshCw className={cn('h-4 w-4 sm:mr-2 text-blue', loading && 'animate-spin')} />
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
             </TooltipTrigger>

@@ -646,8 +646,10 @@ export const Dashboard: React.FC = () => {
             canGoBack={currentIndex > 0}
             canGoNext={currentIndex < invoices.length - 1}
           />
-          <div className="px-4 py-1 text-xs text-muted-foreground">
-            Showing: {viewState.charAt(0).toUpperCase() + viewState.slice(1)} • {invoices.length} invoices
+          <div className="px-6 py-2 bg-muted/30 border-b border-border">
+            <p className="text-xs font-medium text-muted-foreground">
+              Showing: <span className="text-foreground">{viewState.charAt(0).toUpperCase() + viewState.slice(1)}</span> • <span className="text-foreground">{invoices.length}</span> invoices
+            </p>
           </div>
 
           {/* Content Area */}
@@ -662,20 +664,25 @@ export const Dashboard: React.FC = () => {
               </div>
             )}
             
-            <div className="h-full flex gap-6 px-4 lg:px-6 py-4">
+            <div className="h-full flex gap-6 px-6 py-6">
               {hasNoInvoices ? (
                 /* No Invoices State */
                 <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">
-                      No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
+                  <div className="text-center space-y-4">
+                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                      <svg className="w-8 h-8 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h2 className="text-xl font-semibold">
+                      No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices
                     </h2>
-                    <p className="text-muted-foreground mb-4">
+                    <p className="text-sm text-muted-foreground max-w-sm">
                       {viewState === "paid"
                         ? "No paid invoices are available to view."
                         : viewState === "flagged"
                           ? "No flagged invoices are available to view."
-                          : "No invoices are available for processing."}
+                          : "Awaiting new invoices for processing."}
                     </p>
                     {viewState === "paid" && (
                       <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>

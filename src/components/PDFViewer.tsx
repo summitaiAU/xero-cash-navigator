@@ -16,12 +16,12 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   }, [invoice.id]);
 
   return (
-    <div className="dashboard-card p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="section-header mb-0">Invoice PDF</h3>
+    <div className="dashboard-card flex flex-col h-full">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Invoice PDF</h3>
       </div>
 
-      <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
+      <div className="flex-1 relative rounded-b-2xl overflow-hidden bg-[hsl(var(--pdf-bg))]">
         {!pdfError ? (
           <iframe
             src={invoice.drive_embed_url}
@@ -38,7 +38,11 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
             <p className="text-muted-foreground mb-6">
               The PDF preview could not be loaded. You can still view it in a new tab.
             </p>
-            <Button onClick={() => window.open(invoice.drive_view_url, '_blank')}>
+            <Button 
+              onClick={() => window.open(invoice.drive_view_url, '_blank')}
+              variant="default"
+              className="bg-blue hover:bg-blue-hover"
+            >
               <ExternalLink className="h-4 w-4 mr-2" />
               Open PDF in New Tab
             </Button>
@@ -46,10 +50,10 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
         )}
       </div>
 
-      <div className="mt-4 text-sm text-muted-foreground">
-        <div className="flex justify-between">
-          <span>Invoice: {invoice.invoice_number}</span>
-          <span>{invoice.supplier}</span>
+      <div className="px-6 py-4 border-t border-border bg-muted/30">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Invoice: <span className="font-medium text-foreground">{invoice.invoice_number}</span></span>
+          <span className="font-medium text-foreground">{invoice.supplier}</span>
         </div>
       </div>
     </div>

@@ -407,15 +407,15 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   };
 
   return (
-    <div className="dashboard-card p-8 space-y-8">
-      <h3 className="section-header">Payment Confirmation</h3>
+    <div className="dashboard-card space-y-8">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide border-b border-border pb-4">Payment Confirmation</h3>
 
       {/* Guided Three-Step Layout */}
       <div className="space-y-8">
         {/* Step 1: Upload Remittance */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-light text-blue font-semibold text-sm">
               1
             </div>
             <Label className="text-base font-semibold">Upload Payment Proof</Label>
@@ -433,13 +433,13 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
           >
             {!imageData ? (
               <div className="space-y-5 py-4">
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Upload className="h-8 w-8 text-primary" />
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{ backgroundColor: 'hsl(38 92% 50% / 0.1)' }}>
+                  <Upload className="h-8 w-8" style={{ color: 'hsl(38 92% 50%)' }} />
                 </div>
                 <div className="text-center space-y-2">
                   <h4 className="text-lg font-semibold text-foreground">Drop your remittance file here</h4>
                   <p className="text-sm text-muted-foreground">Images or PDFs accepted • Click to browse files</p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-primary pt-2">
+                  <div className="flex items-center justify-center gap-2 text-xs pt-2" style={{ color: 'hsl(38 92% 50%)' }}>
                     <Camera className="h-4 w-4" />
                     <span>Tip: Press Ctrl+V to paste from clipboard</span>
                   </div>
@@ -484,7 +484,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         {/* Step 2: Choose Recipients */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-light text-blue font-semibold text-sm">
               2
             </div>
             <Label className="text-base font-semibold">Choose Recipients</Label>
@@ -545,25 +545,30 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
         {/* Step 3: Confirm & Send */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-light text-blue font-semibold text-sm">
               3
             </div>
             <Label className="text-base font-semibold">Confirm & Send</Label>
           </div>
           
-          {/* Invoice Summary Sticky Section */}
-          <div className="p-5 bg-secondary/50 rounded-[var(--radius-lg)] space-y-3 border border-border/50">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Invoice:</span>
-              <span className="font-medium text-foreground">{invoice.invoice_number}</span>
+          {/* Invoice Summary Card - Refined */}
+          <div className="p-6 bg-muted/30 rounded-2xl space-y-4 border border-border">
+            <div className="flex justify-between items-center pb-3 border-b border-border/50">
+              <span className="text-sm font-medium text-muted-foreground">Invoice Details</span>
             </div>
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>Supplier:</span>
-              <span className="font-medium text-foreground">{invoice.supplier}</span>
-            </div>
-            <div className="flex justify-between text-base font-semibold border-t border-border pt-3">
-              <span>Amount:</span>
-              <span className="text-primary">{formatCurrency(invoice.amount)}</span>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Invoice:</span>
+                <span className="font-semibold text-foreground">{invoice.invoice_number}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Supplier:</span>
+                <span className="font-semibold text-foreground truncate ml-4">{invoice.supplier}</span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-border/50">
+                <span className="text-base font-semibold">Amount:</span>
+                <span className="text-xl font-bold" style={{ color: 'hsl(25, 95%, 53%)' }}>{formatCurrency(invoice.amount)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -641,55 +646,65 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
         {/* Only show payment buttons if status is not PAID */}
         {invoice.status !== 'PAID' && (
-          <div className="space-y-3">
+          <div className="space-y-3 pt-4">
+            {/* Primary: Mark as Fully Paid & Send Remittance - Gradient orange */}
             <Button
-              variant="default"
               size="lg"
               onClick={handleMarkAsPaidWithRemittance}
               disabled={loading || !email}
-              className="w-full font-semibold"
+              className="w-full font-semibold text-white shadow-md hover:shadow-lg"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(25, 95%, 53%), hsl(25, 95%, 58%))',
+              }}
             >
               <Send className="h-4 w-4 mr-2" />
               {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
             </Button>
             
+            {/* Secondary: Mark as Fully Paid - White with border */}
             <Button
               variant="outline"
               size="lg"
               onClick={handleMarkAsPaidOnly}
               disabled={loading}
-              className="w-full"
+              className="w-full bg-card hover:bg-muted/50"
             >
               <Check className="h-4 w-4 mr-2" />
               Mark as Fully Paid
             </Button>
 
+            {/* Tertiary: Mark as Partially Paid - Solid orange */}
             <Button
-              variant="outline"
               size="lg"
               onClick={() => setShowPartialPaymentModal(true)}
               disabled={loading}
-              className="w-full"
+              className="w-full text-white"
+              style={{ 
+                backgroundColor: 'hsl(25, 95%, 53%)',
+              }}
             >
               <DollarSign className="h-4 w-4 mr-2" />
               Mark as Partially Paid
             </Button>
             
+            {/* Skip Link - Plain text style */}
             <Button
               variant="ghost"
               onClick={onSkip}
               disabled={loading}
-              className="w-full"
+              className="w-full text-blue hover:text-blue-hover"
             >
               Skip to Next Invoice
             </Button>
 
-            {/* Flag Invoice Button */}
+            {/* Flag Invoice Button - Red outline */}
             {onFlag && (
-              <FlagInvoiceButton
-                invoice={invoice}
-                onFlag={onFlag}
-              />
+              <div className="pt-2">
+                <FlagInvoiceButton
+                  invoice={invoice}
+                  onFlag={onFlag}
+                />
+              </div>
             )}
           </div>
         )}
