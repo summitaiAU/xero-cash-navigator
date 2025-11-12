@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -11,6 +11,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePerfMonitor } from "@/components/RoutePerfMonitor";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
 import { runtimeDebugContext } from "@/services/runtimeDebugContext";
+import { queryClient } from "@/services/queryClient";
 import "./App.css";
 
 import { AppLayout } from "./layouts/AppLayout";
@@ -24,9 +25,6 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPasswordVerify = lazy(() => import("./pages/ResetPasswordVerify"));
 const UpdatePassword = lazy(() => import("./pages/UpdatePassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
-
-// Create QueryClient outside component to prevent recreation on every render
-const queryClient = new QueryClient();
 
 function App() {
   // Global error handlers with runtime context and rate limiting

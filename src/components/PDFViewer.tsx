@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
@@ -10,7 +10,11 @@ interface PDFViewerProps {
   invoice: Invoice;
 }
 
-export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
+export interface PDFViewerHandle {
+  abort: () => void;
+}
+
+export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice }, ref) => {
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [shouldMount, setShouldMount] = useState(false);
@@ -18,6 +22,21 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadStartRef = useRef<number>(0);
   const timeoutRef = useRef<NodeJS.Timeout>();
+
+  // Expose abort() handle to parent
+  useImperativeHandle(ref, () => ({
+    abort() {
+      try {
+        console.info('[PDFViewer] Abort called - unloading iframe');
+        if (iframeRef.current) {
+          iframeRef.current.src = 'about:blank';
+        }
+      } finally {
+        setShouldMount(false);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      }
+    },
+  }));
 
   // Reset state when invoice changes and delay mounting
   useEffect(() => {
@@ -171,4 +190,4 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
       </div>
     </div>
   );
-};
+});

@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { PDFViewer } from "@/components/PDFViewer";
+import { PDFViewer, PDFViewerHandle } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
 import { fetchInvoiceById, prefetchInvoiceById } from "@/services/paidInvoicesService";
@@ -17,6 +17,7 @@ import { ApiErrorLogger } from "@/services/apiErrorLogger";
 import { runtimeDebugContext } from "@/services/runtimeDebugContext";
 import { stallMonitor } from "@/services/stallMonitor";
 import { pdfSafeModeService } from "@/services/pdfSafeMode";
+import { hardCleanupBeforeInvoiceNavigation } from "@/services/navigationCleanup";
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
   open: boolean;
@@ -55,7 +56,7 @@ const getStatusBadge = (status: string) => {
   );
 };
 
-type LoadingPhase = 'idle' | 'fetching-data' | 'data-ready' | 'mounting-pdf' | 'complete';
+type LoadingPhase = 'idle' | 'cleanup' | 'fetching-data' | 'data-ready' | 'mounting-pdf' | 'complete';
 
 export function PaidInvoiceViewer({
   invoiceId,
@@ -69,17 +70,29 @@ export function PaidInvoiceViewer({
   const [isNavigating, setIsNavigating] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('idle');
   const [isInCooldown, setIsInCooldown] = useState(false);
+  const [showPdf, setShowPdf] = useState(true);
   
   const { toast } = useToast();
+  
+  // Refs for cleanup hooks
+  const pdfRef = useRef<PDFViewerHandle | null>(null);
+  const fetchAbortRef = useRef<AbortController | null>(null);
+  const timersRef = useRef<Set<number>>(new Set());
   
   // Request coordination to prevent race conditions
   const requestIdRef = useRef<number>(0);
   const lastNavigationRef = useRef<number>(0);
   const navBurstRef = useRef<number[]>([]);
   const warningCountRef = useRef<number>(0);
-  const currentIndex = invoiceId ? invoiceIds.indexOf(invoiceId) : -1;
+  const invoiceIdsRef = useRef<string[]>(invoiceIds); // Stable ref for navigation after cache clear
+  const currentIndex = invoiceId ? invoiceIdsRef.current.indexOf(invoiceId) : -1;
   const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
+  const canGoNext = currentIndex >= 0 && currentIndex < invoiceIdsRef.current.length - 1;
+
+  // Update invoiceIdsRef when props change
+  useEffect(() => {
+    invoiceIdsRef.current = invoiceIds;
+  }, [invoiceIds]);
 
   // Start/stop stall monitor on mount/unmount
   useEffect(() => {
@@ -278,9 +291,9 @@ export function PaidInvoiceViewer({
       });
   }, [invoiceId, open, toast]);
 
-  // Navigation handler with strengthened circuit breaker
+  // Navigation handler with hard cleanup
   const handleNavigate = useCallback(
-    (targetInvoiceId: string, direction: "prev" | "next") => {
+    async (targetInvoiceId: string, direction: "prev" | "next") => {
       // Block during cooldown
       if (isInCooldown) {
         telemetry.logUIEvent("navigation_blocked_cooldown", { targetInvoiceId });
@@ -342,13 +355,13 @@ export function PaidInvoiceViewer({
       navBurstRef.current.push(now);
 
       // Validate invoiceIds array
-      if (!invoiceIds || invoiceIds.length === 0) {
+      if (!invoiceIdsRef.current || invoiceIdsRef.current.length === 0) {
         console.error("Navigation failed: invoiceIds array is empty");
         return;
       }
 
       // Validate target invoice exists
-      if (!invoiceIds.includes(targetInvoiceId)) {
+      if (!invoiceIdsRef.current.includes(targetInvoiceId)) {
         console.error("Navigation failed: target invoice not in list", targetInvoiceId);
         toast({
           title: "Navigation Error",
@@ -359,16 +372,36 @@ export function PaidInvoiceViewer({
       }
 
       setIsNavigating(true);
-      setLoadingPhase('fetching-data');
+      setLoadingPhase('cleanup');
+      setShowPdf(false);
+      
       runtimeDebugContext.update({ 
         lastNavDirection: direction, 
         lastNavAt: now,
         isNavigating: true,
+        loadingPhase: 'cleanup',
       });
+
+      // PERFORM HARD CLEANUP
+      await hardCleanupBeforeInvoiceNavigation({
+        abortPdf: () => pdfRef.current?.abort(),
+        abortRequests: () => {
+          fetchAbortRef.current?.abort();
+          fetchAbortRef.current = null;
+        },
+        clearTimers: () => {
+          for (const id of timersRef.current) clearTimeout(id);
+          timersRef.current.clear();
+        },
+      });
+
+      // Now proceed with navigation
+      setLoadingPhase('fetching-data');
+      runtimeDebugContext.update({ loadingPhase: 'fetching-data' });
       telemetry.logUIEvent("invoice_navigation", { direction, targetInvoiceId });
       onNavigate?.(targetInvoiceId);
     },
-    [isNavigating, invoiceIds, onNavigate, toast, isInCooldown]
+    [isNavigating, onNavigate, toast, isInCooldown]
   );
 
   // Prefetch adjacent invoices
@@ -377,14 +410,21 @@ export function PaidInvoiceViewer({
     
     // Prefetch previous invoice
     if (currentIndex > 0) {
-      prefetchInvoiceById(invoiceIds[currentIndex - 1]);
+      prefetchInvoiceById(invoiceIdsRef.current[currentIndex - 1]);
     }
     
     // Prefetch next invoice
-    if (currentIndex < invoiceIds.length - 1) {
-      prefetchInvoiceById(invoiceIds[currentIndex + 1]);
+    if (currentIndex < invoiceIdsRef.current.length - 1) {
+      prefetchInvoiceById(invoiceIdsRef.current[currentIndex + 1]);
     }
-  }, [currentIndex, open, invoiceIds]);
+  }, [currentIndex, open]);
+
+  // Re-enable PDF after navigation completes
+  useEffect(() => {
+    if (loadingPhase === 'mounting-pdf') {
+      setShowPdf(true);
+    }
+  }, [loadingPhase]);
 
   // Keyboard navigation DISABLED for testing (to isolate crash cause)
   // If crashes stop with buttons-only navigation, arrow keys are the culprit
@@ -466,8 +506,8 @@ export function PaidInvoiceViewer({
                 <>
                   {/* Left: PDF Preview */}
                   <div className="flex-1 bg-muted/30 overflow-auto p-6">
-                    {invoice.drive_embed_url && loadingPhase !== 'data-ready' ? (
-                      <PDFViewer invoice={invoice} key={invoice.id} />
+                    {invoice.drive_embed_url && loadingPhase !== 'data-ready' && showPdf ? (
+                      <PDFViewer ref={pdfRef} invoice={invoice} key={invoice.id} />
                     ) : invoice.drive_embed_url ? (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
@@ -506,7 +546,7 @@ export function PaidInvoiceViewer({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => canGoPrev && handleNavigate(invoiceIds[currentIndex - 1], "prev")}
+                    onClick={() => canGoPrev && handleNavigate(invoiceIdsRef.current[currentIndex - 1], "prev")}
                     disabled={!canGoPrev || isNavigating || isInCooldown}
                     className="gap-2"
                   >
@@ -516,7 +556,7 @@ export function PaidInvoiceViewer({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => canGoNext && handleNavigate(invoiceIds[currentIndex + 1], "next")}
+                    onClick={() => canGoNext && handleNavigate(invoiceIdsRef.current[currentIndex + 1], "next")}
                     disabled={!canGoNext || isNavigating || isInCooldown}
                     className="gap-2"
                   >
@@ -526,7 +566,7 @@ export function PaidInvoiceViewer({
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  Invoice {currentIndex + 1} of {invoiceIds.length}
+                  Invoice {currentIndex + 1} of {invoiceIdsRef.current.length}
                 </div>
               </div>
             )}
