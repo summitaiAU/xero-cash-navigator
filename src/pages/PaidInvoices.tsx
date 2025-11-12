@@ -49,6 +49,7 @@ export default function PaidInvoices() {
   const sortDirection = (searchParams.get("sortDir") || "desc") as "asc" | "desc";
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [isViewerClosing, setIsViewerClosing] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   // Parse filters from URL
   const filters: PaidInvoicesFilters = {
@@ -275,13 +276,16 @@ export default function PaidInvoices() {
       // Close drawer/viewer: Escape
       if (e.key === "Escape") {
         if (filterDrawerOpen) setFilterDrawerOpen(false);
-        if (selectedInvoiceId && !isViewerClosing) handleCloseViewer();
+        if (viewerOpen && !isViewerClosing) {
+          setViewerOpen(false);
+          handleCloseViewer();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filterDrawerOpen, selectedInvoiceId, isViewerClosing]);
+  }, [filterDrawerOpen, viewerOpen, isViewerClosing]);
 
   // Update URL params
   const updateParams = (updates: Record<string, string | null>) => {
@@ -386,16 +390,14 @@ export default function PaidInvoices() {
     [filters, searchParams]
   );
 
-  const handleInvoiceClick = useCallback(
-    (id: string) => {
-      setSelectedInvoiceId(id);
-    },
-    []
-  );
+  const handleInvoiceClick = useCallback((id: string) => {
+    setSelectedInvoiceId(id);
+    setViewerOpen(true);
+  }, []);
 
   const handleCloseViewer = useCallback(() => {
     setIsViewerClosing(true);
-    // Defer table re-render until Dialog animation completes (200ms + 50ms buffer)
+    // Defer cleanup until Dialog animation completes (200ms + 50ms buffer)
     setTimeout(() => {
       setSelectedInvoiceId(null);
       setIsViewerClosing(false);
@@ -550,11 +552,17 @@ export default function PaidInvoices() {
 
       <PaidInvoiceViewer
         invoice={selectedInvoice}
-        open={selectedInvoiceId !== null}
-        onOpenChange={(open) => !open && handleCloseViewer()}
+        open={viewerOpen}
+        onOpenChange={(open) => {
+          if (!open && !isViewerClosing) {
+            setViewerOpen(false);
+            handleCloseViewer();
+          }
+        }}
         isLockedByOther={isLockedByOther}
         lockedByUser={lockedByUser}
         onSupplierClick={handleSupplierClick}
+        closing={isViewerClosing || !viewerOpen}
       />
 
       <ExportDialog

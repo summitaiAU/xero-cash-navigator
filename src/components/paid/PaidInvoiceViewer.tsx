@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { PDFViewer } from "@/components/PDFViewer";
+import { PDFViewer, PDFViewerHandle } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -18,6 +18,7 @@ interface PaidInvoiceViewerProps {
   isLockedByOther?: boolean;
   lockedByUser?: string;
   onSupplierClick?: (supplier: string) => void;
+  closing?: boolean;
 }
 
 const formatCurrency = (amount: number) => {
@@ -82,8 +83,21 @@ export function PaidInvoiceViewer({
   isLockedByOther,
   lockedByUser,
   onSupplierClick,
+  closing = false,
 }: PaidInvoiceViewerProps) {
   const [copied, setCopied] = useState(false);
+  const pdfRef = useRef<PDFViewerHandle>(null);
+  
+  // Abort PDF loading when closing starts
+  useEffect(() => {
+    if (closing) {
+      try {
+        pdfRef.current?.abort();
+      } catch (error) {
+        // Ignore errors during cleanup
+      }
+    }
+  }, [closing]);
   
   const handleSupplierClick = () => {
     if (invoice?.supplier && onSupplierClick) {
@@ -103,7 +117,7 @@ export function PaidInvoiceViewer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 flex flex-col">
+      <DialogContent hideClose className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 flex flex-col">
         <TooltipProvider delayDuration={300} skipDelayDuration={100}>
           <ErrorBoundary>
           {invoice ? (
@@ -162,7 +176,7 @@ export function PaidInvoiceViewer({
                   </div>
 
                   {/* Close Button */}
-                  <DialogClose autoFocus className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <DialogClose className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                       <path d="M18 6 6 18" />
                       <path d="m6 6 12 12" />
@@ -177,35 +191,39 @@ export function PaidInvoiceViewer({
 
               {/* Content Area */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-                <ResizablePanelGroup direction="horizontal" className="flex-1">
-                  {/* Left: PDF Preview */}
-                  <ResizablePanel defaultSize={52} minSize={40} className="bg-muted/30">
-                    <div className="h-full overflow-auto p-4">
-                      {invoice.drive_embed_url ? (
-                        <PDFViewer invoice={invoice} key={invoice.id} />
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                          No preview available
-                        </div>
-                      )}
-                    </div>
-                  </ResizablePanel>
+                {closing ? (
+                  <div className="flex-1" />
+                ) : (
+                  <ResizablePanelGroup direction="horizontal" className="flex-1">
+                    {/* Left: PDF Preview */}
+                    <ResizablePanel defaultSize={52} minSize={40} className="bg-muted/30">
+                      <div className="h-full overflow-auto p-4">
+                        {invoice.drive_embed_url ? (
+                          <PDFViewer ref={pdfRef} invoice={invoice} />
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No preview available
+                          </div>
+                        )}
+                      </div>
+                    </ResizablePanel>
 
-                  {/* Divider */}
-                  <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
+                    {/* Divider */}
+                    <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
 
-                  {/* Right: Xero Details */}
-                  <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
-                    <div className="h-full overflow-auto p-4">
-                      <XeroSection 
-                        invoice={invoice} 
-                        onUpdate={() => {}} 
-                        onSync={() => {}}
-                        disablePresence={true}
-                      />
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                    {/* Right: Xero Details */}
+                    <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
+                      <div className="h-full overflow-auto p-4">
+                        <XeroSection 
+                          invoice={invoice} 
+                          onUpdate={() => {}} 
+                          onSync={() => {}}
+                          disablePresence={true}
+                        />
+                      </div>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
+                )}
               </div>
             </>
           ) : (
