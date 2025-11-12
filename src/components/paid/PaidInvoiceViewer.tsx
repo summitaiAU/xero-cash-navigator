@@ -133,7 +133,7 @@ export function PaidInvoiceViewer({
                 <ResizablePanelGroup direction="horizontal" className="flex-1">
                   {/* Left: PDF Preview */}
                   <ResizablePanel defaultSize={52} minSize={40} className="bg-muted/30">
-                    <div className="h-full overflow-auto p-4">
+                    <div className="h-full overflow-auto px-3 py-2">
                       {invoice.drive_embed_url ? (
                         <PDFViewer invoice={invoice} key={invoice.id} />
                       ) : (
@@ -149,7 +149,7 @@ export function PaidInvoiceViewer({
 
                   {/* Right: Xero Details */}
                   <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
-                    <div className="h-full overflow-auto p-4">
+                    <div className="h-full overflow-auto px-3 py-2">
                       <XeroSection 
                         invoice={invoice} 
                         onUpdate={() => {}} 
