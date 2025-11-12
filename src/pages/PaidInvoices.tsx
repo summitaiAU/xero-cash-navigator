@@ -48,6 +48,7 @@ export default function PaidInvoices() {
   const sortField = searchParams.get("sortBy") || "paid_date";
   const sortDirection = (searchParams.get("sortDir") || "desc") as "asc" | "desc";
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [isViewerClosing, setIsViewerClosing] = useState(false);
 
   // Parse filters from URL
   const filters: PaidInvoicesFilters = {
@@ -274,13 +275,13 @@ export default function PaidInvoices() {
       // Close drawer/viewer: Escape
       if (e.key === "Escape") {
         if (filterDrawerOpen) setFilterDrawerOpen(false);
-        if (selectedInvoiceId) handleCloseViewer();
+        if (selectedInvoiceId && !isViewerClosing) handleCloseViewer();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filterDrawerOpen, selectedInvoiceId]);
+  }, [filterDrawerOpen, selectedInvoiceId, isViewerClosing]);
 
   // Update URL params
   const updateParams = (updates: Record<string, string | null>) => {
@@ -393,7 +394,12 @@ export default function PaidInvoices() {
   );
 
   const handleCloseViewer = useCallback(() => {
-    setSelectedInvoiceId(null);
+    setIsViewerClosing(true);
+    // Defer table re-render until Dialog animation completes (200ms + 50ms buffer)
+    setTimeout(() => {
+      setSelectedInvoiceId(null);
+      setIsViewerClosing(false);
+    }, 250);
   }, []);
 
   const handleSupplierClick = useCallback(
@@ -505,8 +511,8 @@ export default function PaidInvoices() {
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto max-w-full">
-        {/* Hide table when viewer is open to prevent expensive re-renders */}
-        {selectedInvoiceId === null ? (
+        {/* Hide table when viewer is open or closing to prevent expensive re-renders */}
+        {selectedInvoiceId === null && !isViewerClosing ? (
           isInitialLoad ? (
             <div className="p-8">
               <div className="animate-pulse space-y-4">
