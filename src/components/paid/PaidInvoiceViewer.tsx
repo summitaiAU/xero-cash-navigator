@@ -76,13 +76,19 @@ export function PaidInvoiceViewer({
                     </div>
                   </div>
                 </div>
-                <DialogClose />
+                <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                  <span className="sr-only">Close</span>
+                </DialogClose>
               </div>
 
               {/* Content Area */}
               <div className="flex-1 flex overflow-hidden">
-                {/* Left: PDF Preview */}
-                <div className="flex-1 bg-muted/30 overflow-auto p-6">
+                {/* Left: PDF Preview - 60% */}
+                <div className="w-[60%] bg-muted/30 overflow-auto p-6">
                   {invoice.drive_embed_url ? (
                     <PDFViewer invoice={invoice} key={invoice.id} />
                   ) : (
@@ -92,8 +98,8 @@ export function PaidInvoiceViewer({
                   )}
                 </div>
 
-                {/* Right: Xero Details */}
-                <div className="w-[420px] bg-background border-l overflow-auto">
+                {/* Right: Xero Details - 40% */}
+                <div className="w-[40%] bg-background border-l overflow-auto">
                   <XeroSection 
                     invoice={invoice} 
                     onUpdate={() => {}} 
