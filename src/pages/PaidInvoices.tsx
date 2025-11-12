@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
@@ -52,7 +52,7 @@ export default function PaidInvoices() {
   const [viewerOpen, setViewerOpen] = useState(false);
 
   // Parse filters from URL
-  const filters: PaidInvoicesFilters = {
+  const filters: PaidInvoicesFilters = useMemo(() => ({
     invoiceDateFrom: searchParams.get("invoiceDateFrom") || undefined,
     invoiceDateTo: searchParams.get("invoiceDateTo") || undefined,
     paidDateFrom: searchParams.get("paidDateFrom") || undefined,
@@ -66,7 +66,7 @@ export default function PaidInvoices() {
     entities: searchParams.get("entities")?.split(",").filter(Boolean) || undefined,
     statuses: searchParams.get("statuses")?.split(",").filter(Boolean) || ["PAID"],
     suppliers: searchParams.get("suppliers")?.split(",").filter(Boolean) || undefined,
-  };
+  }), [searchParams]);
 
   // Calculate active filters count
   const activeFiltersCount = [
@@ -108,14 +108,17 @@ export default function PaidInvoices() {
   }, []);
 
   // Generate cache key
-  const cacheKey = paidInvoicesCacheService.generateCacheKey({
-    page,
-    pageSize,
-    searchQuery,
-    sortField,
-    sortDirection,
-    filters,
-  });
+  const cacheKey = useMemo(() => 
+    paidInvoicesCacheService.generateCacheKey({
+      page,
+      pageSize,
+      searchQuery,
+      sortField,
+      sortDirection,
+      filters,
+    }),
+    [page, pageSize, searchQuery, sortField, sortDirection, filters]
+  );
 
   // Fetch invoices with caching and request coordination
   const loadInvoices = useCallback(
