@@ -396,6 +396,20 @@ export default function PaidInvoices() {
     setSelectedInvoiceId(null);
   }, []);
 
+  const handleSupplierClick = useCallback(
+    (supplier: string) => {
+      telemetry.logUIEvent('paid_supplier_filter_from_viewer', { supplier });
+      updateParams({ 
+        suppliers: supplier, 
+        page: "0" 
+      });
+      toast.success("Filter applied", {
+        description: `Showing invoices from ${supplier}`,
+      });
+    },
+    [searchParams]
+  );
+
   const handleExport = useCallback(
     async (format: 'csv' | 'xlsx', columns: ExportColumn[], dateRange: { from?: string; to?: string }) => {
       try {
@@ -534,6 +548,7 @@ export default function PaidInvoices() {
         onOpenChange={(open) => !open && handleCloseViewer()}
         isLockedByOther={isLockedByOther}
         lockedByUser={lockedByUser}
+        onSupplierClick={handleSupplierClick}
       />
 
       <ExportDialog

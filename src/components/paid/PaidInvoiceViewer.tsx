@@ -17,6 +17,7 @@ interface PaidInvoiceViewerProps {
   onOpenChange: (open: boolean) => void;
   isLockedByOther?: boolean;
   lockedByUser?: string;
+  onSupplierClick?: (supplier: string) => void;
 }
 
 const formatDate = (dateString?: string) => {
@@ -90,13 +91,63 @@ export function PaidInvoiceViewer({
   onOpenChange,
   isLockedByOther,
   lockedByUser,
+  onSupplierClick,
 }: PaidInvoiceViewerProps) {
+  
+  const handleSupplierClick = () => {
+    if (invoice?.supplier && onSupplierClick) {
+      onSupplierClick(invoice.supplier);
+      onOpenChange(false);
+    }
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0">
         <ErrorBoundary>
           {invoice ? (
             <>
+              {/* Sticky Header */}
+              <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-6 flex-1 min-w-0">
+                  {/* Invoice number and amount */}
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-base font-semibold text-foreground">
+                      {invoice.invoice_number}
+                    </h2>
+                    <span className="text-lg font-semibold text-foreground">
+                      {formatCurrency(invoice.total_amount)}
+                    </span>
+                  </div>
+
+                  {/* Status */}
+                  {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
+
+                  {/* Supplier (clickable) */}
+                  <button
+                    onClick={handleSupplierClick}
+                    className="text-sm text-primary hover:underline hover:text-primary/80 transition-colors truncate max-w-[200px]"
+                  >
+                    {invoice.supplier}
+                  </button>
+
+                  {/* Dates */}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Issued: {formatDate(invoice.invoice_date)}</span>
+                    <span>•</span>
+                    <span>Paid: {formatDate(invoice.paid_date)}</span>
+                  </div>
+                </div>
+
+                {/* Close button */}
+                <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                  <span className="sr-only">Close</span>
+                </DialogClose>
+              </div>
+
               {/* Content Area */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                 <ResizablePanelGroup direction="horizontal" className="flex-1">
