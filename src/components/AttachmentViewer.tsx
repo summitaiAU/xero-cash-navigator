@@ -452,13 +452,14 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             
             <div className="flex items-center gap-3">
               {attachment?.data_base64url && (
-                <Button variant="outline" size="sm" onClick={handleDownload} title="Download">
+                <Button variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-3 h-3 mr-1" />
                   <span className="text-xs">Download</span>
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={loadAttachment} title="Refresh">
+              <Button variant="outline" size="sm" onClick={loadAttachment} aria-label="Refresh">
                 <RefreshCw className="w-3 h-3" />
+                <span className="sr-only">Refresh</span>
               </Button>
               {attachment && attachment.status === "review" && (
                 <>
@@ -466,14 +467,13 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                     variant="outline" 
                     size="sm" 
                     onClick={handleIgnore}
-                    title="Ignore this attachment"
                     className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
                   >
                     <X className="w-3 h-3 mr-1" />
                     <span className="text-xs">Ignore</span>
                   </Button>
                   {onAddInvoice && (
-                    <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)} title="Add Invoice">
+                    <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
                       <Plus className="w-3 h-3 mr-1" />
                       <span className="text-xs">Add Invoice</span>
                     </Button>
