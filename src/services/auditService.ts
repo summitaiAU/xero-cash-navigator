@@ -363,6 +363,38 @@ class AuditService {
       console.error('API error logging failed:', error);
     }
   }
+
+  // Lock-related events
+  async logLockAcquired(invoiceNumber: string, invoiceId: string) {
+    await this.log({
+      action_type: 'LOCK_ACQUIRED',
+      entity_type: 'INVOICE',
+      entity_id: invoiceId,
+      details: { invoice_number: invoiceNumber }
+    });
+  }
+
+  async logLockReleased(invoiceNumber: string, invoiceId: string) {
+    await this.log({
+      action_type: 'LOCK_RELEASED',
+      entity_type: 'INVOICE',
+      entity_id: invoiceId,
+      details: { invoice_number: invoiceNumber }
+    });
+  }
+
+  async logLockForceTaken(invoiceNumber: string, invoiceId: string, reason: string) {
+    await this.log({
+      action_type: 'FORCE_TAKE_LOCK',
+      entity_type: 'INVOICE',
+      entity_id: invoiceId,
+      details: { 
+        invoice_number: invoiceNumber,
+        reason,
+        force_taken: true 
+      }
+    });
+  }
 }
 
 export const auditService = new AuditService();

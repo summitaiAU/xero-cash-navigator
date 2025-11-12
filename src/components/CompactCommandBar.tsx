@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { AddInvoiceButton } from './AddInvoiceButton';
 import { InvoiceDropdown } from './InvoiceDropdown';
 import { Invoice } from '@/types/invoice';
+import { LiveStatusBadge } from './LiveStatusBadge';
+import { ViewerPresenceChips } from './ViewerPresenceChips';
 import {
   Tooltip,
   TooltipContent,
@@ -133,6 +135,17 @@ export const CompactCommandBar: React.FC<CompactCommandBarProps> = ({
 
       {/* Right-aligned Controls */}
       <div className="flex items-center gap-2">
+        {/* Live Status Badge */}
+        <LiveStatusBadge />
+        
+        {/* Viewer Presence Chips */}
+        {currentInvoice && (
+          <ViewerPresenceChips invoiceId={currentInvoice.id} maxVisible={3} />
+        )}
+        
+        {/* Divider */}
+        {currentInvoice && <div className="hidden sm:block h-6 w-px bg-border mx-1" />}
+        
         {/* Refresh Button */}
         <TooltipProvider delayDuration={300}>
           <Tooltip>

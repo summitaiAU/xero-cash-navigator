@@ -17,6 +17,9 @@ interface RealtimeContextType {
   updatePresence: (invoiceId?: string, status?: 'viewing' | 'editing' | 'idle') => void;
   getUsersOnInvoice: (invoiceId: string) => UserPresence[];
   isInvoiceBeingEdited: (invoiceId: string) => boolean;
+  connectionStatus: 'live' | 'reconnecting' | 'offline';
+  lastSyncTime: Date | null;
+  retryConnection: () => void;
 }
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(undefined);
@@ -40,6 +43,8 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
 }) => {
   const { user } = useAuth();
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<'live' | 'reconnecting' | 'offline'>('live');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const currentUserId = user?.id;
 
   // Refs for stable subscription lifecycle
@@ -80,6 +85,8 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
           });
           
           setActiveUsers(users);
+          setConnectionStatus('live');
+          setLastSyncTime(new Date());
         })
         .on('presence', { event: 'join' }, ({ newPresences }) => {
           // Reduced logging - only log when significant
@@ -94,6 +101,8 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
         })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED' && userRef.current) {
+            setConnectionStatus('live');
+            setLastSyncTime(new Date());
             await channel.track({
               user_email: userRef.current.email,
               user_id: userRef.current.id,
@@ -101,6 +110,10 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
               status: 'idle'
             });
             console.log('[presence] subscribed', { userId: user.id, t: new Date().toISOString() });
+          } else if (status === 'CHANNEL_ERROR') {
+            setConnectionStatus('offline');
+          } else if (status === 'TIMED_OUT') {
+            setConnectionStatus('reconnecting');
           }
         });
 
@@ -160,12 +173,24 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
     );
   }, [activeUsers, currentUserId]);
 
+  const retryConnection = useCallback(async () => {
+    setConnectionStatus('reconnecting');
+    const channel = channelRef.current;
+    if (channel) {
+      await channel.unsubscribe();
+      await channel.subscribe();
+    }
+  }, []);
+
   const value: RealtimeContextType = {
     activeUsers,
     currentChannel: channelRef.current,
     updatePresence,
     getUsersOnInvoice,
-    isInvoiceBeingEdited
+    isInvoiceBeingEdited,
+    connectionStatus,
+    lastSyncTime,
+    retryConnection,
   };
 
   return (

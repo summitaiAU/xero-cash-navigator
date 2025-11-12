@@ -11,6 +11,9 @@ import { AddInvoiceButton } from "@/components/AddInvoiceButton";
 import { UserPresenceIndicator } from "@/components/UserPresenceIndicator";
 import { ConflictWarning } from "@/components/ConflictWarning";
 import { RealtimeNotifications } from "@/components/RealtimeNotifications";
+import { InvoiceLockBanner } from "@/components/InvoiceLockBanner";
+import { ActivityDrawer } from "@/components/ActivityDrawer";
+import { UpdateShimmer } from "@/components/UpdateShimmer";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { CompactCommandBar } from "@/components/CompactCommandBar";
 import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
@@ -50,6 +53,8 @@ export const Dashboard: React.FC = () => {
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">(initialView);
   const [isViewLoading, setIsViewLoading] = useState(false);
+  const [showActivityDrawer, setShowActivityDrawer] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -147,7 +152,10 @@ export const Dashboard: React.FC = () => {
 
   // Stable callback for real-time updates
   const handleRealtimeListUpdate = useCallback(() => {
-    loadInvoices(true);
+    setIsUpdating(true);
+    loadInvoices(true).finally(() => {
+      setTimeout(() => setIsUpdating(false), 2000);
+    });
   }, [loadInvoices]);
 
   // Load all invoices for search functionality
@@ -691,13 +699,22 @@ export const Dashboard: React.FC = () => {
 
                 {/* SCROLLABLE RIGHT COLUMN - Only this scrolls */}
                 <div ref={rightScrollRef} className="w-1/2 h-full overflow-y-auto bg-console-bg">
-                  <div className="space-y-6 pr-2 pt-0">
-                    <XeroSection
-                      invoice={currentInvoice}
-                      onUpdate={handleXeroUpdate}
-                      onSync={() =>
-                        currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
-                      }
+                  <UpdateShimmer show={isUpdating}>
+                    <div className="space-y-6 pr-2 pt-0">
+                      {/* Lock Banner - Show if invoice is locked by another user */}
+                      {currentInvoice && (
+                        <InvoiceLockBanner 
+                          invoiceId={currentInvoice.id}
+                          isCurrentUserEditing={false}
+                        />
+                      )}
+                      
+                      <XeroSection
+                        invoice={currentInvoice}
+                        onUpdate={handleXeroUpdate}
+                        onSync={() =>
+                          currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
+                        }
                       loading={isXeroLoading}
                     />
 
@@ -746,6 +763,7 @@ export const Dashboard: React.FC = () => {
                     {/* Extra spacing at bottom for better scrolling */}
                     <div className="h-6"></div>
                   </div>
+                  </UpdateShimmer>
                 </div>
                 </>
               )}
@@ -755,13 +773,22 @@ export const Dashboard: React.FC = () => {
       {/* Real-time notifications */}
       <RealtimeNotifications viewState={viewState} onInvoiceListUpdate={handleRealtimeListUpdate} />
 
-      {/* Conflict warning if another user is editing */}
+      {/* Activity Drawer */}
       {currentInvoice && (
+        <ActivityDrawer
+          open={showActivityDrawer}
+          onOpenChange={setShowActivityDrawer}
+          invoiceId={currentInvoice.id}
+        />
+      )}
+
+      {/* Conflict warning if another user is editing - DEPRECATED, using InvoiceLockBanner instead */}
+      {/* {currentInvoice && (
         <ConflictWarning
           invoiceId={currentInvoice.id}
           isEditing={false}
         />
-      )}
+      )} */}
 
       {/* Global Success Overlay - Only show temporarily after payment */}
       {showSuccessOverlay && (
