@@ -226,6 +226,9 @@ export async function fetchPaidInvoices({
         total: Number(invoice.total_amount) || 0,
       },
     }));
+    
+    // Prewarm single-invoice cache from list data
+    paidInvoicesCacheService.prewarmCache(mappedInvoices);
 
     return { data: mappedInvoices, totalCount: count || 0, error: null };
   } catch (error) {
@@ -283,11 +286,23 @@ export async function fetchInvoiceById(
   invoiceId: string
 ): Promise<{ data: Invoice | null; error: Error | null }> {
   try {
-    // Check cache first
+    // Check single-invoice cache first
     const cached = paidInvoicesCacheService.getCachedInvoice(invoiceId);
     if (cached) {
+      telemetry.logUIEvent("invoice_cache_hit", { invoiceId, source: "single" });
       return { data: cached, error: null };
     }
+    
+    // Check if invoice exists in any cached list
+    const cachedFromList = paidInvoicesCacheService.getCachedInvoiceFromList(invoiceId);
+    if (cachedFromList) {
+      telemetry.logUIEvent("invoice_cache_hit", { invoiceId, source: "list" });
+      // Also cache it in single-invoice cache for future lookups
+      paidInvoicesCacheService.setCachedInvoice(invoiceId, cachedFromList);
+      return { data: cachedFromList, error: null };
+    }
+    
+    telemetry.logUIEvent("invoice_cache_miss", { invoiceId });
 
     const { data, error } = await supabase
       .from("invoices")

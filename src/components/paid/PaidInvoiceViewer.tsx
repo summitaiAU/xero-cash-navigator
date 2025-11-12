@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Invoice } from "@/types/invoice";
 import { fetchInvoiceById } from "@/services/paidInvoicesService";
 import { toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
+import { telemetry } from "@/services/telemetry";
+import { useToast } from "@/hooks/use-toast";
 
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
@@ -58,43 +60,135 @@ export function PaidInvoiceViewer({
 }: PaidInvoiceViewerProps) {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  const { toast } = useToast();
+  
+  // Request coordination to prevent race conditions
+  const requestIdRef = useRef<number>(0);
+  const lastNavigationRef = useRef<number>(0);
 
   const currentIndex = invoiceId ? invoiceIds.indexOf(invoiceId) : -1;
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
 
+  // Fetch invoice with request coordination
   useEffect(() => {
-    if (open && invoiceId) {
-      setLoading(true);
-      fetchInvoiceById(invoiceId)
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Error fetching invoice:", error);
-          } else {
-            setInvoice(data);
-          }
-        })
-        .finally(() => setLoading(false));
-    } else {
+    if (!open || !invoiceId) {
       setInvoice(null);
+      return;
     }
-  }, [invoiceId, open]);
 
-  // Keyboard navigation
+    const currentRequestId = ++requestIdRef.current;
+    setLoading(true);
+
+    const t0 = performance.now();
+
+    fetchInvoiceById(invoiceId)
+      .then(({ data, error }) => {
+        // Only update if this is still the latest request
+        if (currentRequestId !== requestIdRef.current) {
+          telemetry.logUIEvent("invoice_viewer_stale_response", { invoiceId });
+          return;
+        }
+
+        if (error) {
+          console.error("Error fetching invoice:", error);
+          telemetry.logError("invoice_viewer_fetch_error", error);
+          toast({
+            title: "Failed to load invoice",
+            description: error.message,
+            variant: "destructive",
+          });
+          setInvoice(null);
+        } else if (data) {
+          setInvoice(data);
+          
+          const duration = performance.now() - t0;
+          telemetry.logPerf("invoice_viewer_fetch", { duration, invoiceId });
+        } else {
+          setInvoice(null);
+        }
+      })
+      .catch((error) => {
+        if (currentRequestId === requestIdRef.current) {
+          console.error("Error fetching invoice:", error);
+          telemetry.logError("invoice_viewer_fetch_exception", error);
+          setInvoice(null);
+        }
+      })
+      .finally(() => {
+        if (currentRequestId === requestIdRef.current) {
+          setLoading(false);
+          setIsNavigating(false);
+        }
+      });
+  }, [invoiceId, open, toast]);
+
+  // Navigation handler with guards and debouncing
+  const handleNavigate = useCallback(
+    (targetInvoiceId: string, direction: "prev" | "next") => {
+      // Prevent concurrent navigation
+      if (isNavigating) {
+        telemetry.logUIEvent("navigation_blocked_concurrent", { targetInvoiceId });
+        return;
+      }
+
+      // Debounce rapid navigation (100ms)
+      const now = Date.now();
+      if (now - lastNavigationRef.current < 100) {
+        telemetry.logUIEvent("navigation_debounced", { targetInvoiceId });
+        return;
+      }
+      lastNavigationRef.current = now;
+
+      // Validate invoiceIds array
+      if (!invoiceIds || invoiceIds.length === 0) {
+        console.error("Navigation failed: invoiceIds array is empty");
+        return;
+      }
+
+      // Validate target invoice exists
+      if (!invoiceIds.includes(targetInvoiceId)) {
+        console.error("Navigation failed: target invoice not in list", targetInvoiceId);
+        toast({
+          title: "Navigation Error",
+          description: "Invoice not found in current list",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setIsNavigating(true);
+      telemetry.logUIEvent("invoice_navigation", { direction, targetInvoiceId });
+      onNavigate?.(targetInvoiceId);
+    },
+    [isNavigating, invoiceIds, onNavigate, toast]
+  );
+
+  // Keyboard navigation with debouncing
   useEffect(() => {
     if (!open || !onNavigate) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" && canGoPrev) {
-        onNavigate(invoiceIds[currentIndex - 1]);
-      } else if (e.key === "ArrowRight" && canGoNext) {
-        onNavigate(invoiceIds[currentIndex + 1]);
+      if (e.key === "ArrowLeft" && canGoPrev && !isNavigating) {
+        e.preventDefault();
+        handleNavigate(invoiceIds[currentIndex - 1], "prev");
+      } else if (e.key === "ArrowRight" && canGoNext && !isNavigating) {
+        e.preventDefault();
+        handleNavigate(invoiceIds[currentIndex + 1], "next");
+      } else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !canGoPrev && !canGoNext) {
+        // At boundary
+        toast({
+          title: e.key === "ArrowLeft" ? "First Invoice" : "Last Invoice",
+          description: `You're at the ${e.key === "ArrowLeft" ? "beginning" : "end"} of the list`,
+        });
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, currentIndex, canGoPrev, canGoNext, invoiceIds, onNavigate]);
+  }, [open, currentIndex, canGoPrev, canGoNext, invoiceIds, onNavigate, isNavigating, handleNavigate, toast]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,7 +245,7 @@ export function PaidInvoiceViewer({
               {/* Left: PDF Preview */}
               <div className="flex-1 bg-muted/30 overflow-auto p-6">
                 {invoice.drive_embed_url ? (
-                  <PDFViewer invoice={invoice} />
+                  <PDFViewer invoice={invoice} key={invoice.id} />
                 ) : (
                   <div className="flex items-center justify-center h-full text-muted-foreground">
                     No preview available
@@ -165,6 +259,7 @@ export function PaidInvoiceViewer({
                   invoice={invoice}
                   onUpdate={() => {}}
                   onSync={() => {}}
+                  key={invoice.id}
                 />
               </div>
             </>
@@ -182,8 +277,8 @@ export function PaidInvoiceViewer({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => canGoPrev && onNavigate?.(invoiceIds[currentIndex - 1])}
-                disabled={!canGoPrev}
+                onClick={() => canGoPrev && handleNavigate(invoiceIds[currentIndex - 1], "prev")}
+                disabled={!canGoPrev || isNavigating}
                 className="gap-2"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -192,8 +287,8 @@ export function PaidInvoiceViewer({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => canGoNext && onNavigate?.(invoiceIds[currentIndex + 1])}
-                disabled={!canGoNext}
+                onClick={() => canGoNext && handleNavigate(invoiceIds[currentIndex + 1], "next")}
+                disabled={!canGoNext || isNavigating}
                 className="gap-2"
               >
                 Next

@@ -477,6 +477,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   // Load data from Supabase
   const loadInvoiceData = () => {
+    if (!invoice) {
+      console.error('Cannot load invoice data: invoice is null');
+      setInvoiceData(null);
+      setDataLoading(false);
+      return;
+    }
+    
     try {
       setDataLoading(true);
       const processed = processSupabaseData(invoice);
@@ -488,6 +495,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         description: error.message || 'Unknown error', 
         variant: 'destructive' 
       });
+      setInvoiceData(null);
     } finally {
       setDataLoading(false);
     }
@@ -495,7 +503,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
 
   useEffect(() => {
-    loadInvoiceData();
+    if (invoice?.id) {
+      loadInvoiceData();
+    }
   }, [invoice?.id]);
 
   const isLoading = dataLoading || loading;

@@ -63,13 +63,44 @@ class PaidInvoicesCacheService {
   }
 
   /**
-   * Set cached list
+   * Set cached list and prewarm single-invoice cache
    */
   setCachedList(cacheKey: string, data: Invoice[], totalCount: number): void {
     this.cache.lists.set(cacheKey, {
       data,
       totalCount,
       timestamp: Date.now(),
+    });
+    
+    // Prewarm single-invoice cache from list data
+    this.prewarmCache(data);
+  }
+  
+  /**
+   * Get invoice from any cached list
+   */
+  getCachedInvoiceFromList(invoiceId: string): Invoice | null {
+    for (const cached of this.cache.lists.values()) {
+      if (this.isStale(cached.timestamp)) continue;
+      
+      const found = cached.data.find(inv => inv.id === invoiceId);
+      if (found) return found;
+    }
+    return null;
+  }
+  
+  /**
+   * Prewarm single-invoice cache from list data
+   */
+  prewarmCache(invoices: Invoice[]): void {
+    const timestamp = Date.now();
+    invoices.forEach(invoice => {
+      if (!this.cache.invoices.has(invoice.id)) {
+        this.cache.invoices.set(invoice.id, {
+          data: invoice,
+          timestamp,
+        });
+      }
     });
   }
 

@@ -9,10 +9,12 @@ interface PDFViewerProps {
 
 export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [pdfError, setPdfError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Reset error when invoice changes
+  // Reset state when invoice changes
   useEffect(() => {
     setPdfError(false);
+    setIsLoading(true);
   }, [invoice.id]);
 
   return (
@@ -23,13 +25,25 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
+        {isLoading && !pdfError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Loading PDF...</p>
+            </div>
+          </div>
+        )}
         {!pdfError ? (
           <iframe
             src={invoice.drive_embed_url}
             className="w-full h-full"
             frameBorder="0"
             loading="lazy"
-            onError={() => setPdfError(true)}
+            onLoad={() => setIsLoading(false)}
+            onError={() => {
+              setPdfError(true);
+              setIsLoading(false);
+            }}
             title={`Invoice ${invoice.invoice_number}`}
           />
         ) : (
