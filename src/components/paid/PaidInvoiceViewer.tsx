@@ -136,7 +136,7 @@ export function PaidInvoiceViewer({
                         <TooltipTrigger asChild>
                           <button
                             onClick={handleCopyInvoiceNumber}
-                            className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                            className="p-0.5 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                           >
                             {copied ? (
                               <Check className="h-3.5 w-3.5 text-green-600" />
