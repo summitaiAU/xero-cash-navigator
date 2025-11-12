@@ -101,11 +101,11 @@ export function PaidInvoiceViewer({
               <div className="sticky top-0 z-10 bg-background border-b px-6 py-0.5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-semibold truncate">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-semibold leading-none truncate">
                         Invoice {invoice.invoice_number}
                       </h2>
-                      <span className="text-xl font-semibold text-gray-800">
+                      <span className="text-xl font-semibold leading-none text-gray-800">
                         {formatCurrency(invoice.total_amount)}
                       </span>
                       {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
