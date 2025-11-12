@@ -48,6 +48,18 @@ export const useUserPresence = ({ currentInvoiceId, isEditing = false }: UseUser
     };
   }, [updatePresence]);
 
+  // Heartbeat to keep presence fresh
+  useEffect(() => {
+    if (!currentInvoiceId) return;
+    
+    const heartbeat = setInterval(() => {
+      const status = isEditing ? 'editing' : 'viewing';
+      updatePresence(currentInvoiceId, status);
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(heartbeat);
+  }, [currentInvoiceId, isEditing, updatePresence]);
+
   return {
     usersOnCurrentInvoice: currentInvoiceId ? getUsersOnInvoice(currentInvoiceId) : [],
     isCurrentInvoiceBeingEdited: currentInvoiceId ? isInvoiceBeingEdited(currentInvoiceId) : false

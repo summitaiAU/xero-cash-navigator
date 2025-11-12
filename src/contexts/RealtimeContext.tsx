@@ -159,10 +159,25 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
   }, []);
 
   const getUsersOnInvoice = React.useCallback((invoiceId: string) => {
-    return activeUsers.filter(u => 
-      u.current_invoice_id === invoiceId && 
-      u.user_id !== currentUserId // Exclude current user
-    );
+    const now = new Date().getTime();
+    const FIVE_MINUTES = 5 * 60 * 1000;
+    
+    return activeUsers.filter(u => {
+      // Must have matching invoice ID
+      if (u.current_invoice_id !== invoiceId) return false;
+      
+      // Must not be the current user
+      if (u.user_id === currentUserId) return false;
+      
+      // Must be actively viewing or editing (not idle)
+      if (u.status === 'idle') return false;
+      
+      // Must have recent activity (within last 5 minutes)
+      const lastActivity = new Date(u.last_activity).getTime();
+      if (now - lastActivity > FIVE_MINUTES) return false;
+      
+      return true;
+    });
   }, [activeUsers, currentUserId]);
 
   const isInvoiceBeingEdited = React.useCallback((invoiceId: string) => {

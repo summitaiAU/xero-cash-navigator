@@ -184,6 +184,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     isEditing: isEditing
   });
 
+  // Lock heartbeat to keep lock alive while editing
+  useEffect(() => {
+    if (!isEditing || !invoice.id) return;
+    
+    const heartbeat = setInterval(async () => {
+      const { invoiceLockService } = await import('@/services/invoiceLockService');
+      await invoiceLockService.extendLock(invoice.id);
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
+    return () => clearInterval(heartbeat);
+  }, [isEditing, invoice.id]);
+
   // Edit mode functions
   const startEditing = () => {
     if (!invoiceData) {
@@ -234,12 +246,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             taxType = 'NONE';
             gstIncluded = true; // GST excluded, checkbox checked
           }
-        } else if (oldFormatHasGst) {
-          // Old format: inherit from invoice level
-          taxType = 'INPUT';
-          gstIncluded = false; // GST applies, checkbox unchecked
         } else {
-          // Old format: no GST at invoice level
+          // Old format: Default to GST excluded (safer default)
+          // User must manually uncheck if GST should apply
           taxType = 'NONE';
           gstIncluded = true; // GST excluded, checkbox checked
         }
@@ -428,7 +437,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
-        total_amount: totals.total
+        total_amount: totals.total,
+        last_edited_at: new Date().toISOString()
       });
 
       // Update local state

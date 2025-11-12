@@ -158,7 +158,8 @@ export const updateInvoicePaymentStatus = async (
     remittance_sent: remittanceSent,
     paid_date: new Date().toISOString(),
     payment_made_at: new Date().toISOString(),
-    amount_paid: currentInvoice.total_amount
+    amount_paid: currentInvoice.total_amount,
+    last_edited_at: new Date().toISOString()
   };
 
   if (remittanceEmail) {
@@ -232,7 +233,8 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
       paid_date: null,
       payment_made_at: null,
       remittance_sent_at: null,
-      amount_paid: null
+      amount_paid: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
@@ -281,7 +283,8 @@ export const updateInvoiceRemittanceStatus = async (
 
   const updateData: any = { 
     remittance_sent: true,
-    remittance_sent_at: new Date().toISOString()
+    remittance_sent_at: new Date().toISOString(),
+    last_edited_at: new Date().toISOString()
   };
 
   if (remittanceEmail) {
@@ -340,7 +343,8 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
   // Update invoice with flag information
   const updateData: any = {
     status: 'FLAGGED',
-    flag_type: flagData.flagType
+    flag_type: flagData.flagType,
+    last_edited_at: new Date().toISOString()
   };
 
   if (flagData.emailAddress) {
@@ -422,7 +426,8 @@ export const resolveFlag = async (invoiceId: string) => {
       flag_type: null,
       flag_email_address: null,
       flag_email_subject: null,
-      flag_email_body: null
+      flag_email_body: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
@@ -453,7 +458,8 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   subtotal?: number,
   gst?: number,
   total_amount?: number,
-  approved?: boolean
+  approved?: boolean,
+  last_edited_at?: string
 }) => {
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
@@ -540,7 +546,10 @@ export const approveInvoice = async (invoiceId: string) => {
 
   const { error } = await supabase
     .from('invoices')
-    .update({ approved: true } as any)
+    .update({ 
+      approved: true,
+      last_edited_at: new Date().toISOString()
+    } as any)
     .eq('id', invoiceId);
 
   if (error) {
@@ -571,7 +580,10 @@ export const undoApproveInvoice = async (invoiceId: string) => {
 
   const { error } = await supabase
     .from('invoices')
-    .update({ approved: false } as any)
+    .update({ 
+      approved: false,
+      last_edited_at: new Date().toISOString()
+    } as any)
     .eq('id', invoiceId);
 
   if (error) {
@@ -614,7 +626,8 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
       partially_paid: true,
       amount_paid: newAmountPaid,
       amount_due: newAmountDue,
-      partial_payment_made_at: new Date().toISOString()
+      partial_payment_made_at: new Date().toISOString(),
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
@@ -742,7 +755,8 @@ export const unmarkPartialPayment = async (invoiceId: string) => {
       partially_paid: false,
       amount_paid: 0,
       amount_due: null,
-      partial_payment_made_at: null
+      partial_payment_made_at: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
