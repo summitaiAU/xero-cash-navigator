@@ -97,37 +97,6 @@ export function PaidInvoiceViewer({
         <ErrorBoundary>
           {invoice ? (
             <>
-              {/* Sticky Header */}
-              <div className="sticky top-0 z-10 bg-background border-b px-6 py-2 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="flex flex-col gap-0 flex-1 min-w-0">
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-semibold leading-none truncate">
-                        Invoice {invoice.invoice_number}
-                      </h2>
-                      <span className="text-xl font-semibold leading-none text-gray-800">
-                        {formatCurrency(invoice.total_amount)}
-                      </span>
-                      {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 leading-none">
-                      <span className="truncate">{invoice.supplier}</span>
-                      <span>•</span>
-                      <span>Issued: {formatDate(invoice.invoice_date)}</span>
-                      <span>•</span>
-                      <span>Paid: {formatDate(invoice.paid_date)}</span>
-                    </div>
-                  </div>
-                </div>
-                <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                  <span className="sr-only">Close</span>
-                </DialogClose>
-              </div>
-
               {/* Content Area */}
               <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                 <ResizablePanelGroup direction="horizontal" className="flex-1">
