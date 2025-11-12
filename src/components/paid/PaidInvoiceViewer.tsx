@@ -70,7 +70,6 @@ export function PaidInvoiceViewer({
   const [isNavigating, setIsNavigating] = useState(false);
   const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('idle');
   const [isInCooldown, setIsInCooldown] = useState(false);
-  const [showPdf, setShowPdf] = useState(true);
   
   const { toast } = useToast();
   
@@ -372,34 +371,19 @@ export function PaidInvoiceViewer({
       }
 
       setIsNavigating(true);
-      setLoadingPhase('cleanup');
-      setShowPdf(false);
       
       runtimeDebugContext.update({ 
         lastNavDirection: direction, 
         lastNavAt: now,
         isNavigating: true,
-        loadingPhase: 'cleanup',
       });
 
-      // PERFORM HARD CLEANUP
-      await hardCleanupBeforeInvoiceNavigation({
-        abortPdf: () => pdfRef.current?.abort(),
-        abortRequests: () => {
-          fetchAbortRef.current?.abort();
-          fetchAbortRef.current = null;
-        },
-        clearTimers: () => {
-          for (const id of timersRef.current) clearTimeout(id);
-          timersRef.current.clear();
-        },
-      });
-
-      // Now proceed with navigation
-      setLoadingPhase('fetching-data');
-      runtimeDebugContext.update({ loadingPhase: 'fetching-data' });
+      // NO CLEANUP - Testing basic navigation
       telemetry.logUIEvent("invoice_navigation", { direction, targetInvoiceId });
       onNavigate?.(targetInvoiceId);
+      
+      // Reset navigation flag after a short delay
+      setTimeout(() => setIsNavigating(false), 300);
     },
     [isNavigating, onNavigate, toast, isInCooldown]
   );
@@ -418,13 +402,6 @@ export function PaidInvoiceViewer({
       prefetchInvoiceById(invoiceIdsRef.current[currentIndex + 1]);
     }
   }, [currentIndex, open]);
-
-  // Re-enable PDF after navigation completes
-  useEffect(() => {
-    if (loadingPhase === 'mounting-pdf') {
-      setShowPdf(true);
-    }
-  }, [loadingPhase]);
 
   // Keyboard navigation DISABLED for testing (to isolate crash cause)
   // If crashes stop with buttons-only navigation, arrow keys are the culprit
@@ -506,15 +483,8 @@ export function PaidInvoiceViewer({
                 <>
                   {/* Left: PDF Preview */}
                   <div className="flex-1 bg-muted/30 overflow-auto p-6">
-                    {invoice.drive_embed_url && loadingPhase !== 'data-ready' && showPdf ? (
+                    {invoice.drive_embed_url ? (
                       <PDFViewer ref={pdfRef} invoice={invoice} key={invoice.id} />
-                    ) : invoice.drive_embed_url ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
-                          <p className="text-sm text-muted-foreground">Preparing PDF...</p>
-                        </div>
-                      </div>
                     ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
                         No preview available
