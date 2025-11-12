@@ -104,7 +104,7 @@ export function PaidInvoiceViewer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 flex flex-col">
-        <TooltipProvider>
+        <TooltipProvider delayDuration={300} skipDelayDuration={100}>
           <ErrorBoundary>
           {invoice ? (
             <>
@@ -112,7 +112,7 @@ export function PaidInvoiceViewer({
               <div className="sticky top-0 z-10 bg-background shadow-sm">
                 <div className="px-8 py-2.5 flex items-center justify-between gap-6">
                   {/* Left: Primary Info Block */}
-                  <div className="flex items-baseline gap-4 flex-1 min-w-0">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
                     {/* Invoice Number with Copy */}
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium text-foreground">
