@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface RealtimeInvoiceUpdate {
@@ -17,6 +18,7 @@ interface UseRealtimeInvoicesProps {
 
 export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeInvoicesProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const toastRef = useRef(toast);
   const onUpdateRef = useRef(onInvoiceUpdate);
   const [realtimeUpdates, setRealtimeUpdates] = useState<RealtimeInvoiceUpdate[]>([]);
@@ -32,7 +34,13 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
   }, [onInvoiceUpdate]);
 
   useEffect(() => {
-    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState, 'onInvoiceUpdate stable:', !!onInvoiceUpdate);
+    // Don't subscribe until user is authenticated
+    if (!user?.id) {
+      console.log('[useRealtimeInvoices] Waiting for authentication...');
+      return;
+    }
+
+    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState, 'user:', user.email);
     
     const channelName = `invoice-changes-${viewState}`;
     const channel = supabase
@@ -121,13 +129,18 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           onUpdateRef.current?.(update);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[useRealtimeInvoices] Subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[useRealtimeInvoices] Channel error - check RLS policies and auth state');
+        }
+      });
 
     return () => {
       console.log('[useRealtimeInvoices] Cleaning up channel for viewState:', viewState);
       supabase.removeChannel(channel);
     };
-  }, [viewState]);
+  }, [viewState, user?.id]);
 
   return { realtimeUpdates };
 };
