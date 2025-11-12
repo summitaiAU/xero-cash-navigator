@@ -50,6 +50,14 @@ export const InvoiceLockBanner: React.FC<InvoiceLockBannerProps> = ({
 
   // Subscribe to lock changes
   useEffect(() => {
+    // Don't subscribe until user is authenticated
+    if (!user?.id) {
+      console.log('[InvoiceLockBanner] Waiting for authentication...');
+      return;
+    }
+
+    console.log('[InvoiceLockBanner] Setting up lock subscription for invoice:', invoiceId);
+    
     let unsubscribe: (() => void) | undefined;
     
     const setupSubscription = () => {
@@ -68,7 +76,7 @@ export const InvoiceLockBanner: React.FC<InvoiceLockBannerProps> = ({
         unsubscribe();
       }
     };
-  }, [invoiceId]);
+  }, [invoiceId, user?.id]);
 
   // Don't show banner if no lock or current user is the locker
   if (!lock || lock.locked_by_user_id === user?.id) return null;

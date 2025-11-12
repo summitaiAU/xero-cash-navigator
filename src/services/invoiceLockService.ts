@@ -170,7 +170,12 @@ class InvoiceLockService {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[invoiceLockService] Subscription status:', status);
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[invoiceLockService] Channel error - check RLS policies and auth state');
+        }
+      });
 
     return () => supabase.removeChannel(channel);
   }
