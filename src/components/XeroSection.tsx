@@ -503,9 +503,11 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
 
   useEffect(() => {
-    if (invoice?.id) {
+    if (!invoice?.id) return;
+    const id = setTimeout(() => {
       loadInvoiceData();
-    }
+    }, 50);
+    return () => clearTimeout(id);
   }, [invoice?.id]);
 
   const isLoading = dataLoading || loading;

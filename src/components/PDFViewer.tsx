@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
@@ -10,11 +10,24 @@ interface PDFViewerProps {
 export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Reset state when invoice changes
   useEffect(() => {
     setPdfError(false);
     setIsLoading(true);
+  }, [invoice.id]);
+
+  // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
+  useEffect(() => {
+    const prevFrame = iframeRef.current;
+    return () => {
+      try {
+        if (prevFrame) {
+          prevFrame.src = 'about:blank';
+        }
+      } catch {}
+    };
   }, [invoice.id]);
 
   return (
@@ -35,6 +48,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
         )}
         {!pdfError ? (
           <iframe
+            key={invoice.id}
+            ref={iframeRef}
             src={invoice.drive_embed_url}
             className="w-full h-full"
             frameBorder="0"

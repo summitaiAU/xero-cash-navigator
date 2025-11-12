@@ -15,6 +15,7 @@ interface CacheStore {
   lists: Map<string, CachedList>;
   invoices: Map<string, CachedInvoice>;
   scrollPositions: Map<string, number>;
+  invoiceIdIndex: Map<string, string>; // invoiceId -> cacheKey
 }
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -24,6 +25,7 @@ class PaidInvoicesCacheService {
     lists: new Map(),
     invoices: new Map(),
     scrollPositions: new Map(),
+    invoiceIdIndex: new Map(),
   };
 
   /**
@@ -72,6 +74,11 @@ class PaidInvoicesCacheService {
       timestamp: Date.now(),
     });
     
+    // Index invoices for O(1) lookup of which list contains an invoice
+    data.forEach((inv) => {
+      this.cache.invoiceIdIndex.set(inv.id, cacheKey);
+    });
+    
     // Prewarm single-invoice cache from list data
     this.prewarmCache(data);
   }
@@ -80,11 +87,13 @@ class PaidInvoicesCacheService {
    * Get invoice from any cached list
    */
   getCachedInvoiceFromList(invoiceId: string): Invoice | null {
-    for (const cached of this.cache.lists.values()) {
-      if (this.isStale(cached.timestamp)) continue;
-      
-      const found = cached.data.find(inv => inv.id === invoiceId);
-      if (found) return found;
+    const cacheKey = this.cache.invoiceIdIndex.get(invoiceId);
+    if (cacheKey) {
+      const cached = this.cache.lists.get(cacheKey);
+      if (cached && !this.isStale(cached.timestamp)) {
+        const found = cached.data.find((inv) => inv.id === invoiceId);
+        if (found) return found;
+      }
     }
     return null;
   }
@@ -150,6 +159,7 @@ class PaidInvoicesCacheService {
     this.cache.lists.clear();
     this.cache.invoices.clear();
     this.cache.scrollPositions.clear();
+    this.cache.invoiceIdIndex.clear();
   }
 
   /**
@@ -157,6 +167,7 @@ class PaidInvoicesCacheService {
    */
   invalidateLists(): void {
     this.cache.lists.clear();
+    this.cache.invoiceIdIndex.clear();
   }
 }
 

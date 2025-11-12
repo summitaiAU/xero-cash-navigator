@@ -12,7 +12,7 @@ import { toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 import { telemetry } from "@/services/telemetry";
 import { useToast } from "@/hooks/use-toast";
-
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
   open: boolean;
@@ -67,10 +67,21 @@ export function PaidInvoiceViewer({
   // Request coordination to prevent race conditions
   const requestIdRef = useRef<number>(0);
   const lastNavigationRef = useRef<number>(0);
-
+  const navBurstRef = useRef<number[]>([]);
   const currentIndex = invoiceId ? invoiceIds.indexOf(invoiceId) : -1;
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
+
+  // Ensure cleanup when dialog closes
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      requestIdRef.current += 1; // invalidate pending
+      setInvoice(null);
+      setLoading(false);
+      setIsNavigating(false);
+    }
+    onOpenChange(nextOpen);
+  };
 
   // Fetch invoice with request coordination
   useEffect(() => {
@@ -134,13 +145,26 @@ export function PaidInvoiceViewer({
         return;
       }
 
-      // Debounce rapid navigation (100ms)
+      // Debounce rapid navigation (200ms)
       const now = Date.now();
-      if (now - lastNavigationRef.current < 100) {
+      if (now - lastNavigationRef.current < 200) {
         telemetry.logUIEvent("navigation_debounced", { targetInvoiceId });
         return;
       }
       lastNavigationRef.current = now;
+
+      // Circuit breaker: limit to 5 navigations per second
+      const windowStart = now - 1000;
+      navBurstRef.current = navBurstRef.current.filter((t) => t > windowStart);
+      if (navBurstRef.current.length >= 5) {
+        toast({
+          title: "You're navigating too fast",
+          description: "Please slow down to keep things stable.",
+        });
+        telemetry.logUIEvent("navigation_circuit_breaker", { targetInvoiceId, burstSize: navBurstRef.current.length });
+        return;
+      }
+      navBurstRef.current.push(now);
 
       // Validate invoiceIds array
       if (!invoiceIds || invoiceIds.length === 0) {
@@ -191,132 +215,136 @@ export function PaidInvoiceViewer({
   }, [open, currentIndex, canGoPrev, canGoNext, invoiceIds, onNavigate, isNavigating, handleNavigate, toast]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 data-[state=open]:animate-slide-in-right">
-        {/* Sticky Header */}
-        <div className="sticky top-0 z-20 px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {open && (
+        <ErrorBoundary>
+          <DialogContent className="max-w-7xl h-[90vh] p-0 gap-0 data-[state=open]:animate-slide-in-right">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-20 px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 min-w-0">
+                  {loading ? (
+                    <Skeleton className="h-6 w-48" />
+                  ) : invoice ? (
+                    <>
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold text-foreground">
+                          {invoice.invoice_no}
+                        </h2>
+                        {getStatusBadge(invoice.status)}
+                      </div>
+                      <div className="flex items-center gap-6 mt-2 text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{invoice.supplier_name}</span>
+                        <span className="text-border">|</span>
+                        <span>Paid: {formatDate(invoice.paid_date)}</span>
+                        <span className="text-border">|</span>
+                        <span className="font-semibold text-foreground tabular-nums">
+                          {formatCurrency(invoice.total_amount)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <h2 className="text-xl font-bold text-foreground">Invoice</h2>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleOpenChange(false)}
+                  className="flex-shrink-0"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            <div className="flex-1 flex overflow-hidden">
               {loading ? (
-                <Skeleton className="h-6 w-48" />
+                <div className="flex-1 p-6 space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-96 w-full" />
+                </div>
               ) : invoice ? (
                 <>
-                  <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-foreground">
-                      {invoice.invoice_no}
-                    </h2>
-                    {getStatusBadge(invoice.status)}
+                  {/* Left: PDF Preview */}
+                  <div className="flex-1 bg-muted/30 overflow-auto p-6">
+                    {invoice.drive_embed_url ? (
+                      <PDFViewer invoice={invoice} key={invoice.id} />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No preview available
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-6 mt-2 text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">{invoice.supplier_name}</span>
-                    <span className="text-border">|</span>
-                    <span>Paid: {formatDate(invoice.paid_date)}</span>
-                    <span className="text-border">|</span>
-                    <span className="font-semibold text-foreground tabular-nums">
-                      {formatCurrency(invoice.total_amount)}
-                    </span>
+
+                  {/* Right: Metadata */}
+                  <div className="w-[420px] bg-muted/50 overflow-auto p-6 border-l border-border">
+                    <XeroSection
+                      invoice={invoice}
+                      onUpdate={() => {}}
+                      onSync={() => {}}
+                      key={invoice.id}
+                    />
                   </div>
                 </>
               ) : (
-                <h2 className="text-xl font-bold text-foreground">Invoice</h2>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  No invoice selected
+                </div>
               )}
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="flex-shrink-0"
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+            {/* Footer with Navigation Hints */}
+            {invoice && invoiceIds.length > 0 && (
+              <div className="sticky bottom-0 px-6 py-3 border-t border-border bg-card/95 backdrop-blur-sm flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => canGoPrev && handleNavigate(invoiceIds[currentIndex - 1], "prev")}
+                    disabled={!canGoPrev || isNavigating}
+                    className="gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => canGoNext && handleNavigate(invoiceIds[currentIndex + 1], "next")}
+                    disabled={!canGoNext || isNavigating}
+                    className="gap-2"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
 
-        {/* Content Area */}
-        <div className="flex-1 flex overflow-hidden">
-          {loading ? (
-            <div className="flex-1 p-6 space-y-4">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-96 w-full" />
-            </div>
-          ) : invoice ? (
-            <>
-              {/* Left: PDF Preview */}
-              <div className="flex-1 bg-muted/30 overflow-auto p-6">
-                {invoice.drive_embed_url ? (
-                  <PDFViewer invoice={invoice} key={invoice.id} />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground">
-                    No preview available
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">←</kbd>
+                    <span>Previous</span>
                   </div>
-                )}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">→</kbd>
+                    <span>Next</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">ESC</kbd>
+                    <span>Close</span>
+                  </div>
+                </div>
 
-              {/* Right: Metadata */}
-              <div className="w-[420px] bg-muted/50 overflow-auto p-6 border-l border-border">
-                <XeroSection
-                  invoice={invoice}
-                  onUpdate={() => {}}
-                  onSync={() => {}}
-                  key={invoice.id}
-                />
+                <div className="text-xs text-muted-foreground">
+                  Invoice {currentIndex + 1} of {invoiceIds.length}
+                </div>
               </div>
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              No invoice selected
-            </div>
-          )}
-        </div>
-
-        {/* Footer with Navigation Hints */}
-        {invoice && invoiceIds.length > 0 && (
-          <div className="sticky bottom-0 px-6 py-3 border-t border-border bg-card/95 backdrop-blur-sm flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => canGoPrev && handleNavigate(invoiceIds[currentIndex - 1], "prev")}
-                disabled={!canGoPrev || isNavigating}
-                className="gap-2"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => canGoNext && handleNavigate(invoiceIds[currentIndex + 1], "next")}
-                disabled={!canGoNext || isNavigating}
-                className="gap-2"
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">←</kbd>
-                <span>Previous</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">→</kbd>
-                <span>Next</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">ESC</kbd>
-                <span>Close</span>
-              </div>
-            </div>
-
-            <div className="text-xs text-muted-foreground">
-              Invoice {currentIndex + 1} of {invoiceIds.length}
-            </div>
-          </div>
-        )}
-      </DialogContent>
+            )}
+          </DialogContent>
+        </ErrorBoundary>
+      )}
     </Dialog>
   );
 }
