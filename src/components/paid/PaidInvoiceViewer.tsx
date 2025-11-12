@@ -277,29 +277,8 @@ export function PaidInvoiceViewer({
     }
   }, [currentIndex, open, invoiceIds]);
 
-  // Keyboard navigation with debouncing
-  useEffect(() => {
-    if (!open || !onNavigate) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" && canGoPrev && !isNavigating) {
-        e.preventDefault();
-        handleNavigate(invoiceIds[currentIndex - 1], "prev");
-      } else if (e.key === "ArrowRight" && canGoNext && !isNavigating) {
-        e.preventDefault();
-        handleNavigate(invoiceIds[currentIndex + 1], "next");
-      } else if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && !canGoPrev && !canGoNext) {
-        // At boundary
-        toast({
-          title: e.key === "ArrowLeft" ? "First Invoice" : "Last Invoice",
-          description: `You're at the ${e.key === "ArrowLeft" ? "beginning" : "end"} of the list`,
-        });
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open, currentIndex, canGoPrev, canGoNext, invoiceIds, onNavigate, isNavigating, handleNavigate, toast]);
+  // Keyboard navigation DISABLED for testing (to isolate crash cause)
+  // If crashes stop with buttons-only navigation, arrow keys are the culprit
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
