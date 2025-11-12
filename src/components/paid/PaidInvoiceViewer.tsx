@@ -49,31 +49,27 @@ const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: bool
 
   return (
     <div className="flex items-center gap-2">
-      <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge className={`px-2.5 py-1 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
+            {status}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{getTooltipContent()}</p>
+        </TooltipContent>
+      </Tooltip>
+      {isLockedByOther && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge className={`px-2.5 py-1 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
-              {status}
-            </Badge>
+            <div className="flex items-center gap-1 text-amber-600">
+              <Lock className="h-4 w-4" />
+            </div>
           </TooltipTrigger>
           <TooltipContent>
-            <p>{getTooltipContent()}</p>
+            <p>Being edited by {lockedByUser}</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      {isLockedByOther && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1 text-amber-600">
-                <Lock className="h-4 w-4" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Being edited by {lockedByUser}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
       )}
     </div>
   );
@@ -108,7 +104,8 @@ export function PaidInvoiceViewer({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 flex flex-col">
-        <ErrorBoundary>
+        <TooltipProvider>
+          <ErrorBoundary>
           {invoice ? (
             <>
               {/* Sticky Header */}
@@ -121,25 +118,23 @@ export function PaidInvoiceViewer({
                       <span className="text-sm font-medium text-foreground">
                         {invoice.invoice_number}
                       </span>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={handleCopyInvoiceNumber}
-                              className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              {copied ? (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Copy invoice number</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={handleCopyInvoiceNumber}
+                            className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            {copied ? (
+                              <Check className="h-3.5 w-3.5 text-green-600" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy invoice number</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </div>
 
                     {/* Amount - Primary focal point */}
@@ -219,6 +214,7 @@ export function PaidInvoiceViewer({
             </div>
           )}
         </ErrorBoundary>
+        </TooltipProvider>
       </DialogContent>
     </Dialog>
   );
