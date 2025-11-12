@@ -10,6 +10,7 @@ import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePerfMonitor } from "@/components/RoutePerfMonitor";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
+import { runtimeDebugContext } from "@/services/runtimeDebugContext";
 import "./App.css";
 
 import { AppLayout } from "./layouts/AppLayout";
@@ -28,23 +29,82 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient();
 
 function App() {
-  // Global error handlers
+  // Global error handlers with runtime context and rate limiting
   React.useEffect(() => {
+    let lastErrorHash = '';
+    let lastErrorTime = 0;
+
+    const getErrorHash = (message: string, stack?: string) => {
+      return `${message}:${stack?.substring(0, 100) || ''}`;
+    };
+
     const handleError = (event: ErrorEvent) => {
       console.error('[Global] Uncaught error:', event.error);
+      
+      // Rate limiting: dedupe same error within 3 seconds
+      const errorHash = getErrorHash(event.message, event.error?.stack);
+      const now = Date.now();
+      if (errorHash === lastErrorHash && now - lastErrorTime < 3000) {
+        return;
+      }
+      lastErrorHash = errorHash;
+      lastErrorTime = now;
+
+      // Capture memory if available
+      const memory = (performance as any).memory;
+
       ApiErrorLogger.logError({
         endpoint: 'window/error',
         method: 'WINDOW_ERROR',
         error: event.error,
+        requestData: {
+          error_context: {
+            route: window.location.pathname,
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            userAgent: navigator.userAgent,
+            memory: memory ? {
+              usedJSHeapSize: memory.usedJSHeapSize,
+              totalJSHeapSize: memory.totalJSHeapSize,
+              jsHeapSizeLimit: memory.jsHeapSizeLimit,
+            } : null,
+            viewerState: runtimeDebugContext.getSnapshot(),
+          }
+        }
       }).catch(err => console.error('[Global] Failed to log error:', err));
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
       console.error('[Global] Unhandled promise rejection:', event.reason);
+
+      // Rate limiting
+      const errorHash = getErrorHash(String(event.reason), event.reason?.stack);
+      const now = Date.now();
+      if (errorHash === lastErrorHash && now - lastErrorTime < 3000) {
+        return;
+      }
+      lastErrorHash = errorHash;
+      lastErrorTime = now;
+
+      const memory = (performance as any).memory;
+
       ApiErrorLogger.logError({
         endpoint: 'window/unhandledrejection',
         method: 'PROMISE_REJECTION',
         error: event.reason,
+        requestData: {
+          error_context: {
+            route: window.location.pathname,
+            userAgent: navigator.userAgent,
+            memory: memory ? {
+              usedJSHeapSize: memory.usedJSHeapSize,
+              totalJSHeapSize: memory.totalJSHeapSize,
+              jsHeapSizeLimit: memory.jsHeapSizeLimit,
+            } : null,
+            viewerState: runtimeDebugContext.getSnapshot(),
+          }
+        }
       }).catch(err => console.error('[Global] Failed to log rejection:', err));
     };
 

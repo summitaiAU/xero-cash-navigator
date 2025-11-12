@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
+import { ApiErrorLogger } from '@/services/apiErrorLogger';
+import { runtimeDebugContext } from '@/services/runtimeDebugContext';
 
 interface PDFViewerProps {
   invoice: Invoice;
@@ -12,17 +14,58 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [shouldMount, setShouldMount] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const loadStartRef = useRef<number>(0);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   // Reset state when invoice changes and delay mounting
   useEffect(() => {
     setPdfError(false);
     setIsLoading(true);
     setShouldMount(false);
+    loadStartRef.current = performance.now();
     
     // Delay mounting by 100ms to ensure previous iframe is cleaned up
     const timer = setTimeout(() => setShouldMount(true), 100);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [invoice.id]);
+
+  // Setup 5s timeout watchdog when iframe mounts
+  useEffect(() => {
+    if (!shouldMount || pdfError) return;
+
+    timeoutRef.current = setTimeout(() => {
+      if (isLoading) {
+        console.error('[PDFViewer] Iframe failed to load within 5s timeout', invoice.id);
+        
+        const embedHost = invoice.drive_embed_url ? new URL(invoice.drive_embed_url).hostname : 'unknown';
+        
+        ApiErrorLogger.logError({
+          endpoint: 'pdf/iframe_timeout',
+          method: 'IFRAME_LOAD',
+          error: new Error(`PDF iframe timeout after 5s`),
+          requestData: {
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            embedHost,
+            urlTruncated: invoice.drive_embed_url?.substring(0, 100),
+            loadTime: performance.now() - loadStartRef.current,
+            viewerState: runtimeDebugContext.getSnapshot(),
+          },
+          userContext: 'PDFViewer/timeout',
+        }).catch(console.error);
+
+        setPdfError(true);
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [shouldMount, isLoading, pdfError, invoice.id, invoice.invoice_number, invoice.drive_embed_url]);
 
   // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
   useEffect(() => {
@@ -35,6 +78,38 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
       } catch {}
     };
   }, [invoice.id]);
+
+  const handleLoad = () => {
+    const elapsed = performance.now() - loadStartRef.current;
+    console.info('[PDFViewer] Iframe loaded', { invoiceId: invoice.id, elapsed });
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsLoading(false);
+  };
+
+  const handleError = () => {
+    console.error('[PDFViewer] Iframe error', invoice.id);
+    
+    const embedHost = invoice.drive_embed_url ? new URL(invoice.drive_embed_url).hostname : 'unknown';
+    
+    ApiErrorLogger.logError({
+      endpoint: 'pdf/iframe_error',
+      method: 'IFRAME_LOAD',
+      error: new Error(`PDF iframe failed to load`),
+      requestData: {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoice_number,
+        embedHost,
+        urlTruncated: invoice.drive_embed_url?.substring(0, 100),
+        loadTime: performance.now() - loadStartRef.current,
+        viewerState: runtimeDebugContext.getSnapshot(),
+      },
+      userContext: 'PDFViewer/error',
+    }).catch(console.error);
+
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setPdfError(true);
+    setIsLoading(false);
+  };
 
   return (
     <div className="dashboard-card p-3 flex flex-col h-full">
@@ -60,11 +135,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
             className="w-full h-full"
             frameBorder="0"
             loading="lazy"
-            onLoad={() => setIsLoading(false)}
-            onError={() => {
-              setPdfError(true);
-              setIsLoading(false);
-            }}
+            onLoad={handleLoad}
+            onError={handleError}
             title={`Invoice ${invoice.invoice_number}`}
           />
         ) : pdfError ? (

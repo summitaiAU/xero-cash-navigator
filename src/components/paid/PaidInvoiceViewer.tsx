@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { telemetry } from "@/services/telemetry";
 import { useToast } from "@/hooks/use-toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ApiErrorLogger } from "@/services/apiErrorLogger";
+import { runtimeDebugContext } from "@/services/runtimeDebugContext";
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
   open: boolean;
@@ -77,6 +79,38 @@ export function PaidInvoiceViewer({
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
 
+  // Update runtime context on mount/unmount
+  useEffect(() => {
+    runtimeDebugContext.update({
+      route: window.location.pathname,
+      viewerOpen: open,
+      invoiceCount: invoiceIds.length,
+    });
+
+    return () => {
+      runtimeDebugContext.update({ viewerOpen: false, invoiceId: undefined });
+    };
+  }, [open, invoiceIds.length]);
+
+  // Update runtime context on invoice/index change
+  useEffect(() => {
+    runtimeDebugContext.update({
+      invoiceId,
+      currentIndex,
+      invoiceCount: invoiceIds.length,
+    });
+  }, [invoiceId, currentIndex, invoiceIds.length]);
+
+  // Update runtime context on phase change
+  useEffect(() => {
+    runtimeDebugContext.update({ loadingPhase });
+  }, [loadingPhase]);
+
+  // Update runtime context on navigation state change
+  useEffect(() => {
+    runtimeDebugContext.update({ isNavigating, isInCooldown });
+  }, [isNavigating, isInCooldown]);
+
   // Ensure cleanup when dialog closes
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -87,6 +121,7 @@ export function PaidInvoiceViewer({
       setLoadingPhase('idle');
       setIsInCooldown(false);
       warningCountRef.current = 0;
+      runtimeDebugContext.update({ viewerOpen: false, invoiceId: undefined, loadingPhase: 'idle' });
     }
     onOpenChange(nextOpen);
   };
@@ -102,6 +137,7 @@ export function PaidInvoiceViewer({
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
     setLoadingPhase('fetching-data');
+    runtimeDebugContext.update({ requestId: currentRequestId });
 
     const t0 = performance.now();
     let t1 = 0, t2 = 0, t3 = 0;
@@ -117,6 +153,15 @@ export function PaidInvoiceViewer({
         if (error) {
           console.error("Error fetching invoice:", error);
           telemetry.logError("invoice_viewer_fetch_error", error);
+          
+          // Log structured error
+          ApiErrorLogger.logSupabaseError('select', error, {
+            table: 'invoices',
+            invoiceId,
+            invoiceNumber: data?.invoice_no,
+            userContext: 'PaidInvoiceViewer/fetchInvoiceById',
+          }).catch(console.error);
+
           toast({
             title: "Failed to load invoice",
             description: error.message,
@@ -142,13 +187,17 @@ export function PaidInvoiceViewer({
                   setLoadingPhase('complete');
                   
                   // Log phase timings
-                  telemetry.logPerf("invoice_viewer_phase_timing", {
+                  const phaseTiming = {
                     fetchData: t1 - t0,
                     bufferDelay: t2 - t1,
                     pdfMount: t3 - t2,
                     total: t3 - t0,
+                  };
+                  telemetry.logPerf("invoice_viewer_phase_timing", {
+                    ...phaseTiming,
                     invoiceId,
                   });
+                  runtimeDebugContext.update({ phaseTiming });
                 }
               }, 150);
             }
@@ -162,6 +211,22 @@ export function PaidInvoiceViewer({
         if (currentRequestId === requestIdRef.current) {
           console.error("Error fetching invoice:", error);
           telemetry.logError("invoice_viewer_fetch_exception", error);
+          
+          // Log structured error
+          ApiErrorLogger.logError({
+            endpoint: 'viewer/fetch',
+            method: 'GET',
+            error,
+            requestData: {
+              invoiceId,
+              requestId: currentRequestId,
+              loadingPhase,
+              currentIndex,
+              invoiceCount: invoiceIds.length,
+            },
+            userContext: 'PaidInvoiceViewer/fetchException',
+          }).catch(console.error);
+
           setInvoice(null);
           setLoadingPhase('idle');
         }
@@ -256,6 +321,11 @@ export function PaidInvoiceViewer({
 
       setIsNavigating(true);
       setLoadingPhase('fetching-data');
+      runtimeDebugContext.update({ 
+        lastNavDirection: direction, 
+        lastNavAt: now,
+        isNavigating: true,
+      });
       telemetry.logUIEvent("invoice_navigation", { direction, targetInvoiceId });
       onNavigate?.(targetInvoiceId);
     },
@@ -414,21 +484,6 @@ export function PaidInvoiceViewer({
                     Next
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">←</kbd>
-                    <span>Previous</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">→</kbd>
-                    <span>Next</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <kbd className="px-2 py-1 bg-muted border border-border rounded text-xs">ESC</kbd>
-                    <span>Close</span>
-                  </div>
                 </div>
 
                 <div className="text-xs text-muted-foreground">

@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { auditService } from '@/services/auditService';
+import { runtimeDebugContext } from '@/services/runtimeDebugContext';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 
@@ -33,7 +34,10 @@ export class ErrorBoundary extends Component<Props, State> {
       errorInfo,
     });
 
-    // Log to audit system
+    // Capture memory if available
+    const memory = (performance as any).memory;
+
+    // Log to audit system with runtime context snapshot
     auditService.logApiError({
       api_endpoint: 'ui/error',
       error_message: error.message,
@@ -42,6 +46,13 @@ export class ErrorBoundary extends Component<Props, State> {
         componentStack: errorInfo.componentStack,
         route: window.location.pathname,
         timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        memory: memory ? {
+          usedJSHeapSize: memory.usedJSHeapSize,
+          totalJSHeapSize: memory.totalJSHeapSize,
+          jsHeapSizeLimit: memory.jsHeapSizeLimit,
+        } : null,
+        viewerState: runtimeDebugContext.getSnapshot(),
       },
       response_status: 0,
     }).catch(err => {
