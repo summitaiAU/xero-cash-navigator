@@ -15,6 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
 import { runtimeDebugContext } from "@/services/runtimeDebugContext";
+import { stallMonitor } from "@/services/stallMonitor";
+import { pdfSafeModeService } from "@/services/pdfSafeMode";
 interface PaidInvoiceViewerProps {
   invoiceId: string | null;
   open: boolean;
@@ -78,6 +80,43 @@ export function PaidInvoiceViewer({
   const currentIndex = invoiceId ? invoiceIds.indexOf(invoiceId) : -1;
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
+
+  // Start/stop stall monitor on mount/unmount
+  useEffect(() => {
+    if (open) {
+      stallMonitor.start();
+      
+      const unsubscribe = stallMonitor.subscribe({
+        onStallDetected: (metrics) => {
+          console.warn('[PaidInvoiceViewer] Stall detected during viewer', {
+            lag: metrics.eventLoopLag,
+            loadingPhase,
+            isNavigating,
+            invoiceId,
+          });
+          
+          // If stall occurs during PDF mounting phase, enable safe mode
+          if (loadingPhase === 'mounting-pdf' && metrics.eventLoopLag > 300) {
+            pdfSafeModeService.enable(`Stall during PDF mount: ${metrics.eventLoopLag.toFixed(0)}ms lag`);
+            
+            toast({
+              title: "PDF Safe Mode Enabled",
+              description: "PDF rendering temporarily disabled to prevent freezing.",
+              variant: "default",
+            });
+          }
+        },
+        onRecovery: () => {
+          console.log('[PaidInvoiceViewer] Recovered from stall');
+        },
+      });
+      
+      return () => {
+        unsubscribe();
+        stallMonitor.stop();
+      };
+    }
+  }, [open, loadingPhase, isNavigating, invoiceId, toast]);
 
   // Update runtime context on mount/unmount
   useEffect(() => {
