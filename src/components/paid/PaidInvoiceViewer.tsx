@@ -1,15 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
-import { toZonedTime } from "date-fns-tz";
-import { format } from "date-fns";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Lock } from "lucide-react";
+import { Lock, Copy, Check } from "lucide-react";
+import { formatDateSydney } from "@/lib/dateUtils";
+import { toast } from "sonner";
 
 interface PaidInvoiceViewerProps {
   invoice: Invoice | null;
@@ -19,12 +19,6 @@ interface PaidInvoiceViewerProps {
   lockedByUser?: string;
   onSupplierClick?: (supplier: string) => void;
 }
-
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "—";
-  const sydneyTime = toZonedTime(new Date(dateString), "Australia/Sydney");
-  return format(sydneyTime, "dd/MM/yyyy");
-};
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat("en-AU", {
@@ -45,10 +39,10 @@ const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: bool
 
   const getTooltipContent = () => {
     if (status === "PAID") {
-      return `Paid ${formatCurrency(invoice.amount_paid || invoice.total_amount)} on ${formatDate(invoice.paid_date)}`;
+      return `Paid ${formatCurrency(invoice.amount_paid || invoice.total_amount)} on ${formatDateSydney(invoice.paid_date)}`;
     }
     if (status === "PARTIALLY PAID") {
-      return `Partially paid ${formatCurrency(invoice.amount_paid || 0)} on ${formatDate(invoice.paid_date)}`;
+      return `Partially paid ${formatCurrency(invoice.amount_paid || 0)} on ${formatDateSydney(invoice.paid_date)}`;
     }
     return status;
   };
@@ -93,6 +87,7 @@ export function PaidInvoiceViewer({
   lockedByUser,
   onSupplierClick,
 }: PaidInvoiceViewerProps) {
+  const [copied, setCopied] = useState(false);
   
   const handleSupplierClick = () => {
     if (invoice?.supplier && onSupplierClick) {
@@ -100,6 +95,16 @@ export function PaidInvoiceViewer({
       onOpenChange(false);
     }
   };
+
+  const handleCopyInvoiceNumber = () => {
+    if (invoice?.invoice_number) {
+      navigator.clipboard.writeText(invoice.invoice_number);
+      setCopied(true);
+      toast.success("Invoice number copied");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0">
@@ -107,45 +112,72 @@ export function PaidInvoiceViewer({
           {invoice ? (
             <>
               {/* Sticky Header */}
-              <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-6 flex-1 min-w-0">
-                  {/* Invoice number and amount */}
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-base font-semibold text-foreground">
-                      {invoice.invoice_number}
-                    </h2>
-                    <span className="text-lg font-semibold text-foreground">
+              <div className="sticky top-0 z-10 bg-background shadow-sm">
+                <div className="px-8 py-2.5 flex items-baseline justify-between gap-6">
+                  {/* Left: Primary Info Block */}
+                  <div className="flex items-baseline gap-4 flex-1 min-w-0">
+                    {/* Invoice Number with Copy */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium text-foreground">
+                        {invoice.invoice_number}
+                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={handleCopyInvoiceNumber}
+                              className="p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {copied ? (
+                                <Check className="h-3.5 w-3.5 text-green-600" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Copy invoice number</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+
+                    {/* Amount - Primary focal point */}
+                    <span className="text-base font-semibold text-foreground tabular-nums">
                       {formatCurrency(invoice.total_amount)}
                     </span>
+
+                    {/* Status Badge */}
+                    {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
+
+                    {/* Supplier - Clickable */}
+                    <button
+                      onClick={handleSupplierClick}
+                      className="text-sm font-semibold text-primary hover:text-primary/80 hover:underline transition-all truncate max-w-[200px]"
+                    >
+                      {invoice.supplier}
+                    </button>
                   </div>
 
-                  {/* Status */}
-                  {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
-
-                  {/* Supplier (clickable) */}
-                  <button
-                    onClick={handleSupplierClick}
-                    className="text-sm text-primary hover:underline hover:text-primary/80 transition-colors truncate max-w-[200px]"
-                  >
-                    {invoice.supplier}
-                  </button>
-
-                  {/* Dates */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>Issued: {formatDate(invoice.invoice_date)}</span>
-                    <span>•</span>
-                    <span>Paid: {formatDate(invoice.paid_date)}</span>
+                  {/* Right: Secondary Metadata */}
+                  <div className="flex items-baseline gap-3 text-xs text-muted-foreground">
+                    <span>Issued {formatDateSydney(invoice.invoice_date)}</span>
+                    <span className="text-border">•</span>
+                    <span>Paid {formatDateSydney(invoice.paid_date)}</span>
                   </div>
+
+                  {/* Close Button */}
+                  <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 self-start mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                    <span className="sr-only">Close</span>
+                  </DialogClose>
                 </div>
-
-                {/* Close button */}
-                <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M18 6 6 18" />
-                    <path d="m6 6 12 12" />
-                  </svg>
-                  <span className="sr-only">Close</span>
-                </DialogClose>
+                
+                {/* Subtle divider */}
+                <div className="h-px bg-border/50" />
               </div>
 
               {/* Content Area */}
