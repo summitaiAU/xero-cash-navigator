@@ -516,6 +516,7 @@ export type Database = {
           id: string
           invoice_date: string | null
           invoice_no: string | null
+          last_edited_at: string | null
           link_to_invoice: string | null
           list_items: Json[] | null
           paid_date: string | null
@@ -569,6 +570,7 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_no?: string | null
+          last_edited_at?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
@@ -622,6 +624,7 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_no?: string | null
+          last_edited_at?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
