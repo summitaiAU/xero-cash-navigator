@@ -151,12 +151,58 @@ export const Dashboard: React.FC = () => {
   }, [viewState, toast]);
 
   // Stable callback for real-time updates
-  const handleRealtimeListUpdate = useCallback(() => {
+  const handleRealtimeListUpdate = useCallback(async () => {
+    if (!currentInvoice) return;
+    
     setIsUpdating(true);
-    loadInvoices(true).finally(() => {
+    
+    try {
+      // Store current invoice ID to maintain position
+      const currentInvoiceId = currentInvoice.id;
+      
+      // Fetch fresh data for current view AND all invoices for search
+      const [refreshedInvoices, allRefreshedInvoices] = await Promise.all([
+        fetchInvoices(viewState),
+        Promise.all([
+          fetchInvoices("payable"),
+          fetchInvoices("paid"),
+          fetchInvoices("flagged"),
+        ]).then(([payable, paid, flagged]) => [...payable, ...paid, ...flagged]),
+      ]);
+      
+      setInvoices(refreshedInvoices);
+      setAllInvoices(allRefreshedInvoices);
+      
+      // Find the same invoice in the refreshed list to maintain position
+      const newIndex = refreshedInvoices.findIndex((inv) => inv.id === currentInvoiceId);
+      
+      if (newIndex !== -1) {
+        // Invoice still exists in current view - maintain position
+        setCurrentIndex(newIndex);
+        toast({
+          title: "Invoice Updated",
+          description: "Invoice data has been refreshed with latest changes.",
+          duration: 2000,
+        });
+      } else {
+        // Invoice was deleted or moved to different view
+        setCurrentIndex(0);
+        toast({
+          title: "Invoice Removed",
+          description: "The invoice you were viewing is no longer in this view.",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to refresh invoices:", error);
+      toast({
+        title: "Update Failed",
+        description: "Could not refresh invoice data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
       setTimeout(() => setIsUpdating(false), 2000);
-    });
-  }, [loadInvoices]);
+    }
+  }, [currentInvoice, viewState, toast]);
 
   // Load all invoices for search functionality
   const loadAllInvoices = async () => {
