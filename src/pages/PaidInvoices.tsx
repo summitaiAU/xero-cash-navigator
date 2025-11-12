@@ -46,6 +46,7 @@ export default function PaidInvoices() {
   const sortField = searchParams.get("sortBy") || "paid_date";
   const sortDirection = (searchParams.get("sortDir") || "desc") as "asc" | "desc";
   const invoiceId = searchParams.get("invoiceId") || null;
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // Parse filters from URL
   const filters: PaidInvoicesFilters = {
@@ -385,20 +386,37 @@ export default function PaidInvoices() {
 
   const handleInvoiceClick = useCallback(
     (id: string) => {
-      updateParams({ invoiceId: id });
+      const index = invoices.findIndex(inv => inv.id === id);
+      if (index !== -1) {
+        setViewerIndex(index);
+        updateParams({ invoiceId: id });
+      }
     },
-    [searchParams]
+    [invoices, searchParams]
   );
 
   const handleCloseViewer = useCallback(() => {
+    setViewerIndex(null);
     updateParams({ invoiceId: null });
   }, [searchParams]);
 
   const handleNavigateInvoice = useCallback(
-    (id: string) => {
-      updateParams({ invoiceId: id });
+    (direction: 'next' | 'prev') => {
+      if (viewerIndex === null) return;
+      
+      let newIndex: number;
+      if (direction === 'next' && viewerIndex < invoices.length - 1) {
+        newIndex = viewerIndex + 1;
+      } else if (direction === 'prev' && viewerIndex > 0) {
+        newIndex = viewerIndex - 1;
+      } else {
+        return;
+      }
+      
+      setViewerIndex(newIndex);
+      updateParams({ invoiceId: invoices[newIndex].id });
     },
-    [searchParams]
+    [viewerIndex, invoices, searchParams]
   );
 
   const handleExport = useCallback(
@@ -521,10 +539,10 @@ export default function PaidInvoices() {
       />
 
       <PaidInvoiceViewer
-        invoiceId={invoiceId}
-        open={!!invoiceId}
+        invoices={invoices}
+        currentIndex={viewerIndex}
+        open={viewerIndex !== null}
         onOpenChange={(open) => !open && handleCloseViewer()}
-        invoiceIds={invoiceIds}
         onNavigate={handleNavigateInvoice}
       />
 
