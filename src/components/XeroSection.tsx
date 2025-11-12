@@ -181,12 +181,11 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const { toast } = useToast();
   
   // Multi-user presence and conflict detection (disabled in viewer mode)
-  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = disablePresence
-    ? { usersOnCurrentInvoice: [], isCurrentInvoiceBeingEdited: false }
-    : useUserPresence({
-        currentInvoiceId: invoice.id,
-        isEditing: isEditing
-      });
+  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
+    currentInvoiceId: invoice.id,
+    isEditing: isEditing,
+    disabled: disablePresence
+  });
 
   // Lock heartbeat to keep lock alive while editing (disabled in viewer mode)
   useEffect(() => {

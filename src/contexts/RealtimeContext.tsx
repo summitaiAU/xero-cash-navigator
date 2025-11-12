@@ -47,6 +47,12 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const currentUserId = user?.id;
 
+  // Detect Safari browser
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  
+  // Disable presence for Safari to prevent infinite loops
+  const presenceEnabled = enabled && !isSafari;
+
   // Refs for stable subscription lifecycle
   const channelRef = useRef<RealtimeChannel | null>(null);
   const userRef = useRef<{ id: string; email: string } | null>(null);
@@ -60,7 +66,12 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
 
   // Stable presence channel subscription (only re-subscribes when user.id or enabled changes)
   useEffect(() => {
-    if (!enabled || !user?.id) return;
+    if (!presenceEnabled || !user?.id) {
+      if (isSafari && user?.id) {
+        console.warn('[presence] Disabled for Safari to prevent connection loops');
+      }
+      return;
+    }
 
     // Only create if not already created
     if (!channelRef.current) {
@@ -128,7 +139,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
         channelRef.current = null;
       }
     };
-  }, [user?.id, enabled]);
+  }, [user?.id, presenceEnabled, isSafari]);
 
   const updatePresence = useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
     const channel = channelRef.current;
