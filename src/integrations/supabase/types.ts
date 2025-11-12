@@ -135,6 +135,7 @@ export type Database = {
       }
       email_attachments: {
         Row: {
+          added_invoice_id: string | null
           attachment_added_at: string | null
           attachment_data_raw: Json | null
           created_at: string | null
@@ -169,6 +170,7 @@ export type Database = {
           viewer_kind: string | null
         }
         Insert: {
+          added_invoice_id?: string | null
           attachment_added_at?: string | null
           attachment_data_raw?: Json | null
           created_at?: string | null
@@ -203,6 +205,7 @@ export type Database = {
           viewer_kind?: string | null
         }
         Update: {
+          added_invoice_id?: string | null
           attachment_added_at?: string | null
           attachment_data_raw?: Json | null
           created_at?: string | null
@@ -449,6 +452,47 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      invoice_locks: {
+        Row: {
+          force_reason: string | null
+          force_taken: boolean | null
+          id: string
+          invoice_id: string
+          lock_expires_at: string
+          locked_at: string
+          locked_by_email: string
+          locked_by_user_id: string
+        }
+        Insert: {
+          force_reason?: string | null
+          force_taken?: boolean | null
+          id?: string
+          invoice_id: string
+          lock_expires_at?: string
+          locked_at?: string
+          locked_by_email: string
+          locked_by_user_id: string
+        }
+        Update: {
+          force_reason?: string | null
+          force_taken?: boolean | null
+          id?: string
+          invoice_id?: string
+          lock_expires_at?: string
+          locked_at?: string
+          locked_by_email?: string
+          locked_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_locks_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       invoices: {
         Row: {
@@ -704,6 +748,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_locks: { Args: never; Returns: undefined }
       is_user_allowed: { Args: { user_email: string }; Returns: boolean }
       log_api_error: {
         Args: {
