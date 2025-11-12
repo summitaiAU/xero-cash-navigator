@@ -98,7 +98,7 @@ export function PaidInvoiceViewer({
           {invoice ? (
             <>
               {/* Sticky Header */}
-              <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between gap-4">
+              <div className="sticky top-0 z-10 bg-background border-b px-6 py-3 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
                   <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export function PaidInvoiceViewer({
 
                   {/* Right: Xero Details */}
                   <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
-                    <div className="h-full overflow-auto">
+                    <div className="h-full overflow-auto p-4">
                       <XeroSection 
                         invoice={invoice} 
                         onUpdate={() => {}} 
