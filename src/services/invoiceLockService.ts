@@ -33,12 +33,16 @@ class InvoiceLockService {
 
       if (error) {
         // Check if lock already exists
-        const { data: existingLock } = await supabase
+        const { data: existingLock, error: existingErr } = await supabase
           .from('invoice_locks')
           .select('*')
           .eq('invoice_id', invoiceId)
-          .single();
+          .maybeSingle();
 
+        if (existingErr) {
+          console.warn('[invoiceLockService] lookup existing lock error:', existingErr);
+        }
+        
         if (existingLock) {
           return { 
             success: false, 
@@ -138,13 +142,18 @@ class InvoiceLockService {
   // Get lock for invoice
   async getLock(invoiceId: string): Promise<InvoiceLock | null> {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('invoice_locks')
         .select('*')
         .eq('invoice_id', invoiceId)
-        .single();
+        .maybeSingle();
 
-      return data as InvoiceLock | null;
+      if (error) {
+        console.warn('[invoiceLockService] getLock error:', error);
+        return null;
+      }
+
+      return (data as InvoiceLock) ?? null;
     } catch {
       return null;
     }
