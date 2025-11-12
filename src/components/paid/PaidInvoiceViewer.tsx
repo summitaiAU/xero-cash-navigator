@@ -1,23 +1,17 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
-import { X } from "lucide-react";
+import React from "react";
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PDFViewer, PDFViewerHandle } from "@/components/PDFViewer";
+import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
 import { toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
-import { telemetry } from "@/services/telemetry";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { runtimeDebugContext } from "@/services/runtimeDebugContext";
 
 interface PaidInvoiceViewerProps {
-  invoices: Invoice[];
-  currentIndex: number | null;
+  invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigate: (direction: 'next' | 'prev') => void;
 }
 
 const formatDate = (dateString?: string) => {
@@ -51,78 +45,10 @@ const getStatusBadge = (status: string) => {
 };
 
 export function PaidInvoiceViewer({
-  invoices,
-  currentIndex,
+  invoice,
   open,
   onOpenChange,
-  onNavigate,
 }: PaidInvoiceViewerProps) {
-  const [isNavigating, setIsNavigating] = useState(false);
-  
-  const pdfRef = useRef<PDFViewerHandle>(null);
-
-  // Derive current invoice from props
-  const invoice = currentIndex !== null && currentIndex >= 0 && currentIndex < invoices.length
-    ? invoices[currentIndex]
-    : null;
-
-  const canGoPrev = currentIndex !== null && currentIndex > 0;
-  const canGoNext = currentIndex !== null && currentIndex < invoices.length - 1;
-
-  // Update runtime context when viewer state changes
-  useEffect(() => {
-    if (open && invoice) {
-      runtimeDebugContext.update({
-        route: window.location.pathname,
-        viewerOpen: true,
-        invoiceId: invoice.id,
-        currentIndex,
-        invoiceCount: invoices.length,
-      });
-    } else {
-      runtimeDebugContext.update({
-        viewerOpen: false,
-        invoiceId: null,
-        currentIndex: null,
-      });
-    }
-  }, [open, invoice, currentIndex, invoices.length]);
-
-  // Simplified navigation handler
-  const handleNavigate = useCallback(
-    (direction: 'next' | 'prev') => {
-      if (isNavigating) return;
-      
-      setIsNavigating(true);
-      runtimeDebugContext.update({ 
-        lastNavDirection: direction, 
-        lastNavAt: Date.now(),
-        isNavigating: true,
-      });
-
-      telemetry.logUIEvent("invoice_navigation", { direction, currentIndex });
-      onNavigate(direction);
-      
-      // Reset navigation flag after a short delay
-      setTimeout(() => {
-        setIsNavigating(false);
-        runtimeDebugContext.update({ isNavigating: false });
-      }, 200);
-    },
-    [isNavigating, onNavigate, currentIndex]
-  );
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      runtimeDebugContext.update({
-        viewerOpen: false,
-        invoiceId: null,
-        currentIndex: null,
-      });
-    };
-  }, []);
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0">
@@ -155,53 +81,26 @@ export function PaidInvoiceViewer({
 
               {/* Content Area */}
               <div className="flex-1 flex overflow-hidden">
-                <>
-                  {/* Left: PDF Preview */}
-                  <div className="flex-1 bg-muted/30 overflow-auto p-6">
-                    {invoice.drive_embed_url ? (
-                      <PDFViewer ref={pdfRef} invoice={invoice} key={invoice.id} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground">
-                        No preview available
-                      </div>
-                    )}
-                  </div>
+                {/* Left: PDF Preview */}
+                <div className="flex-1 bg-muted/30 overflow-auto p-6">
+                  {invoice.drive_embed_url ? (
+                    <PDFViewer invoice={invoice} key={invoice.id} />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No preview available
+                    </div>
+                  )}
+                </div>
 
-                  {/* Right: Xero Details */}
-                  <div className="w-[420px] bg-background border-l overflow-auto">
-                    <XeroSection 
-                      invoice={invoice} 
-                      onUpdate={() => {}} 
-                      onSync={() => {}}
-                      disablePresence={true}
-                    />
-                  </div>
-                </>
-              </div>
-
-              {/* Footer Navigation */}
-              <div className="sticky bottom-0 bg-background border-t px-6 py-4 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigate('prev')}
-                  disabled={!canGoPrev || isNavigating}
-                >
-                  Previous
-                </Button>
-                
-                <span className="text-sm text-muted-foreground">
-                  {currentIndex !== null ? currentIndex + 1 : 0} / {invoices.length}
-                </span>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigate('next')}
-                  disabled={!canGoNext || isNavigating}
-                >
-                  Next
-                </Button>
+                {/* Right: Xero Details */}
+                <div className="w-[420px] bg-background border-l overflow-auto">
+                  <XeroSection 
+                    invoice={invoice} 
+                    onUpdate={() => {}} 
+                    onSync={() => {}}
+                    disablePresence={true}
+                  />
+                </div>
               </div>
             </>
           ) : (

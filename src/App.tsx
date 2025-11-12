@@ -10,7 +10,6 @@ import { RealtimeProvider } from "@/contexts/RealtimeContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RoutePerfMonitor } from "@/components/RoutePerfMonitor";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
-import { runtimeDebugContext } from "@/services/runtimeDebugContext";
 import { queryClient } from "@/services/queryClient";
 import "./App.css";
 
@@ -46,7 +45,6 @@ function App() {
         filename: event.filename,
         line: event.lineno,
         col: event.colno,
-        viewerState: runtimeDebugContext.getSnapshot(),
         memory: memory ? {
           usedJSHeapSize: memory.usedJSHeapSize,
           totalJSHeapSize: memory.totalJSHeapSize,
@@ -79,7 +77,6 @@ function App() {
               totalJSHeapSize: memory.totalJSHeapSize,
               jsHeapSizeLimit: memory.jsHeapSizeLimit,
             } : null,
-            viewerState: runtimeDebugContext.getSnapshot(),
           }
         }
       }).catch(err => console.error('[Global] Failed to log error:', err));
@@ -92,7 +89,6 @@ function App() {
       console.error('[CRASH CONTEXT]', {
         message: String(event.reason),
         stack: event.reason?.stack,
-        viewerState: runtimeDebugContext.getSnapshot(),
         memory: memory ? {
           usedJSHeapSize: memory.usedJSHeapSize,
           totalJSHeapSize: memory.totalJSHeapSize,
@@ -122,7 +118,6 @@ function App() {
               totalJSHeapSize: memory.totalJSHeapSize,
               jsHeapSizeLimit: memory.jsHeapSizeLimit,
             } : null,
-            viewerState: runtimeDebugContext.getSnapshot(),
           }
         }
       }).catch(err => console.error('[Global] Failed to log rejection:', err));

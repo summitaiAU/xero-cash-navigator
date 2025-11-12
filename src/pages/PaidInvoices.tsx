@@ -45,8 +45,7 @@ export default function PaidInvoices() {
   const searchQuery = searchParams.get("search") || "";
   const sortField = searchParams.get("sortBy") || "paid_date";
   const sortDirection = (searchParams.get("sortDir") || "desc") as "asc" | "desc";
-  const invoiceId = searchParams.get("invoiceId") || null;
-  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
   // Parse filters from URL
   const filters: PaidInvoicesFilters = {
@@ -273,13 +272,13 @@ export default function PaidInvoices() {
       // Close drawer/viewer: Escape
       if (e.key === "Escape") {
         if (filterDrawerOpen) setFilterDrawerOpen(false);
-        if (invoiceId) handleCloseViewer();
+        if (selectedInvoiceId) handleCloseViewer();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filterDrawerOpen, invoiceId]);
+  }, [filterDrawerOpen, selectedInvoiceId]);
 
   // Update URL params
   const updateParams = (updates: Record<string, string | null>) => {
@@ -386,38 +385,14 @@ export default function PaidInvoices() {
 
   const handleInvoiceClick = useCallback(
     (id: string) => {
-      const index = invoices.findIndex(inv => inv.id === id);
-      if (index !== -1) {
-        setViewerIndex(index);
-        updateParams({ invoiceId: id });
-      }
+      setSelectedInvoiceId(id);
     },
-    [invoices, searchParams]
+    []
   );
 
   const handleCloseViewer = useCallback(() => {
-    setViewerIndex(null);
-    updateParams({ invoiceId: null });
-  }, [searchParams]);
-
-  const handleNavigateInvoice = useCallback(
-    (direction: 'next' | 'prev') => {
-      if (viewerIndex === null) return;
-      
-      let newIndex: number;
-      if (direction === 'next' && viewerIndex < invoices.length - 1) {
-        newIndex = viewerIndex + 1;
-      } else if (direction === 'prev' && viewerIndex > 0) {
-        newIndex = viewerIndex - 1;
-      } else {
-        return;
-      }
-      
-      setViewerIndex(newIndex);
-      updateParams({ invoiceId: invoices[newIndex].id });
-    },
-    [viewerIndex, invoices, searchParams]
-  );
+    setSelectedInvoiceId(null);
+  }, []);
 
   const handleExport = useCallback(
     async (format: 'csv' | 'xlsx', columns: ExportColumn[], dateRange: { from?: string; to?: string }) => {
@@ -486,7 +461,9 @@ export default function PaidInvoices() {
   );
 
   const totalPages = Math.ceil(totalCount / pageSize);
-  const invoiceIds = invoices.map((inv) => inv.id);
+  const selectedInvoice = selectedInvoiceId 
+    ? invoices.find(inv => inv.id === selectedInvoiceId) || null
+    : null;
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -507,7 +484,7 @@ export default function PaidInvoices() {
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto max-w-full">
         {/* Hide table when viewer is open to prevent expensive re-renders */}
-        {viewerIndex === null ? (
+        {selectedInvoiceId === null ? (
           isInitialLoad ? (
             <div className="p-8">
               <div className="animate-pulse space-y-4">
@@ -544,11 +521,9 @@ export default function PaidInvoices() {
       />
 
       <PaidInvoiceViewer
-        invoices={invoices}
-        currentIndex={viewerIndex}
-        open={viewerIndex !== null}
+        invoice={selectedInvoice}
+        open={selectedInvoiceId !== null}
         onOpenChange={(open) => !open && handleCloseViewer()}
-        onNavigate={handleNavigateInvoice}
       />
 
       <ExportDialog

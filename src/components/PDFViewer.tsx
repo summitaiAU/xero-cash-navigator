@@ -2,9 +2,6 @@ import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } f
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
-import { ApiErrorLogger } from '@/services/apiErrorLogger';
-import { runtimeDebugContext } from '@/services/runtimeDebugContext';
-import { pdfSafeModeService } from '@/services/pdfSafeMode';
 
 interface PDFViewerProps {
   invoice: Invoice;
@@ -18,7 +15,6 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [shouldMount, setShouldMount] = useState(false);
-  const [safeModeActive, setSafeModeActive] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const loadStartRef = useRef<number>(0);
   const timeoutRef = useRef<NodeJS.Timeout>();
@@ -43,7 +39,6 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
     setPdfError(false);
     setIsLoading(true);
     setShouldMount(false);
-    setSafeModeActive(pdfSafeModeService.isActive());
     loadStartRef.current = performance.now();
     
     // Delay mounting by 100ms to ensure previous iframe is cleaned up
@@ -61,24 +56,6 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
     timeoutRef.current = setTimeout(() => {
       if (isLoading) {
         console.error('[PDFViewer] Iframe failed to load within 5s timeout', invoice.id);
-        
-        const embedHost = invoice.drive_embed_url ? new URL(invoice.drive_embed_url).hostname : 'unknown';
-        
-        ApiErrorLogger.logError({
-          endpoint: 'pdf/iframe_timeout',
-          method: 'IFRAME_LOAD',
-          error: new Error(`PDF iframe timeout after 5s`),
-          requestData: {
-            invoiceId: invoice.id,
-            invoiceNumber: invoice.invoice_number,
-            embedHost,
-            urlTruncated: invoice.drive_embed_url?.substring(0, 100),
-            loadTime: performance.now() - loadStartRef.current,
-            viewerState: runtimeDebugContext.getSnapshot(),
-          },
-          userContext: 'PDFViewer/timeout',
-        }).catch(console.error);
-
         setPdfError(true);
         setIsLoading(false);
       }
@@ -87,7 +64,7 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [shouldMount, isLoading, pdfError, invoice.id, invoice.invoice_number, invoice.drive_embed_url]);
+  }, [shouldMount, isLoading, pdfError, invoice.id]);
 
   // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
   useEffect(() => {
@@ -110,24 +87,6 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
 
   const handleError = () => {
     console.error('[PDFViewer] Iframe error', invoice.id);
-    
-    const embedHost = invoice.drive_embed_url ? new URL(invoice.drive_embed_url).hostname : 'unknown';
-    
-    ApiErrorLogger.logError({
-      endpoint: 'pdf/iframe_error',
-      method: 'IFRAME_LOAD',
-      error: new Error(`PDF iframe failed to load`),
-      requestData: {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoice_number,
-        embedHost,
-        urlTruncated: invoice.drive_embed_url?.substring(0, 100),
-        loadTime: performance.now() - loadStartRef.current,
-        viewerState: runtimeDebugContext.getSnapshot(),
-      },
-      userContext: 'PDFViewer/error',
-    }).catch(console.error);
-
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setPdfError(true);
     setIsLoading(false);
@@ -141,7 +100,7 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
-        {isLoading && !pdfError && !safeModeActive && (
+        {isLoading && !pdfError && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
@@ -149,20 +108,7 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
             </div>
           </div>
         )}
-        {safeModeActive ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-amber-50 border border-amber-200 rounded-lg">
-            <AlertTriangle className="h-12 w-12 text-warning mb-4" />
-            <h4 className="text-lg font-medium mb-2">PDF Safe Mode Active</h4>
-            <p className="text-muted-foreground mb-6">
-              PDF rendering has been temporarily disabled to prevent browser freezes.
-              You can still open the document directly.
-            </p>
-            <Button onClick={() => window.open(invoice.drive_view_url, '_blank')}>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Open PDF in New Tab
-            </Button>
-          </div>
-        ) : !pdfError && shouldMount ? (
+        {!pdfError && shouldMount ? (
           <iframe
             key={invoice.id}
             ref={iframeRef}
