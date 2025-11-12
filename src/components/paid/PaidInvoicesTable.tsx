@@ -61,7 +61,7 @@ const ShimmerSkeleton = () => (
   <div className="h-12 bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%] animate-shimmer rounded-lg" />
 );
 
-export function PaidInvoicesTable({
+export const PaidInvoicesTable = React.memo(function PaidInvoicesTable({
   invoices,
   loading,
   currentPage,
@@ -238,4 +238,4 @@ export function PaidInvoicesTable({
       </div>
     </div>
   );
-}
+});

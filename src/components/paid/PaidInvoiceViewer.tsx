@@ -172,7 +172,8 @@ export function PaidInvoiceViewer({
                     <XeroSection 
                       invoice={invoice} 
                       onUpdate={() => {}} 
-                      onSync={() => {}} 
+                      onSync={() => {}}
+                      disablePresence={true}
                     />
                   </div>
                 </>

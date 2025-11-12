@@ -506,27 +506,32 @@ export default function PaidInvoices() {
       />
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto max-w-full">
-        {isInitialLoad ? (
-          <div className="p-8">
-            <div className="animate-pulse space-y-4">
-              <div className="h-12 bg-muted rounded" />
-              <div className="h-12 bg-muted rounded" />
-              <div className="h-12 bg-muted rounded" />
+        {/* Hide table when viewer is open to prevent expensive re-renders */}
+        {viewerIndex === null ? (
+          isInitialLoad ? (
+            <div className="p-8">
+              <div className="animate-pulse space-y-4">
+                <div className="h-12 bg-muted rounded" />
+                <div className="h-12 bg-muted rounded" />
+                <div className="h-12 bg-muted rounded" />
+              </div>
             </div>
-          </div>
+          ) : (
+            <PaidInvoicesTable
+              invoices={invoices}
+              loading={loading}
+              currentPage={page}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onInvoiceClick={handleInvoiceClick}
+              isChangingPage={isChangingPage}
+              onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
+            />
+          )
         ) : (
-          <PaidInvoicesTable
-            invoices={invoices}
-            loading={loading}
-            currentPage={page}
-            totalPages={totalPages}
-            totalCount={totalCount}
-            pageSize={pageSize}
-            onPageChange={handlePageChange}
-            onInvoiceClick={handleInvoiceClick}
-            isChangingPage={isChangingPage}
-            onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
-          />
+          <div className="flex-1 bg-muted/30" />
         )}
       </div>
 

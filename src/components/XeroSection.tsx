@@ -31,6 +31,7 @@ interface XeroSectionProps {
   onUpdate: (updates: any) => void;
   onSync: () => void;
   loading?: boolean;
+  disablePresence?: boolean; // Disable presence tracking in viewer mode
 }
 
 // Generate unique ID for line items
@@ -164,7 +165,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   invoice, 
   onUpdate, 
   onSync,
-  loading = false 
+  loading = false,
+  disablePresence = false
 }) => {
   const [invoiceData, setInvoiceData] = useState<ProcessedXeroData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -178,15 +180,17 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   
   const { toast } = useToast();
   
-  // Multi-user presence and conflict detection
-  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
-    currentInvoiceId: invoice.id,
-    isEditing: isEditing
-  });
+  // Multi-user presence and conflict detection (disabled in viewer mode)
+  const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = disablePresence
+    ? { usersOnCurrentInvoice: [], isCurrentInvoiceBeingEdited: false }
+    : useUserPresence({
+        currentInvoiceId: invoice.id,
+        isEditing: isEditing
+      });
 
-  // Lock heartbeat to keep lock alive while editing
+  // Lock heartbeat to keep lock alive while editing (disabled in viewer mode)
   useEffect(() => {
-    if (!isEditing || !invoice.id) return;
+    if (disablePresence || !isEditing || !invoice.id) return;
     
     const heartbeat = setInterval(async () => {
       const { invoiceLockService } = await import('@/services/invoiceLockService');
@@ -194,7 +198,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     }, 5 * 60 * 1000); // Every 5 minutes
     
     return () => clearInterval(heartbeat);
-  }, [isEditing, invoice.id]);
+  }, [disablePresence, isEditing, invoice.id]);
 
   // Edit mode functions
   const startEditing = () => {
