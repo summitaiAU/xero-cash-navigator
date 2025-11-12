@@ -57,7 +57,7 @@ const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: bool
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge className={`px-3 py-1.5 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
+            <Badge className={`px-2.5 py-1 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
               {status}
             </Badge>
           </TooltipTrigger>
@@ -98,19 +98,19 @@ export function PaidInvoiceViewer({
           {invoice ? (
             <>
               {/* Sticky Header */}
-              <div className="sticky top-0 z-10 bg-background border-b px-6 py-0.5 flex items-center justify-between gap-4">
+              <div className="sticky top-0 z-10 bg-background border-b px-6 py-0 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <div className="flex flex-col gap-0 flex-1 min-w-0">
                     <div className="flex items-center gap-3">
-                      <h2 className="text-lg font-semibold truncate">
+                      <h2 className="text-lg font-semibold leading-none truncate">
                         Invoice {invoice.invoice_number}
                       </h2>
-                      <span className="text-xl font-semibold text-gray-800">
+                      <span className="text-xl font-semibold leading-none text-gray-800">
                         {formatCurrency(invoice.total_amount)}
                       </span>
                       {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 leading-tight">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 leading-none">
                       <span className="truncate">{invoice.supplier}</span>
                       <span>•</span>
                       <span>Issued: {formatDate(invoice.invoice_date)}</span>
