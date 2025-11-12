@@ -7,11 +7,16 @@ import { Invoice } from "@/types/invoice";
 import { toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Lock } from "lucide-react";
 
 interface PaidInvoiceViewerProps {
   invoice: Invoice | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isLockedByOther?: boolean;
+  lockedByUser?: string;
 }
 
 const formatDate = (dateString?: string) => {
@@ -27,7 +32,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: boolean, lockedByUser?: string) => {
   const statusConfig: Record<string, { bg: string; border: string; text: string }> = {
     PAID: { bg: "bg-green-50", border: "border-green-200", text: "text-green-700" },
     "PARTIALLY PAID": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
@@ -37,10 +42,45 @@ const getStatusBadge = (status: string) => {
 
   const config = statusConfig[status] || { bg: "bg-muted", border: "border-border", text: "text-foreground" };
 
+  const getTooltipContent = () => {
+    if (status === "PAID") {
+      return `Paid ${formatCurrency(invoice.amount_paid || invoice.total_amount)} on ${formatDate(invoice.paid_date)}`;
+    }
+    if (status === "PARTIALLY PAID") {
+      return `Partially paid ${formatCurrency(invoice.amount_paid || 0)} on ${formatDate(invoice.paid_date)}`;
+    }
+    return status;
+  };
+
   return (
-    <Badge className={`px-3 py-1.5 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
-      {status}
-    </Badge>
+    <div className="flex items-center gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge className={`px-3 py-1.5 text-xs font-medium rounded-full border ${config.bg} ${config.border} ${config.text}`}>
+              {status}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{getTooltipContent()}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {isLockedByOther && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex items-center gap-1 text-amber-600">
+                <Lock className="h-4 w-4" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Being edited by {lockedByUser}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
+    </div>
   );
 };
 
@@ -48,6 +88,8 @@ export function PaidInvoiceViewer({
   invoice,
   open,
   onOpenChange,
+  isLockedByOther,
+  lockedByUser,
 }: PaidInvoiceViewerProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -58,21 +100,22 @@ export function PaidInvoiceViewer({
               {/* Sticky Header */}
               <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="flex flex-col gap-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                    <div className="flex items-center gap-3">
                       <h2 className="text-lg font-semibold truncate">
                         Invoice {invoice.invoice_number}
                       </h2>
-                      {getStatusBadge(invoice.status)}
+                      <span className="text-xl font-semibold text-gray-800">
+                        {formatCurrency(invoice.total_amount)}
+                      </span>
+                      {getStatusBadge(invoice.status, invoice, isLockedByOther, lockedByUser)}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs text-gray-500 leading-tight">
                       <span className="truncate">{invoice.supplier}</span>
                       <span>•</span>
                       <span>Issued: {formatDate(invoice.invoice_date)}</span>
                       <span>•</span>
                       <span>Paid: {formatDate(invoice.paid_date)}</span>
-                      <span>•</span>
-                      <span className="font-medium">{formatCurrency(invoice.total_amount)}</span>
                     </div>
                   </div>
                 </div>
@@ -86,27 +129,36 @@ export function PaidInvoiceViewer({
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 flex overflow-hidden">
-                {/* Left: PDF Preview - 60% */}
-                <div className="w-[60%] bg-muted/30 overflow-auto p-6">
-                  {invoice.drive_embed_url ? (
-                    <PDFViewer invoice={invoice} key={invoice.id} />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      No preview available
+              <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+                <ResizablePanelGroup direction="horizontal" className="flex-1">
+                  {/* Left: PDF Preview */}
+                  <ResizablePanel defaultSize={52} minSize={40} className="bg-muted/30">
+                    <div className="h-full overflow-auto p-4">
+                      {invoice.drive_embed_url ? (
+                        <PDFViewer invoice={invoice} key={invoice.id} />
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                          No preview available
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </ResizablePanel>
 
-                {/* Right: Xero Details - 40% */}
-                <div className="w-[40%] bg-background border-l overflow-auto">
-                  <XeroSection 
-                    invoice={invoice} 
-                    onUpdate={() => {}} 
-                    onSync={() => {}}
-                    disablePresence={true}
-                  />
-                </div>
+                  {/* Divider */}
+                  <ResizableHandle className="w-px bg-border hover:bg-primary/50 transition-colors" />
+
+                  {/* Right: Xero Details */}
+                  <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
+                    <div className="h-full overflow-auto">
+                      <XeroSection 
+                        invoice={invoice} 
+                        onUpdate={() => {}} 
+                        onSync={() => {}}
+                        disablePresence={true}
+                      />
+                    </div>
+                  </ResizablePanel>
+                </ResizablePanelGroup>
               </div>
             </>
           ) : (

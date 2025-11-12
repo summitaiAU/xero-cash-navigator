@@ -7,6 +7,7 @@ import { PaidInvoicesFilterDrawer } from "@/components/paid/PaidInvoicesFilterDr
 import { PaidInvoiceViewer } from "@/components/paid/PaidInvoiceViewer";
 import { ExportDialog } from "@/components/paid/ExportDialog";
 import { Invoice } from "@/types/invoice";
+import { useRealtime } from "@/contexts/RealtimeContext";
 import {
   fetchPaidInvoices,
   prefetchPaidInvoicesPage,
@@ -23,6 +24,7 @@ import { telemetry } from "@/services/telemetry";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
 
 export default function PaidInvoices() {
+  const { isInvoiceBeingEdited, activeUsers } = useRealtime();
   const [searchParams, setSearchParams] = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -465,6 +467,12 @@ export default function PaidInvoices() {
     ? invoices.find(inv => inv.id === selectedInvoiceId) || null
     : null;
 
+  // Check if selected invoice is locked by another user
+  const isLockedByOther = selectedInvoiceId ? isInvoiceBeingEdited(selectedInvoiceId) : false;
+  const lockedByUser = selectedInvoiceId 
+    ? activeUsers.find(u => u.current_invoice_id === selectedInvoiceId && u.status === 'editing')?.user_email 
+    : undefined;
+
   return (
     <div className="h-full flex flex-col bg-background">
       <PaidInvoicesTopBar
@@ -524,6 +532,8 @@ export default function PaidInvoices() {
         invoice={selectedInvoice}
         open={selectedInvoiceId !== null}
         onOpenChange={(open) => !open && handleCloseViewer()}
+        isLockedByOther={isLockedByOther}
+        lockedByUser={lockedByUser}
       />
 
       <ExportDialog
