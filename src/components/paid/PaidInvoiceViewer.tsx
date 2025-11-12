@@ -107,13 +107,13 @@ export function PaidInvoiceViewer({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0">
+      <DialogContent className="max-w-[95vw] w-full h-[95vh] p-0 gap-0 flex flex-col">
         <ErrorBoundary>
           {invoice ? (
             <>
               {/* Sticky Header */}
               <div className="sticky top-0 z-10 bg-background shadow-sm">
-                <div className="px-8 py-2.5 flex items-baseline justify-between gap-6">
+                <div className="px-8 py-2.5 flex items-center justify-between gap-6">
                   {/* Left: Primary Info Block */}
                   <div className="flex items-baseline gap-4 flex-1 min-w-0">
                     {/* Invoice Number with Copy */}
@@ -160,14 +160,14 @@ export function PaidInvoiceViewer({
                   </div>
 
                   {/* Right: Secondary Metadata */}
-                  <div className="flex items-baseline gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>Issued {formatDateSydney(invoice.invoice_date)}</span>
                     <span className="text-border">•</span>
                     <span>Paid {formatDateSydney(invoice.paid_date)}</span>
                   </div>
 
                   {/* Close Button */}
-                  <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 self-start mt-0.5">
+                  <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                       <path d="M18 6 6 18" />
                       <path d="m6 6 12 12" />
