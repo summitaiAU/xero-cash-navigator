@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { Invoice } from "@/types/invoice";
-import { fetchInvoiceById } from "@/services/paidInvoicesService";
+import { fetchInvoiceById, prefetchInvoiceById } from "@/services/paidInvoicesService";
 import { toZonedTime } from "date-fns-tz";
 import { format } from "date-fns";
 import { telemetry } from "@/services/telemetry";
@@ -51,6 +51,8 @@ const getStatusBadge = (status: string) => {
   );
 };
 
+type LoadingPhase = 'idle' | 'fetching-data' | 'data-ready' | 'mounting-pdf' | 'complete';
+
 export function PaidInvoiceViewer({
   invoiceId,
   open,
@@ -61,6 +63,8 @@ export function PaidInvoiceViewer({
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState<LoadingPhase>('idle');
+  const [isInCooldown, setIsInCooldown] = useState(false);
   
   const { toast } = useToast();
   
@@ -68,6 +72,7 @@ export function PaidInvoiceViewer({
   const requestIdRef = useRef<number>(0);
   const lastNavigationRef = useRef<number>(0);
   const navBurstRef = useRef<number[]>([]);
+  const warningCountRef = useRef<number>(0);
   const currentIndex = invoiceId ? invoiceIds.indexOf(invoiceId) : -1;
   const canGoPrev = currentIndex > 0;
   const canGoNext = currentIndex >= 0 && currentIndex < invoiceIds.length - 1;
@@ -79,21 +84,27 @@ export function PaidInvoiceViewer({
       setInvoice(null);
       setLoading(false);
       setIsNavigating(false);
+      setLoadingPhase('idle');
+      setIsInCooldown(false);
+      warningCountRef.current = 0;
     }
     onOpenChange(nextOpen);
   };
 
-  // Fetch invoice with request coordination
+  // Fetch invoice with sequential loading phases
   useEffect(() => {
     if (!open || !invoiceId) {
       setInvoice(null);
+      setLoadingPhase('idle');
       return;
     }
 
     const currentRequestId = ++requestIdRef.current;
     setLoading(true);
+    setLoadingPhase('fetching-data');
 
     const t0 = performance.now();
+    let t1 = 0, t2 = 0, t3 = 0;
 
     fetchInvoiceById(invoiceId)
       .then(({ data, error }) => {
@@ -112,13 +123,39 @@ export function PaidInvoiceViewer({
             variant: "destructive",
           });
           setInvoice(null);
+          setLoadingPhase('idle');
         } else if (data) {
+          t1 = performance.now();
           setInvoice(data);
+          setLoadingPhase('data-ready');
           
-          const duration = performance.now() - t0;
-          telemetry.logPerf("invoice_viewer_fetch", { duration, invoiceId });
+          // Wait 100ms buffer before mounting PDF
+          setTimeout(() => {
+            if (currentRequestId === requestIdRef.current) {
+              t2 = performance.now();
+              setLoadingPhase('mounting-pdf');
+              
+              // Give PDF time to mount
+              setTimeout(() => {
+                if (currentRequestId === requestIdRef.current) {
+                  t3 = performance.now();
+                  setLoadingPhase('complete');
+                  
+                  // Log phase timings
+                  telemetry.logPerf("invoice_viewer_phase_timing", {
+                    fetchData: t1 - t0,
+                    bufferDelay: t2 - t1,
+                    pdfMount: t3 - t2,
+                    total: t3 - t0,
+                    invoiceId,
+                  });
+                }
+              }, 150);
+            }
+          }, 100);
         } else {
           setInvoice(null);
+          setLoadingPhase('idle');
         }
       })
       .catch((error) => {
@@ -126,6 +163,7 @@ export function PaidInvoiceViewer({
           console.error("Error fetching invoice:", error);
           telemetry.logError("invoice_viewer_fetch_exception", error);
           setInvoice(null);
+          setLoadingPhase('idle');
         }
       })
       .finally(() => {
@@ -136,9 +174,15 @@ export function PaidInvoiceViewer({
       });
   }, [invoiceId, open, toast]);
 
-  // Navigation handler with guards and debouncing
+  // Navigation handler with strengthened circuit breaker
   const handleNavigate = useCallback(
     (targetInvoiceId: string, direction: "prev" | "next") => {
+      // Block during cooldown
+      if (isInCooldown) {
+        telemetry.logUIEvent("navigation_blocked_cooldown", { targetInvoiceId });
+        return;
+      }
+
       // Prevent concurrent navigation
       if (isNavigating) {
         telemetry.logUIEvent("navigation_blocked_concurrent", { targetInvoiceId });
@@ -153,16 +197,43 @@ export function PaidInvoiceViewer({
       }
       lastNavigationRef.current = now;
 
-      // Circuit breaker: limit to 5 navigations per second
+      // Circuit breaker: limit to 3 navigations per second
       const windowStart = now - 1000;
       navBurstRef.current = navBurstRef.current.filter((t) => t > windowStart);
-      if (navBurstRef.current.length >= 5) {
-        toast({
-          title: "You're navigating too fast",
-          description: "Please slow down to keep things stable.",
-        });
-        telemetry.logUIEvent("navigation_circuit_breaker", { targetInvoiceId, burstSize: navBurstRef.current.length });
-        return;
+      
+      if (navBurstRef.current.length >= 3) {
+        warningCountRef.current += 1;
+        
+        if (warningCountRef.current === 1) {
+          toast({
+            title: "Slow down",
+            description: "You're navigating too quickly.",
+          });
+          telemetry.logUIEvent("navigation_circuit_breaker_warning", { 
+            targetInvoiceId, 
+            burstSize: navBurstRef.current.length 
+          });
+        } else {
+          // Enter cooldown on second violation
+          setIsInCooldown(true);
+          toast({
+            title: "Navigation paused",
+            description: "Please wait 2 seconds before continuing.",
+            variant: "destructive",
+          });
+          telemetry.logUIEvent("navigation_circuit_breaker_cooldown", { 
+            targetInvoiceId, 
+            burstSize: navBurstRef.current.length 
+          });
+          
+          setTimeout(() => {
+            setIsInCooldown(false);
+            navBurstRef.current = [];
+            warningCountRef.current = 0;
+          }, 2000);
+          
+          return;
+        }
       }
       navBurstRef.current.push(now);
 
@@ -184,11 +255,27 @@ export function PaidInvoiceViewer({
       }
 
       setIsNavigating(true);
+      setLoadingPhase('fetching-data');
       telemetry.logUIEvent("invoice_navigation", { direction, targetInvoiceId });
       onNavigate?.(targetInvoiceId);
     },
-    [isNavigating, invoiceIds, onNavigate, toast]
+    [isNavigating, invoiceIds, onNavigate, toast, isInCooldown]
   );
+
+  // Prefetch adjacent invoices
+  useEffect(() => {
+    if (!open || currentIndex < 0) return;
+    
+    // Prefetch previous invoice
+    if (currentIndex > 0) {
+      prefetchInvoiceById(invoiceIds[currentIndex - 1]);
+    }
+    
+    // Prefetch next invoice
+    if (currentIndex < invoiceIds.length - 1) {
+      prefetchInvoiceById(invoiceIds[currentIndex + 1]);
+    }
+  }, [currentIndex, open, invoiceIds]);
 
   // Keyboard navigation with debouncing
   useEffect(() => {
@@ -223,8 +310,11 @@ export function PaidInvoiceViewer({
             <div className="sticky top-0 z-20 px-6 py-4 border-b border-border bg-card/95 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  {loading ? (
-                    <Skeleton className="h-6 w-48" />
+                  {loadingPhase === 'fetching-data' ? (
+                    <>
+                      <Skeleton className="h-6 w-48 mb-2" />
+                      <Skeleton className="h-4 w-64" />
+                    </>
                   ) : invoice ? (
                     <>
                       <div className="flex items-center gap-4">
@@ -248,30 +338,55 @@ export function PaidInvoiceViewer({
                   )}
                 </div>
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleOpenChange(false)}
-                  className="flex-shrink-0"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center gap-3">
+                  {loadingPhase !== 'idle' && loadingPhase !== 'complete' && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                      {loadingPhase === 'fetching-data' && 'Loading data...'}
+                      {loadingPhase === 'data-ready' && 'Preparing...'}
+                      {loadingPhase === 'mounting-pdf' && 'Loading PDF...'}
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleOpenChange(false)}
+                    className="flex-shrink-0"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             </div>
 
             {/* Content Area */}
             <div className="flex-1 flex overflow-hidden">
-              {loading ? (
-                <div className="flex-1 p-6 space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-96 w-full" />
+              {loadingPhase === 'fetching-data' ? (
+                <div className="flex-1 flex gap-6 p-6">
+                  <div className="flex-1 space-y-3">
+                    <Skeleton className="h-8 w-48" />
+                    <Skeleton className="h-[600px] w-full" />
+                  </div>
+                  <div className="w-[420px] space-y-3">
+                    <Skeleton className="h-8 w-32" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                  </div>
                 </div>
               ) : invoice ? (
                 <>
                   {/* Left: PDF Preview */}
                   <div className="flex-1 bg-muted/30 overflow-auto p-6">
-                    {invoice.drive_embed_url ? (
+                    {invoice.drive_embed_url && loadingPhase !== 'data-ready' ? (
                       <PDFViewer invoice={invoice} key={invoice.id} />
+                    ) : invoice.drive_embed_url ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+                          <p className="text-sm text-muted-foreground">Preparing PDF...</p>
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
                         No preview available
@@ -304,7 +419,7 @@ export function PaidInvoiceViewer({
                     variant="outline"
                     size="sm"
                     onClick={() => canGoPrev && handleNavigate(invoiceIds[currentIndex - 1], "prev")}
-                    disabled={!canGoPrev || isNavigating}
+                    disabled={!canGoPrev || isNavigating || isInCooldown}
                     className="gap-2"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -314,7 +429,7 @@ export function PaidInvoiceViewer({
                     variant="outline"
                     size="sm"
                     onClick={() => canGoNext && handleNavigate(invoiceIds[currentIndex + 1], "next")}
-                    disabled={!canGoNext || isNavigating}
+                    disabled={!canGoNext || isNavigating || isInCooldown}
                     className="gap-2"
                   >
                     Next

@@ -280,6 +280,23 @@ export async function prefetchPaidInvoicesPage(
 }
 
 /**
+ * Prefetch single invoice by ID (background, no waiting)
+ */
+export async function prefetchInvoiceById(invoiceId: string): Promise<void> {
+  const cached = paidInvoicesCacheService.getCachedInvoice(invoiceId);
+  if (cached) return; // Already in cache
+  
+  // Fetch in background and cache, but don't wait
+  fetchInvoiceById(invoiceId).then(({ data }) => {
+    if (data) {
+      paidInvoicesCacheService.setCachedInvoice(invoiceId, data);
+    }
+  }).catch(() => {
+    // Silently fail for prefetch
+  });
+}
+
+/**
  * Fetch single invoice by ID
  */
 export async function fetchInvoiceById(

@@ -10,12 +10,18 @@ interface PDFViewerProps {
 export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [shouldMount, setShouldMount] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Reset state when invoice changes
+  // Reset state when invoice changes and delay mounting
   useEffect(() => {
     setPdfError(false);
     setIsLoading(true);
+    setShouldMount(false);
+    
+    // Delay mounting by 100ms to ensure previous iframe is cleaned up
+    const timer = setTimeout(() => setShouldMount(true), 100);
+    return () => clearTimeout(timer);
   }, [invoice.id]);
 
   // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
@@ -46,7 +52,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
             </div>
           </div>
         )}
-        {!pdfError ? (
+        {!pdfError && shouldMount ? (
           <iframe
             key={invoice.id}
             ref={iframeRef}
@@ -61,7 +67,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
             }}
             title={`Invoice ${invoice.invoice_number}`}
           />
-        ) : (
+        ) : pdfError ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
             <AlertTriangle className="h-12 w-12 text-warning mb-4" />
             <h4 className="text-lg font-medium mb-2">Unable to display PDF</h4>
@@ -73,7 +79,7 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
               Open PDF in New Tab
             </Button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );
