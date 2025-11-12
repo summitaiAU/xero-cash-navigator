@@ -47,6 +47,10 @@ const base64urlToBase64 = (base64url: string): string => {
   return base64;
 };
 
+// Safari/iOS detection
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 // Create a Blob URL from base64url data
 const createBlobUrl = (base64url: string, mimeType: string): string => {
   const base64 = base64urlToBase64(base64url);
@@ -173,13 +177,29 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       }
       const byteArray = new Uint8Array(byteNums);
       const blob = new Blob([byteArray], { type: attachment.mime_type });
+      
+      // iOS Safari fallback - no download attribute support
+      if (isIOS) {
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, "_blank");
+        // Delay revoke for iOS
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        return;
+      }
+      
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
       link.download = attachment.filename || "attachment";
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(link.href);
+      
+      // Delay revoke for Safari
+      if (isSafari) {
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+      } else {
+        URL.revokeObjectURL(link.href);
+      }
     } catch (error) {
       console.error("Download failed:", error);
       toast({
@@ -296,23 +316,66 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
         );
       }
 
+      // iOS Safari - Show open button instead of embed
+      if (isIOS && blobUrl) {
+        return (
+          <div className="w-full bg-white rounded-lg shadow-sm p-8" style={{ minHeight: "70vh" }}>
+            <div className="flex flex-col items-center justify-center h-full gap-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">PDF Preview</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  PDF preview is not supported on iOS. Open in a new tab to view.
+                </p>
+              </div>
+              <Button 
+                onClick={() => window.open(blobUrl, "_blank")} 
+                size="lg"
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Open PDF
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
       return (
-        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto" }}>
+        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
           {blobUrl ? (
-            <iframe
-              src={blobUrl}
-              className="w-full border-0 rounded-lg"
-              style={{ minHeight: "70vh", width: "100%" }}
-              title={attachment.filename}
-              onError={() => {
-                setBlobError(true);
-                toast({
-                  title: "Error",
-                  description: "Failed to load PDF. Try Download.",
-                  variant: "destructive",
-                });
-              }}
-            />
+            isSafari ? (
+              // Desktop Safari - use object tag
+              <object
+                data={blobUrl}
+                type="application/pdf"
+                className="w-full border-0 rounded-lg"
+                style={{ minHeight: "70vh", width: "100%" }}
+              >
+                <div className="flex flex-col items-center justify-center p-8 gap-4">
+                  <p className="text-muted-foreground">Unable to display PDF in browser</p>
+                  <Button onClick={() => window.open(blobUrl, "_blank")} variant="outline">
+                    <Download className="w-4 h-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                </div>
+              </object>
+            ) : (
+              // Chrome/Firefox - use iframe
+              <iframe
+                src={blobUrl}
+                className="w-full border-0 rounded-lg"
+                style={{ minHeight: "70vh", width: "100%" }}
+                title={attachment.filename}
+                onError={() => {
+                  setBlobError(true);
+                  toast({
+                    title: "Error",
+                    description: "Failed to load PDF. Try Download.",
+                    variant: "destructive",
+                  });
+                }}
+              />
+            )
           ) : (
             <div className="flex items-center justify-center" style={{ minHeight: "70vh" }}>
               <Skeleton className="w-full h-full" />
@@ -345,7 +408,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       }
 
       return (
-        <div className="flex items-center justify-center min-h-[400px] p-8 bg-muted/10 rounded-lg overflow-auto">
+        <div className="flex items-center justify-center min-h-[400px] p-8 bg-muted/10 rounded-lg overflow-auto" style={{ WebkitOverflowScrolling: "touch" }}>
           {blobUrl ? (
             <img
               src={blobUrl}
