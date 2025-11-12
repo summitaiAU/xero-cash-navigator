@@ -39,7 +39,22 @@ function App() {
     };
 
     const handleError = (event: ErrorEvent) => {
-      console.error('[Global] Uncaught error:', event.error);
+      const memory = (performance as any).memory;
+      
+      // Console mirror for immediate debugging
+      console.error('[CRASH CONTEXT]', {
+        message: event.message || String(event.error),
+        stack: event.error?.stack,
+        filename: event.filename,
+        line: event.lineno,
+        col: event.colno,
+        viewerState: runtimeDebugContext.getSnapshot(),
+        memory: memory ? {
+          usedJSHeapSize: memory.usedJSHeapSize,
+          totalJSHeapSize: memory.totalJSHeapSize,
+          jsHeapSizeLimit: memory.jsHeapSizeLimit,
+        } : null
+      });
       
       // Rate limiting: dedupe same error within 3 seconds
       const errorHash = getErrorHash(event.message, event.error?.stack);
@@ -49,9 +64,6 @@ function App() {
       }
       lastErrorHash = errorHash;
       lastErrorTime = now;
-
-      // Capture memory if available
-      const memory = (performance as any).memory;
 
       ApiErrorLogger.logError({
         endpoint: 'window/error',
@@ -76,7 +88,19 @@ function App() {
     };
 
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('[Global] Unhandled promise rejection:', event.reason);
+      const memory = (performance as any).memory;
+      
+      // Console mirror for immediate debugging
+      console.error('[CRASH CONTEXT]', {
+        message: String(event.reason),
+        stack: event.reason?.stack,
+        viewerState: runtimeDebugContext.getSnapshot(),
+        memory: memory ? {
+          usedJSHeapSize: memory.usedJSHeapSize,
+          totalJSHeapSize: memory.totalJSHeapSize,
+          jsHeapSizeLimit: memory.jsHeapSizeLimit,
+        } : null
+      });
 
       // Rate limiting
       const errorHash = getErrorHash(String(event.reason), event.reason?.stack);
@@ -86,8 +110,6 @@ function App() {
       }
       lastErrorHash = errorHash;
       lastErrorTime = now;
-
-      const memory = (performance as any).memory;
 
       ApiErrorLogger.logError({
         endpoint: 'window/unhandledrejection',
