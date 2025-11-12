@@ -93,10 +93,10 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
   };
 
   return (
-    <div className="dashboard-card p-2 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-1 pb-1 border-b border-border/50 text-sm leading-none text-muted-foreground">
-        <span className="leading-none">Invoice: {invoice.invoice_number}</span>
-        <span className="leading-none">{invoice.supplier}</span>
+    <div className="dashboard-card p-3 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border/50 text-sm text-muted-foreground">
+        <span>Invoice: {invoice.invoice_number}</span>
+        <span>{invoice.supplier}</span>
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
