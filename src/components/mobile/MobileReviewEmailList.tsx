@@ -18,11 +18,13 @@ import { format, isToday, isThisWeek, parseISO } from "date-fns";
 interface MobileReviewEmailListProps {
   selectedEmailId: string | null;
   onSelectEmail: (email: EmailListItem) => void;
+  onToggleHamburgerMenu: () => void;
 }
 
 export const MobileReviewEmailList = ({
   selectedEmailId,
   onSelectEmail,
+  onToggleHamburgerMenu,
 }: MobileReviewEmailListProps) => {
   const [emails, setEmails] = useState<EmailListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -172,7 +174,12 @@ export const MobileReviewEmailList = ({
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Mobile Header */}
       <div className="h-14 px-2 border-b bg-background flex items-center justify-between sticky top-0 z-50">
-        <Button variant="ghost" size="icon" className="h-10 w-10">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-10 w-10"
+          onClick={onToggleHamburgerMenu}
+        >
           <Menu className="h-5 w-5" />
         </Button>
 

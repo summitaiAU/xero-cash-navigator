@@ -9,11 +9,13 @@ import { format, parseISO } from "date-fns";
 interface EmailConversationViewProps {
   email: EmailContent | null;
   loading: boolean;
+  compact?: boolean;
 }
 
 export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
   email,
   loading,
+  compact = false,
 }) => {
   const [showHeaders, setShowHeaders] = React.useState(false);
 
@@ -123,7 +125,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
           <div className="review-prose">
             {/* Additional Metadata (Collapsible) */}
             {(email.reply_to || (email.headers_slim && Object.keys(email.headers_slim).length > 0)) && (
-              <div className="pb-4 mb-4 border-b space-y-2">
+              <div className={compact ? "pb-2 mb-2 border-b space-y-1" : "pb-4 mb-4 border-b space-y-2"}>
                 {email.reply_to && (
                   <div className="text-xs">
                     <span className="font-medium text-muted-foreground">Reply-To: </span>
@@ -141,7 +143,7 @@ export const EmailConversationView: React.FC<EmailConversationViewProps> = ({
                       />
                       View Full Headers
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="mt-2">
+                    <CollapsibleContent className={compact ? "mt-1" : "mt-2"}>
                       <div className="bg-muted/30 rounded-md p-2 text-xs font-mono space-y-1">
                         {Object.entries(email.headers_slim).map(([key, value]) => (
                           <div key={key}>

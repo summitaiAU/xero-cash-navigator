@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { EmailListItem, EmailContent, EmailAttachment } from "@/services/emailReviewService";
 import { EmailConversationView } from "@/components/EmailConversationView";
 import { MobileReviewHeader } from "./MobileReviewHeader";
@@ -20,6 +21,14 @@ export const MobileReviewEmailView = ({
   onBack,
   onAttachmentClick,
 }: MobileReviewEmailViewProps) => {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top when component mounts
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo(0, 0);
+    }
+  }, []);
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Mobile Header */}
@@ -30,6 +39,7 @@ export const MobileReviewEmailView = ({
 
       {/* Email Content (scrollable) */}
       <div 
+        ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"
         style={{ 
           height: 'calc(100vh - 56px - 80px)',
@@ -40,6 +50,7 @@ export const MobileReviewEmailView = ({
         <EmailConversationView
           email={emailContent}
           loading={loading}
+          compact={true}
         />
       </div>
 

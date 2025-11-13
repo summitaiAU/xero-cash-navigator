@@ -491,7 +491,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={`
         ${isMobile 
-          ? 'inset-0 m-0 h-screen w-screen max-w-none rounded-none' 
+          ? 'fixed inset-0 m-0 h-screen w-screen max-w-none rounded-none z-50' 
           : 'max-w-5xl max-h-[95vh]'
         } 
         overflow-hidden flex flex-col bg-white
