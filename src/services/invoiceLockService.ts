@@ -232,8 +232,11 @@ class InvoiceLockService {
 
   // Subscribe to lock changes for an invoice
   subscribeLockChanges(invoiceId: string, callback: (lock: InvoiceLock | null) => void) {
+    const channelName = `invoice-lock-${invoiceId}`;
+    console.log(`[invoiceLockService] Creating realtime subscription for invoice: ${invoiceId}, channel: ${channelName}`);
+    
     const channel = supabase
-      .channel(`invoice-lock-${invoiceId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -243,21 +246,43 @@ class InvoiceLockService {
           filter: `invoice_id=eq.${invoiceId}`
         },
         (payload) => {
+          console.log(`[invoiceLockService] Received realtime event:`, {
+            eventType: payload.eventType,
+            hasNew: !!payload.new,
+            hasOld: !!payload.old,
+            newKeys: payload.new ? Object.keys(payload.new) : [],
+            oldKeys: payload.old ? Object.keys(payload.old) : []
+          });
+          
+          if (!payload) {
+            console.warn('[invoiceLockService] Received undefined payload');
+            return;
+          }
+          
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            console.log('[invoiceLockService] Lock INSERT/UPDATE:', payload.new);
             callback(payload.new as InvoiceLock);
           } else if (payload.eventType === 'DELETE') {
+            console.log('[invoiceLockService] Lock DELETE');
             callback(null);
           }
         }
       )
       .subscribe((status) => {
-        console.log('[invoiceLockService] Subscription status:', status);
-        if (status === 'CHANNEL_ERROR') {
-          console.error('[invoiceLockService] Channel error - check RLS policies and auth state');
+        console.log(`[invoiceLockService] Subscription status for ${channelName}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log(`[invoiceLockService] ✅ Successfully subscribed to lock changes for invoice ${invoiceId}`);
+        } else if (status === 'CLOSED') {
+          console.log(`[invoiceLockService] ⚠️ Channel closed for invoice ${invoiceId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`[invoiceLockService] ❌ Channel error for invoice ${invoiceId} - check RLS policies and auth state`);
         }
       });
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      console.log(`[invoiceLockService] Unsubscribing from ${channelName}`);
+      supabase.removeChannel(channel);
+    };
   }
 }
 
