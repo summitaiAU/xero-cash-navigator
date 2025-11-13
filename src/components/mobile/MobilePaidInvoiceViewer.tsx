@@ -49,23 +49,15 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
     disabled: false,
   });
 
-  // Process line items from invoice data
-  const processedLineItems = React.useMemo(() => {
-    if (invoice.list_items && Array.isArray(invoice.list_items)) {
-      return invoice.list_items;
-    }
-    if (invoice.xero_data?.lineItems) {
-      return invoice.xero_data.lineItems;
-    }
-    return [];
-  }, [invoice]);
+  // Use xero_data.lineItems directly (already normalized by service) - matches MobileDashboard pattern
+  const lineItems = invoice.xero_data?.lineItems || [];
 
   // Calculate totals from line items
   const { subtotal, totalTax, total } = React.useMemo(() => {
     let sub = 0;
     let tax = 0;
     
-    processedLineItems.forEach((item: any) => {
+    lineItems.forEach((item: any) => {
       const lineTotalExGst = item.lineTotalExGst || (item.quantity * item.unitAmount);
       const lineGst = item.lineGst || 0;
       sub += lineTotalExGst;
@@ -77,7 +69,7 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
       totalTax: tax,
       total: sub + tax,
     };
-  }, [processedLineItems]);
+  }, [lineItems]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-AU', {
@@ -212,7 +204,7 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
           invoice={invoice} 
           onSupplierClick={onSupplierClick} 
         />
-        <MobileLineItems lineItems={processedLineItems} />
+        <MobileLineItems lineItems={lineItems} />
         <MobileTotals 
           subtotal={subtotal}
           totalTax={totalTax}
