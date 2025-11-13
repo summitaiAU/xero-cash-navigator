@@ -530,6 +530,7 @@ export type Database = {
           processing_status: string | null
           project: string | null
           remittance_email: string | null
+          remittance_embed_link: string | null
           remittance_sent: boolean | null
           remittance_sent_at: string | null
           saved_emails: string[] | null
@@ -584,6 +585,7 @@ export type Database = {
           processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
+          remittance_embed_link?: string | null
           remittance_sent?: boolean | null
           remittance_sent_at?: string | null
           saved_emails?: string[] | null
@@ -638,6 +640,7 @@ export type Database = {
           processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
+          remittance_embed_link?: string | null
           remittance_sent?: boolean | null
           remittance_sent_at?: string | null
           saved_emails?: string[] | null

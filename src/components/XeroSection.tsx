@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { useUserPresence } from '@/hooks/useUserPresence';
 import { ConflictWarning } from '@/components/ConflictWarning';
 import { formatDateSydney } from '@/lib/dateUtils';
@@ -185,6 +186,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const [isApproving, setIsApproving] = useState(false);
   
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Multi-user presence and conflict detection (disabled in viewer mode)
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
@@ -229,13 +231,37 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     const lockResult = await invoiceLockService.acquireLock(invoice.id);
     
     if (!lockResult.success) {
-      // Lock failed - another user is editing
-      toast({
-        title: 'Invoice Locked',
-        description: lockResult.error || 'Another user is currently editing this invoice',
-        variant: 'destructive'
-      });
-      return; // Don't enter edit mode
+      // Check if the lock is owned by the current user
+      if (lockResult.lock?.locked_by_user_id === user?.id) {
+        // User's own stale lock - shouldn't happen with fixes, but handle gracefully
+        toast({
+          title: 'Session Recovery',
+          description: 'Your previous lock was found. Attempting to recover...',
+        });
+        
+        // Try to force-release own lock and retry
+        await invoiceLockService.releaseOwnLock(invoice.id);
+        
+        // Retry acquisition
+        const retryResult = await invoiceLockService.acquireLock(invoice.id);
+        if (!retryResult.success) {
+          toast({
+            title: 'Lock Recovery Failed',
+            description: 'Please refresh the page and try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        // If retry successful, continue with edit mode below
+      } else {
+        // Different user's lock
+        toast({
+          title: 'Invoice Locked',
+          description: lockResult.error || 'Another user is currently editing this invoice',
+          variant: 'destructive'
+        });
+        return; // Don't enter edit mode
+      }
     }
     
     console.log('[XeroSection] Lock acquired, entering edit mode');
