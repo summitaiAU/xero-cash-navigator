@@ -1,6 +1,9 @@
 import React from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobilePDFViewer } from './MobilePDFViewer';
+import { MobileInvoiceDetails } from './MobileInvoiceDetails';
+import { MobileLineItems } from './MobileLineItems';
+import { MobileTotals } from './MobileTotals';
 import { Invoice } from '@/types/invoice';
 
 interface MobileDashboardProps {
@@ -40,15 +43,35 @@ export const MobileDashboard = ({
         onOpenHamburgerMenu={onOpenHamburgerMenu}
       />
       
-      <main className="pt-14">
+      <main 
+        className="pt-14 pb-6 overflow-y-auto" 
+        style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
+      >
         <MobilePDFViewer invoice={currentInvoice} />
         
-        {/* TODO: Add remaining sections in Priority 2 & 3 */}
-        {/* - Invoice Details Section */}
-        {/* - Line Items Section */}
-        {/* - Totals Section */}
-        {/* - Action Buttons */}
-        {/* - Payment Confirmation */}
+        {/* Invoice Details Section */}
+        <MobileInvoiceDetails 
+          invoice={currentInvoice}
+          onSupplierClick={(supplier) => {
+            console.log('Filter by supplier:', supplier);
+          }}
+        />
+        
+        {/* Line Items Section */}
+        {currentInvoice.xero_data?.lineItems && (
+          <MobileLineItems lineItems={currentInvoice.xero_data.lineItems} />
+        )}
+        
+        {/* Totals Section */}
+        <MobileTotals 
+          subtotal={currentInvoice.xero_data?.subtotal || currentInvoice.subtotal || 0}
+          totalTax={currentInvoice.xero_data?.totalTax || currentInvoice.gst || 0}
+          total={currentInvoice.xero_data?.total || currentInvoice.total_amount || currentInvoice.amount || 0}
+          isApproved={currentInvoice.approved}
+        />
+        
+        {/* TODO: Action Buttons - Priority 3 */}
+        {/* TODO: Payment Confirmation - Priority 3 */}
       </main>
     </div>
   );
