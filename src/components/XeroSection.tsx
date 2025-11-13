@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -217,6 +217,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   // Edit mode state management
   const [isEditing, setIsEditing] = useState(false);
   const [editableData, setEditableData] = useState<any>(null);
+  
+  // Guard to prevent multiple auto-start calls per invoice
+  const didAutoStartRef = useRef(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -256,9 +259,21 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     return () => clearInterval(heartbeat);
   }, [disablePresence, isEditing, invoice.id]);
 
-  // Auto-start edit mode when autoStartEdit is true (for mobile)
+  // Reset auto-start guard when invoice changes
   useEffect(() => {
-    if (autoStartEdit && !isEditing && !dataLoading && invoiceData) {
+    didAutoStartRef.current = false;
+  }, [invoice.id]);
+
+  // Auto-start edit mode when autoStartEdit is true (for mobile) - one-shot per invoice
+  useEffect(() => {
+    if (
+      autoStartEdit &&
+      !didAutoStartRef.current &&
+      !isEditing &&
+      !dataLoading &&
+      invoiceData
+    ) {
+      didAutoStartRef.current = true;
       startEditing();
     }
   }, [autoStartEdit, isEditing, dataLoading, invoiceData]);
