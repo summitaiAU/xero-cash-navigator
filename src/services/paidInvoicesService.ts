@@ -222,11 +222,11 @@ export async function fetchPaidInvoices({
                   taxRate: itemData.gst_exempt ? "No Tax" : "GST (10%)",
                   amount: Number(itemData.line_total_ex_gst ?? itemData.total ?? 0),
                   // Preserve per-line GST fields
-                  gst_included: Boolean(itemData.gst_included),
-                  gst_exempt: Boolean(itemData.gst_exempt),
-                  line_gst: itemData.line_gst !== undefined ? Number(itemData.line_gst) : undefined,
-                  line_total_ex_gst: itemData.line_total_ex_gst !== undefined ? Number(itemData.line_total_ex_gst) : undefined,
-                  line_total_inc_gst: itemData.line_total_inc_gst !== undefined ? Number(itemData.line_total_inc_gst) : undefined,
+                  gstIncluded: Boolean(itemData.gst_included),
+                  gstExempt: Boolean(itemData.gst_exempt),
+                  lineGst: itemData.line_gst !== undefined ? Number(itemData.line_gst) : undefined,
+                  lineTotalExGst: itemData.line_total_ex_gst !== undefined ? Number(itemData.line_total_ex_gst) : undefined,
+                  lineTotalIncGst: itemData.line_total_inc_gst !== undefined ? Number(itemData.line_total_inc_gst) : undefined,
                 };
               })
             : []
@@ -413,11 +413,11 @@ export async function fetchInvoiceById(
                   taxRate: itemData.gst_exempt ? "No Tax" : "GST (10%)",
                   amount: Number(itemData.line_total_ex_gst ?? itemData.total ?? 0),
                   // Preserve per-line GST fields
-                  gst_included: Boolean(itemData.gst_included),
-                  gst_exempt: Boolean(itemData.gst_exempt),
-                  line_gst: itemData.line_gst !== undefined ? Number(itemData.line_gst) : undefined,
-                  line_total_ex_gst: itemData.line_total_ex_gst !== undefined ? Number(itemData.line_total_ex_gst) : undefined,
-                  line_total_inc_gst: itemData.line_total_inc_gst !== undefined ? Number(itemData.line_total_inc_gst) : undefined,
+                  gstIncluded: Boolean(itemData.gst_included),
+                  gstExempt: Boolean(itemData.gst_exempt),
+                  lineGst: itemData.line_gst !== undefined ? Number(itemData.line_gst) : undefined,
+                  lineTotalExGst: itemData.line_total_ex_gst !== undefined ? Number(itemData.line_total_ex_gst) : undefined,
+                  lineTotalIncGst: itemData.line_total_inc_gst !== undefined ? Number(itemData.line_total_inc_gst) : undefined,
                 };
               })
             : []

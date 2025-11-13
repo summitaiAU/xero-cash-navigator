@@ -66,8 +66,8 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
     let tax = 0;
     
     processedLineItems.forEach((item: any) => {
-      const lineTotalExGst = item.line_total_ex_gst || (item.quantity * item.unit_price);
-      const lineGst = item.line_gst || 0;
+      const lineTotalExGst = item.lineTotalExGst || (item.quantity * item.unitAmount);
+      const lineGst = item.lineGst || 0;
       sub += lineTotalExGst;
       tax += lineGst;
     });
