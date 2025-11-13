@@ -321,33 +321,11 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
         );
       }
 
-      // iOS Safari - Show open button instead of embed
-      if (isIOS && blobUrl) {
-        return (
-          <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 bg-slate-50 border border-slate-200 rounded-xl p-8">
-            <div className="text-center">
-              <h3 className="text-base font-semibold mb-2">PDF Preview</h3>
-              <p className="text-sm text-muted-foreground">
-                PDF preview is not supported on iOS. Open in a new tab to view.
-              </p>
-            </div>
-            <Button 
-              onClick={() => window.open(blobUrl, "_blank")} 
-              size="lg"
-              className="h-12 px-8"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Open PDF
-            </Button>
-          </div>
-        );
-      }
-
       return (
         <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
           {blobUrl ? (
-            isSafari ? (
-              // Desktop Safari - use object tag
+            isSafari && !isIOS ? (
+              // Desktop Safari only - use object tag
               <object
                 data={blobUrl}
                 type="application/pdf"
@@ -363,7 +341,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                 </div>
               </object>
             ) : (
-              // Chrome/Firefox - use iframe
+              // All other browsers including iOS - use iframe
               <iframe
                 src={blobUrl}
                 className="w-full border-0 rounded-lg"
