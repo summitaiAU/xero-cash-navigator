@@ -49,18 +49,26 @@ export const MobileHeader = ({
           <img src={SodhiLogo} alt="Sodhi" className="h-6 w-auto" />
         </div>
 
-        <div className="flex-1 min-w-0 px-2 flex items-center justify-between">
-          <div className="flex flex-col min-w-0">
-            <p className="text-sm font-semibold truncate">
-              {currentInvoice?.invoice_number || 'No Invoice'}
+        <div className="flex-1 min-w-0 px-2 flex items-center justify-center">
+          {currentInvoice ? (
+            <>
+              <div className="flex flex-col min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate">
+                  {currentInvoice.invoice_number}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {currentInvoice.supplier}
+                </p>
+              </div>
+              <div className="ml-2 font-semibold text-sm tabular-nums">
+                ${currentInvoice.total_amount?.toLocaleString() || '0'}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-muted-foreground">
+              No Flagged Invoices
             </p>
-            <p className="text-xs text-muted-foreground truncate">
-              {currentInvoice?.supplier || 'No Supplier'}
-            </p>
-          </div>
-          <div className="ml-2 font-semibold text-sm tabular-nums">
-            ${currentInvoice?.total_amount?.toLocaleString() || '0'}
-          </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
