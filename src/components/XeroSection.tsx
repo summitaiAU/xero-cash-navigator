@@ -275,8 +275,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const cancelEditing = async () => {
     // Release lock before exiting edit mode
     const { invoiceLockService } = await import('@/services/invoiceLockService');
-    await invoiceLockService.releaseLock(invoice.id);
-    console.log('[XeroSection] Lock released (cancel)');
+    const result = await invoiceLockService.releaseLock(invoice.id);
+    
+    if (!result.success) {
+      console.error('[XeroSection] Failed to release lock on cancel:', result.error);
+      toast({
+        title: 'Lock Release Failed',
+        description: 'The invoice lock may still be active. Please refresh the page.',
+        variant: 'destructive'
+      });
+    } else {
+      console.log('[XeroSection] Lock released (cancel)');
+    }
     
     setIsEditing(false);
     onEditingChange?.(false);
@@ -469,8 +479,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
       // Release lock after successful save
       const { invoiceLockService } = await import('@/services/invoiceLockService');
-      await invoiceLockService.releaseLock(invoice.id);
-      console.log('[XeroSection] Lock released (save)');
+      const lockReleaseResult = await invoiceLockService.releaseLock(invoice.id);
+
+      if (!lockReleaseResult.success) {
+        console.error('[XeroSection] Failed to release lock after save:', lockReleaseResult.error);
+        toast({
+          title: 'Warning',
+          description: 'Invoice saved but lock may still be active. Please refresh.',
+          variant: 'destructive'
+        });
+      } else {
+        console.log('[XeroSection] Lock released (save)');
+      }
 
       setInvoiceData(processSupabaseData(updatedInvoice));
       setIsEditing(false);
@@ -524,7 +544,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       loadInvoiceData();
     }, 50);
     return () => clearTimeout(id);
-  }, [invoice?.id]);
+  }, [invoice]);
 
   const isLoading = dataLoading || loading;
   const hasInvoiceData = !!invoiceData;

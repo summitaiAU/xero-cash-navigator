@@ -63,17 +63,36 @@ class InvoiceLockService {
   async releaseLock(invoiceId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return { success: false, error: 'Not authenticated' };
+      if (!user) {
+        console.warn('[invoiceLockService] releaseLock: Not authenticated');
+        return { success: false, error: 'Not authenticated' };
+      }
 
-      const { error } = await supabase
+      console.log('[invoiceLockService] Attempting to release lock for invoice:', invoiceId);
+
+      const { data, error } = await supabase
         .from('invoice_locks')
         .delete()
         .eq('invoice_id', invoiceId)
-        .eq('locked_by_user_id', user.id);
+        .eq('locked_by_user_id', user.id)
+        .select();
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        console.error('[invoiceLockService] releaseLock error:', error);
+        return { success: false, error: error.message };
+      }
+      
+      // Check if anything was actually deleted
+      if (!data || data.length === 0) {
+        console.warn('[invoiceLockService] releaseLock: No lock found to delete (may have already expired)');
+        // This is not necessarily an error - the lock may have been cleaned up by the cron job
+        return { success: true }; // Return success anyway since lock is gone
+      }
+      
+      console.log('[invoiceLockService] Lock successfully released:', data);
       return { success: true };
     } catch (err: any) {
+      console.error('[invoiceLockService] releaseLock exception:', err);
       return { success: false, error: err.message };
     }
   }
