@@ -510,6 +510,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         ...invoice,
         entity: editableData.entity,
         project: editableData.project,
+        supplier: editableData.supplierName,
         supplier_name: editableData.supplierName,
         invoice_no: editableData.invoiceNumber,
         invoice_date: editableData.invoiceDate,
