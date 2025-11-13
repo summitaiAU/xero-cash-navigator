@@ -303,6 +303,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         );
         const taxType = shouldCalculateGst ? 'INPUT' : 'NONE';
         
+        console.log(`[XeroSection] Line ${index + 1} startEditing:`, {
+          lineGst: item.lineGst,
+          gstIncluded,
+          gstExempt,
+          shouldCalculateGst,
+          taxType,
+          quantity: item.quantity,
+          unitAmount: item.unitAmount
+        });
+        
         return {
           id: `item_${Date.now()}_${index}`,
           description: item.description || '',
@@ -818,6 +828,17 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                     {editableData?.lineItems?.map((item: any, index: number) => {
                       const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
                       const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded, item.gstExempt);
+                      
+                      console.log(`[XeroSection] Rendering line ${index + 1}:`, {
+                        quantity: item.quantity,
+                        unitAmount: item.unitAmount,
+                        gstIncluded: item.gstIncluded,
+                        gstExempt: item.gstExempt,
+                        taxType: item.taxType,
+                        subtotal,
+                        gstAmount
+                      });
+                      
                       return (
                         <tr key={item.id} className="hover:bg-muted/20">
                           <td className="px-2 py-4 text-sm text-center font-medium">{index + 1}</td>
