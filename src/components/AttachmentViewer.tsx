@@ -485,16 +485,16 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
     return "secondary";
   };
 
+  // Mobile: Render custom overlay without Dialog wrapper
   if (isMobile) {
+    if (!attachmentId) return null;
+
     return (
-      <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
-        {/* Premium Mobile Overlay with Backdrop */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={onClose}>
-          {/* Premium Card Container */}
-          <div 
-            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={onClose}>
+        <div 
+          className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
             {/* Row 1: Title Bar with Close Button */}
             <div className="flex items-center justify-between h-14 px-4 border-b border-slate-200">
               <Button 
@@ -640,11 +640,10 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             </div>
           </div>
         </div>
-      </Dialog>
     );
   }
 
-  // Desktop Layout (unchanged)
+  // Desktop: Use Dialog component
   return (
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
