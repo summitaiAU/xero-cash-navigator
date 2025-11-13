@@ -3,6 +3,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
+// Module-scoped singleton to prevent duplicate channels
+let sharedPresenceChannel: RealtimeChannel | null = null;
+let sharedPresenceSubscribers = 0;
+let sharedPresenceReady = false;
+let disabledForSession = false;
+let reconnectTimestamps: number[] = [];
+let handlersAttached = false;
+
+// Detect Safari browser once at module scope
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 interface UserPresence {
   user_email: string;
   user_id: string;
@@ -46,9 +57,6 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'live' | 'reconnecting' | 'offline'>('live');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const currentUserId = user?.id;
-
-  // Detect Safari browser
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
   
   // Disable presence for Safari to prevent infinite loops
   const presenceEnabled = enabled && !isSafari;
@@ -64,7 +72,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
     userRef.current = user ? { id: user.id, email: user.email ?? '' } : null;
   }, [user?.id, user?.email]);
 
-  // Stable presence channel subscription (only re-subscribes when user.id or enabled changes)
+  // Stable presence channel subscription (singleton pattern)
   useEffect(() => {
     if (!presenceEnabled || !user?.id) {
       if (isSafari && user?.id) {
@@ -73,8 +81,12 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
       return;
     }
 
-    // Only create if not already created
-    if (!channelRef.current) {
+    // Reuse existing channel or create new one
+    if (sharedPresenceChannel && !channelRef.current) {
+      channelRef.current = sharedPresenceChannel;
+      sharedPresenceSubscribers++;
+      console.log('[presence] Reusing existing channel', { subscribers: sharedPresenceSubscribers });
+    } else if (!sharedPresenceChannel) {
       const channel = supabase.channel('user-presence', {
         config: {
           presence: {
@@ -83,70 +95,101 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
         },
       });
 
-      channel
-        .on('presence', { event: 'sync' }, () => {
-          const presenceState = channel.presenceState();
-          const users: UserPresence[] = [];
-          
-          Object.keys(presenceState).forEach((key) => {
-            const presences = presenceState[key] as any[];
-            presences.forEach((presence) => {
-              users.push(presence);
+      // Attach handlers only once
+      if (!handlersAttached) {
+        channel
+          .on('presence', { event: 'sync' }, () => {
+            const presenceState = channel.presenceState();
+            const users: UserPresence[] = [];
+            
+            Object.keys(presenceState).forEach((key) => {
+              const presences = presenceState[key] as any[];
+              presences.forEach((presence) => {
+                users.push(presence);
+              });
             });
-          });
-          
-          setActiveUsers(users);
-          setConnectionStatus('live');
-          setLastSyncTime(new Date());
-        })
-        .on('presence', { event: 'join' }, ({ newPresences }) => {
-          // Reduced logging - only log when significant
-          if (newPresences.length > 0) {
-            console.log('[presence] user joined', { count: newPresences.length, t: new Date().toISOString() });
-          }
-        })
-        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-          if (leftPresences.length > 0) {
-            console.log('[presence] user left', { count: leftPresences.length, t: new Date().toISOString() });
-          }
-        })
-        .subscribe(async (status) => {
-          if (status === 'SUBSCRIBED' && userRef.current) {
+            
+            setActiveUsers(users);
             setConnectionStatus('live');
             setLastSyncTime(new Date());
-            await channel.track({
-              user_email: userRef.current.email,
-              user_id: userRef.current.id,
-              last_activity: new Date().toISOString(),
-              status: 'idle'
-            });
-            console.log('[presence] subscribed', { userId: user.id, t: new Date().toISOString() });
-          } else if (status === 'CHANNEL_ERROR') {
-            setConnectionStatus('offline');
-          } else if (status === 'TIMED_OUT') {
-            setConnectionStatus('reconnecting');
-          }
-        });
+          })
+          .on('presence', { event: 'join' }, () => {
+            // Silenced to reduce noise
+          })
+          .on('presence', { event: 'leave' }, () => {
+            // Silenced to reduce noise
+          })
+          .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED' && userRef.current) {
+              setConnectionStatus('live');
+              setLastSyncTime(new Date());
+              
+              // Initial join - use track only once
+              if (!sharedPresenceReady) {
+                await channel.track({
+                  user_email: userRef.current.email,
+                  user_id: userRef.current.id,
+                  last_activity: new Date().toISOString(),
+                  status: 'idle'
+                });
+                sharedPresenceReady = true;
+                console.log('[presence] track (join)', { userId: userRef.current.id });
+              }
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+              // Track reconnection attempts
+              const now = Date.now();
+              reconnectTimestamps.push(now);
+              reconnectTimestamps = reconnectTimestamps.filter(t => now - t < 10000); // Keep last 10 seconds
+              
+              if (reconnectTimestamps.length >= 5) {
+                console.warn('[presence] Excessive reconnects; disabling presence this session');
+                disabledForSession = true;
+                channel.unsubscribe();
+                sharedPresenceChannel = null;
+                sharedPresenceReady = false;
+                handlersAttached = false;
+                setConnectionStatus('offline');
+                return;
+              }
+              
+              setConnectionStatus(status === 'TIMED_OUT' ? 'reconnecting' : 'offline');
+            }
+          });
 
+        handlersAttached = true;
+      }
+
+      sharedPresenceChannel = channel;
       channelRef.current = channel;
+      sharedPresenceSubscribers = 1;
+      console.log('[presence] Created new channel', { userId: user.id });
     }
 
     return () => {
-      // Cleanup only when user.id or enabled changes (or unmount)
-      if (channelRef.current) {
-        console.log('[presence] unsubscribing', { userId: user?.id, t: new Date().toISOString() });
-        channelRef.current.unsubscribe();
+      // Only unsubscribe when all subscribers are gone
+      sharedPresenceSubscribers--;
+      
+      if (sharedPresenceSubscribers <= 0 && sharedPresenceChannel) {
+        console.log('[presence] Last subscriber - unsubscribing');
+        sharedPresenceChannel.unsubscribe();
+        sharedPresenceChannel = null;
         channelRef.current = null;
+        sharedPresenceReady = false;
+        handlersAttached = false;
+        disabledForSession = false;
+        reconnectTimestamps = [];
       }
     };
-  }, [user?.id, presenceEnabled, isSafari]);
+  }, [user?.id, presenceEnabled]);
 
   const updatePresence = useCallback(async (invoiceId?: string, status: 'viewing' | 'editing' | 'idle' = 'viewing') => {
+    if (disabledForSession) return;
+    
     const channel = channelRef.current;
     const usr = userRef.current;
-    if (!channel || !usr) return;
+    if (!channel || !usr || !sharedPresenceReady) return;
 
-    // Only track when something changed
+    // Only update when something changed
     const changed = lastPresenceRef.current.invoiceId !== invoiceId || lastPresenceRef.current.status !== status;
     if (!changed) return;
 
@@ -158,6 +201,7 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
     }
 
     debounceRef.current = setTimeout(async () => {
+      // Use track to update presence (Supabase handles update vs join internally)
       await channel.track({
         user_email: usr.email,
         user_id: usr.id,
@@ -165,7 +209,6 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
         last_activity: new Date().toISOString(),
         status,
       });
-      console.log('[presence] track', { invoiceId, status, t: new Date().toISOString() });
     }, 100);
   }, []);
 
