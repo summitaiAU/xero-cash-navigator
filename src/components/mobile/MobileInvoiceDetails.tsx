@@ -94,7 +94,7 @@ export const MobileInvoiceDetails = ({ invoice, onSupplierClick }: MobileInvoice
         
         {/* Due Date */}
         {invoice.due_date && (
-          <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center justify-between py-2.5 border-b border-border/50">
             <span className="text-xs text-muted-foreground flex-shrink-0 mr-2">Due Date</span>
             <div className="flex items-center gap-2 flex-1 justify-end">
               <span className="text-sm font-medium text-right break-words">
@@ -108,6 +108,12 @@ export const MobileInvoiceDetails = ({ invoice, onSupplierClick }: MobileInvoice
             </div>
           </div>
         )}
+        
+        {/* Currency */}
+        <div className="flex items-center justify-between py-2.5">
+          <span className="text-xs text-muted-foreground flex-shrink-0 mr-2">Currency</span>
+          <span className="text-sm font-medium text-right break-words flex-1">{invoice.currency || 'AUD'}</span>
+        </div>
       </div>
     </div>
   );

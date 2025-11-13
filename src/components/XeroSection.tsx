@@ -1300,9 +1300,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             </div>
           </div>
 
-          {/* Totals - Responsive */}
-          <div className="flex justify-end">
-            <div className="w-full max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
+          {/* Currency and Totals Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            {/* Currency Field */}
+            <div className="space-y-2 w-full md:w-auto">
+              <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
+              {isEditing ? (
+                <select
+                  value={editableData?.currency || 'AUD'}
+                  onChange={(e) => setEditableData({...editableData, currency: e.target.value})}
+                  className="flex h-10 w-full md:w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="AUD">AUD</option>
+                  <option value="USD">USD</option>
+                </select>
+              ) : (
+                <div className="font-medium text-sm md:text-base">{invoiceData?.currency || 'AUD'}</div>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="w-full md:w-auto md:max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
               {(() => {
                 const totals = isEditing && editableData 
                   ? calculateInvoiceTotals(editableData.lineItems)
