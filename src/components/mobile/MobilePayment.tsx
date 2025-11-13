@@ -233,7 +233,7 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
 
   return (
     <>
-      <div className="mx-2 mt-3 mb-2 p-4 bg-card border border-border rounded-xl shadow-sm">
+      <div className="mx-2 mt-3 mb-6 p-4 bg-card border border-border rounded-xl shadow-sm">
         <h3 className="text-sm font-semibold mb-4">Payment Confirmation</h3>
 
         {/* Step 1: Upload Payment Proof */}

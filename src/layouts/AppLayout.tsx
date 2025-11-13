@@ -70,21 +70,6 @@ export const AppLayout: React.FC = () => {
     };
   }, []);
 
-  // Setup dynamic viewport height CSS variable for iOS Safari
-  useEffect(() => {
-    const setVh = () => {
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
-    };
-    setVh();
-    window.addEventListener('resize', setVh);
-    window.addEventListener('orientationchange', setVh);
-    return () => {
-      window.removeEventListener('resize', setVh);
-      window.removeEventListener('orientationchange', setVh);
-    };
-  }, []);
-
   // Calculate counts
   const { payableCount, paidCount, flaggedCount } = useMemo(() => {
     const payable = invoices.filter(
@@ -110,10 +95,7 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-      <div
-        className="w-full flex bg-background overflow-hidden"
-        style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
-      >
+    <div className="h-screen w-full flex bg-background overflow-hidden">
       {/* Hide sidebar on mobile (< 1024px) */}
       {!isMobile && (
         <SimpleSidebar
@@ -130,7 +112,7 @@ export const AppLayout: React.FC = () => {
         />
       )}
       <main className={cn(
-        "flex-1 min-w-0 min-h-0 h-full relative overflow-hidden transition-all duration-300",
+        "flex-1 min-w-0 h-full relative overflow-hidden transition-all duration-300",
         // Only add left padding for desktop when sidebar is visible
         !isMobile && (sidebarCollapsed ? "pl-16" : "pl-48")
       )}>
