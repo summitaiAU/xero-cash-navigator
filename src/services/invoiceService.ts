@@ -459,7 +459,9 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   gst?: number,
   total_amount?: number,
   approved?: boolean,
-  last_edited_at?: string
+  last_edited_at?: string,
+  last_edited_by_user_id?: string,
+  last_edited_by_email?: string
 }) => {
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase

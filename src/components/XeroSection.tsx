@@ -27,6 +27,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserPresence } from '@/hooks/useUserPresence';
 import { ConflictWarning } from '@/components/ConflictWarning';
+import { InvoiceEditInfo } from '@/components/InvoiceEditInfo';
 import { formatDateSydney } from '@/lib/dateUtils';
 
 interface XeroSectionProps {
@@ -502,7 +503,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         subtotal: totals.subtotal,
         gst: totals.totalTax,
         total_amount: totals.total,
-        last_edited_at: new Date().toISOString()
+        last_edited_at: new Date().toISOString(),
+        last_edited_by_user_id: user?.id,
+        last_edited_by_email: user?.email
       });
 
       // Update local state
@@ -519,7 +522,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
-        total_amount: totals.total
+        total_amount: totals.total,
+        last_edited_at: new Date().toISOString(),
+        last_edited_by_user_id: user?.id,
+        last_edited_by_email: user?.email
       };
 
       // Release lock after successful save
@@ -611,6 +617,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           </Button>
         </div>
       </div>
+
+      <InvoiceEditInfo 
+        lastEditedAt={invoice.last_edited_at}
+        lastEditedByEmail={invoice.last_edited_by_email}
+        className="mb-3 pb-3 border-b border-border/50"
+      />
 
       {isLoading ? (
         <div className="space-y-6">

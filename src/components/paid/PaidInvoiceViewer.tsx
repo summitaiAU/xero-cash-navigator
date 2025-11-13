@@ -7,6 +7,7 @@ import { Invoice } from "@/types/invoice";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { InvoiceEditInfo } from "@/components/InvoiceEditInfo";
 import { Lock, Copy, Check } from "lucide-react";
 import { formatDateSydney } from "@/lib/dateUtils";
 import { toast } from "sonner";
@@ -179,6 +180,15 @@ export function PaidInvoiceViewer({
                     <span>Issued {formatDateSydney(invoice.invoice_date)}</span>
                     <span className="text-border">•</span>
                     <span>Paid {formatDateSydney(invoice.paid_date)}</span>
+                    {invoice.last_edited_at && invoice.last_edited_by_email && (
+                      <>
+                        <span className="text-border">•</span>
+                        <InvoiceEditInfo 
+                          lastEditedAt={invoice.last_edited_at}
+                          lastEditedByEmail={invoice.last_edited_by_email}
+                        />
+                      </>
+                    )}
                   </div>
 
                   {/* Close Button */}
