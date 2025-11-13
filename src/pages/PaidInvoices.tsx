@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { PaidInvoicesTopBar } from "@/components/paid/PaidInvoicesTopBar";
 import { PaidInvoicesTable } from "@/components/paid/PaidInvoicesTable";
@@ -24,10 +24,19 @@ import {
 } from "@/services/exportService";
 import { telemetry } from "@/services/telemetry";
 import { ApiErrorLogger } from "@/services/apiErrorLogger";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePaidInvoices } from "@/components/mobile/MobilePaidInvoices";
+import { MobileFilterSheet } from "@/components/mobile/MobileFilterSheet";
+import { MobileHamburgerMenu } from "@/components/mobile/MobileHamburgerMenu";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PaidInvoices() {
   const { isInvoiceBeingEdited, activeUsers } = useRealtime();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -35,6 +44,7 @@ export default function PaidInvoices() {
   const [isChangingPage, setIsChangingPage] = useState(false);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [showMobileHamburger, setShowMobileHamburger] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
@@ -497,8 +507,65 @@ export default function PaidInvoices() {
   // Check if selected invoice is locked by another user using the lock service
   const { isLockedByOther, lockedByUser } = useInvoiceLock(selectedInvoiceId || undefined);
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      navigate('/auth');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
+      {isMobile ? (
+        // Mobile View
+        <>
+          <MobileHamburgerMenu
+            open={showMobileHamburger}
+            onOpenChange={setShowMobileHamburger}
+            viewState="paid"
+            payableCount={0}
+            flaggedCount={0}
+            reviewCount={0}
+            userName={user?.email || 'User'}
+            onSignOut={handleSignOut}
+          />
+          <MobilePaidInvoices
+            invoices={invoices}
+            loading={loading}
+            totalCount={totalCount}
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            searchQuery={searchQuery}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            filters={filters}
+            activeFiltersCount={activeFiltersCount}
+            activeFilterChips={activeFilterChips}
+            onSearchChange={handleSearchChange}
+            onSortChange={handleSortChange}
+            onPageChange={handlePageChange}
+            onOpenFilters={() => setFilterDrawerOpen(true)}
+            onRemoveFilter={handleRemoveFilter}
+            onInvoiceClick={handleInvoiceClick}
+            onClearFilters={handleClearFilters}
+            onOpenHamburgerMenu={() => setShowMobileHamburger(true)}
+          />
+          <MobileFilterSheet
+            open={filterDrawerOpen}
+            onOpenChange={setFilterDrawerOpen}
+            filters={filters}
+            onApply={handleApplyFilters}
+            onClear={handleClearFilters}
+          />
+        </>
+      ) : (
+        // Desktop View
+        <>
       <PaidInvoicesTopBar
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
@@ -552,6 +619,22 @@ export default function PaidInvoices() {
         onClear={handleClearFilters}
       />
 
+      {!isMobile && (
+        <ExportDialog
+          open={exportDialogOpen}
+          onOpenChange={setExportDialogOpen}
+          onExport={handleExport}
+          totalCount={totalCount}
+          currentFilters={{
+            invoiceDateFrom: filters.invoiceDateFrom,
+            invoiceDateTo: filters.invoiceDateTo,
+          }}
+        />
+      )}
+        </>
+      )}
+
+      {/* Invoice Viewer - shared between mobile and desktop */}
       <PaidInvoiceViewer
         invoice={selectedInvoice}
         open={viewerOpen}
@@ -572,17 +655,6 @@ export default function PaidInvoices() {
           toast.success('Invoice updated', {
             description: 'Changes saved successfully',
           });
-        }}
-      />
-
-      <ExportDialog
-        open={exportDialogOpen}
-        onOpenChange={setExportDialogOpen}
-        onExport={handleExport}
-        totalCount={totalCount}
-        currentFilters={{
-          invoiceDateFrom: filters.invoiceDateFrom,
-          invoiceDateTo: filters.invoiceDateTo,
         }}
       />
 
