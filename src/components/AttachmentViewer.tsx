@@ -506,9 +506,9 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                 <X className="h-5 w-5" />
               </Button>
               
-              <DialogTitle className="flex-1 text-center text-sm font-semibold truncate px-2">
+              <h2 className="flex-1 text-center text-sm font-semibold truncate px-2">
                 {loading ? <Skeleton className="h-5 w-48 mx-auto" /> : attachment?.filename || "Attachment"}
-              </DialogTitle>
+              </h2>
               
               <div className="w-10" /> {/* Spacer for centering */}
             </div>
