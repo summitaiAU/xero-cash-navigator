@@ -55,6 +55,7 @@ export interface ProcessedXeroData {
     taxRate: string;
     amount: number;
     gstIncluded?: boolean;
+    gstExempt?: boolean;
     lineGst?: number;
     lineTotalExGst?: number;
     lineTotalIncGst?: number;
