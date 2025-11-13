@@ -56,12 +56,6 @@ export const DEFAULT_EXPORT_COLUMNS: ExportColumn[] = [
     enabled: false,
     format: (value) => value ? `$${Number(value).toFixed(2)}` : '$0.00'
   },
-  { 
-    key: 'amount_paid', 
-    label: 'Amount Paid', 
-    enabled: false,
-    format: (value) => value ? `$${Number(value).toFixed(2)}` : '$0.00'
-  },
   { key: 'currency', label: 'Currency', enabled: false },
   { key: 'project', label: 'Project', enabled: false },
   { key: 'remittance_email', label: 'Remittance Email', enabled: false },
