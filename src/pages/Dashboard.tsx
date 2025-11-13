@@ -699,6 +699,13 @@ export const Dashboard: React.FC = () => {
         onNavigateBack={handlePrevious}
         onJumpToInvoice={handleJumpToInvoice}
         onOpenHamburgerMenu={() => setShowHamburgerMenu(true)}
+        onMarkAsPaid={handleMarkAsPaid}
+        onXeroUpdate={handleXeroUpdate}
+        onXeroSync={() => {}}
+        onPartialPaymentUpdate={async () => {
+          await loadInvoices();
+          await loadAllInvoices();
+        }}
       />
     );
   }

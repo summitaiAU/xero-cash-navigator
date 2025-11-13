@@ -1,10 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobilePDFViewer } from './MobilePDFViewer';
 import { MobileInvoiceDetails } from './MobileInvoiceDetails';
 import { MobileLineItems } from './MobileLineItems';
 import { MobileTotals } from './MobileTotals';
-import { Invoice } from '@/types/invoice';
+import { MobileActions } from './MobileActions';
+import { MobilePayment } from './MobilePayment';
+import { MobileEditSheet } from './MobileEditSheet';
+import { Invoice, PaymentData } from '@/types/invoice';
+import { useInvoiceLock } from '@/hooks/useInvoiceLock';
+import { useToast } from '@/hooks/use-toast';
+import { approveInvoice, undoApproveInvoice } from '@/services/invoiceService';
 
 interface MobileDashboardProps {
   currentInvoice: Invoice | null;
@@ -13,6 +19,10 @@ interface MobileDashboardProps {
   onNavigateBack: () => void;
   onJumpToInvoice: (index: number) => void;
   onOpenHamburgerMenu: () => void;
+  onMarkAsPaid: (data: PaymentData) => Promise<void>;
+  onXeroUpdate: (updates: any) => void;
+  onXeroSync: () => void;
+  onPartialPaymentUpdate?: () => Promise<void>;
 }
 
 export const MobileDashboard = ({
@@ -22,7 +32,67 @@ export const MobileDashboard = ({
   onNavigateBack,
   onJumpToInvoice,
   onOpenHamburgerMenu,
+  onMarkAsPaid,
+  onXeroUpdate,
+  onXeroSync,
+  onPartialPaymentUpdate,
 }: MobileDashboardProps) => {
+  const [isEditingXero, setIsEditingXero] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const { toast } = useToast();
+  
+  // Get lock status for current invoice
+  const { isLockedByOther, lockedByUser } = useInvoiceLock(currentInvoice?.id);
+  const handleStartEdit = () => {
+    setIsEditingXero(true);
+  };
+
+  const handleApprove = async () => {
+    if (!currentInvoice) return;
+    
+    setIsApproving(true);
+    try {
+      await approveInvoice(currentInvoice.id);
+      toast({ 
+        title: 'Invoice Approved', 
+        description: 'Invoice has been approved.',
+      });
+      // Trigger parent refresh
+      onXeroUpdate({ approved: true });
+    } catch (error: any) {
+      toast({ 
+        title: 'Approval Failed', 
+        description: error.message, 
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleUndoApprove = async () => {
+    if (!currentInvoice) return;
+    
+    setIsApproving(true);
+    try {
+      await undoApproveInvoice(currentInvoice.id);
+      toast({ 
+        title: 'Approval Undone', 
+        description: 'Invoice approval reverted.',
+      });
+      // Trigger parent refresh
+      onXeroUpdate({ approved: false });
+    } catch (error: any) {
+      toast({ 
+        title: 'Undo Failed', 
+        description: error.message, 
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
   if (!currentInvoice) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -70,9 +140,36 @@ export const MobileDashboard = ({
           isApproved={currentInvoice.approved}
         />
         
-        {/* TODO: Action Buttons - Priority 3 */}
-        {/* TODO: Payment Confirmation - Priority 3 */}
+        {/* Action Buttons */}
+        <MobileActions
+          invoice={currentInvoice}
+          onStartEdit={handleStartEdit}
+          onApprove={handleApprove}
+          onUndoApprove={handleUndoApprove}
+          isEditing={isEditingXero}
+          isApproving={isApproving}
+          isLockedByOther={isLockedByOther}
+          lockedByUser={lockedByUser}
+        />
+        
+        {/* Payment Confirmation */}
+        <MobilePayment
+          invoice={currentInvoice}
+          onMarkAsPaid={onMarkAsPaid}
+          onPartialPaymentUpdate={onPartialPaymentUpdate}
+          isLockedByOther={isLockedByOther}
+          loading={false}
+        />
       </main>
+      
+      {/* Edit Sheet */}
+      <MobileEditSheet
+        open={isEditingXero}
+        onOpenChange={setIsEditingXero}
+        invoice={currentInvoice}
+        onUpdate={onXeroUpdate}
+        onSync={onXeroSync}
+      />
     </div>
   );
 };
