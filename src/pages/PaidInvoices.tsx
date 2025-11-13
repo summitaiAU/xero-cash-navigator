@@ -534,35 +534,40 @@ export default function PaidInvoices() {
             userName={user?.email || 'User'}
             onSignOut={handleSignOut}
           />
-          <MobilePaidInvoices
-            invoices={invoices}
-            loading={loading}
-            totalCount={totalCount}
-            currentPage={page}
-            totalPages={totalPages}
-            pageSize={pageSize}
-            searchQuery={searchQuery}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            filters={filters}
-            activeFiltersCount={activeFiltersCount}
-            activeFilterChips={activeFilterChips}
-            onSearchChange={handleSearchChange}
-            onSortChange={handleSortChange}
-            onPageChange={handlePageChange}
-            onOpenFilters={() => setFilterDrawerOpen(true)}
-            onRemoveFilter={handleRemoveFilter}
-            onInvoiceClick={handleInvoiceClick}
-            onClearFilters={handleClearFilters}
-            onOpenHamburgerMenu={() => setShowMobileHamburger(true)}
-          />
-          <MobileFilterSheet
-            open={filterDrawerOpen}
-            onOpenChange={setFilterDrawerOpen}
-            filters={filters}
-            onApply={handleApplyFilters}
-            onClear={handleClearFilters}
-          />
+          {/* Conditionally render list OR viewer, not both */}
+          {!selectedInvoiceId ? (
+            <>
+              <MobilePaidInvoices
+                invoices={invoices}
+                loading={loading}
+                totalCount={totalCount}
+                currentPage={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                searchQuery={searchQuery}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                filters={filters}
+                activeFiltersCount={activeFiltersCount}
+                activeFilterChips={activeFilterChips}
+                onSearchChange={handleSearchChange}
+                onSortChange={handleSortChange}
+                onPageChange={handlePageChange}
+                onOpenFilters={() => setFilterDrawerOpen(true)}
+                onRemoveFilter={handleRemoveFilter}
+                onInvoiceClick={handleInvoiceClick}
+                onClearFilters={handleClearFilters}
+                onOpenHamburgerMenu={() => setShowMobileHamburger(true)}
+              />
+              <MobileFilterSheet
+                open={filterDrawerOpen}
+                onOpenChange={setFilterDrawerOpen}
+                filters={filters}
+                onApply={handleApplyFilters}
+                onClear={handleClearFilters}
+              />
+            </>
+          ) : null}
         </>
       ) : (
         // Desktop View
