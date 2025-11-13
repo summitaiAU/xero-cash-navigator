@@ -98,30 +98,39 @@ export const MobileHeader = ({
                 <SheetTitle>Jump to Invoice</SheetTitle>
               </SheetHeader>
               <div className="mt-4 space-y-2 overflow-y-auto max-h-[calc(80vh-80px)]">
-                {invoices.map((invoice, index) => (
-                  <button
-                    key={invoice.id}
-                    onClick={() => {
-                      onJumpToInvoice(index);
-                      setShowJumpSheet(false);
-                    }}
-                    className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">
-                          {invoice.invoice_number}
+                {invoices.map((invoice, index) => {
+                  const isCurrentInvoice = currentInvoice?.id === invoice.id;
+                  return (
+                    <button
+                      key={invoice.id}
+                      onClick={() => {
+                        onJumpToInvoice(index);
+                        setShowJumpSheet(false);
+                      }}
+                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                        isCurrentInvoice 
+                          ? 'bg-primary text-primary-foreground border-primary' 
+                          : 'border-border hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm truncate">
+                            {invoice.invoice_number}
+                          </div>
+                          <div className={`text-xs truncate mt-1 ${
+                            isCurrentInvoice ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                          }`}>
+                            {invoice.supplier}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground truncate mt-1">
-                          {invoice.supplier}
+                        <div className="ml-2 font-semibold text-sm tabular-nums">
+                          ${invoice.total_amount.toLocaleString()}
                         </div>
                       </div>
-                      <div className="ml-2 font-semibold text-sm tabular-nums">
-                        ${invoice.total_amount.toLocaleString()}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             </SheetContent>
           </Sheet>
