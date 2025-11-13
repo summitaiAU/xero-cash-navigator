@@ -52,6 +52,25 @@ export const MobileEditSheet: React.FC<MobileEditSheetProps> = ({
     onOpenChange(false);
   };
 
+  const handleSaveAndClose = async (updates: any) => {
+    // Release lock first (same pattern as X button)
+    await invoiceLockService.releaseLock(invoice.id);
+    
+    // Then trigger save callback and close
+    onUpdate(updates);
+    setHasUnsavedChanges(false);
+    onOpenChange(false);
+  };
+
+  const handleCancelAndClose = async () => {
+    // Release lock first (same pattern as X button)
+    await invoiceLockService.releaseLock(invoice.id);
+    
+    // Then close
+    setHasUnsavedChanges(false);
+    onOpenChange(false);
+  };
+
   const handleCancelClose = () => {
     setShowCloseConfirm(false);
   };
@@ -83,18 +102,11 @@ export const MobileEditSheet: React.FC<MobileEditSheetProps> = ({
           <div className="overflow-y-auto h-[calc(100vh-64px)] p-4">
             <XeroSection
               invoice={invoice}
-              onUpdate={(updates) => {
-                onUpdate(updates);
-                setHasUnsavedChanges(false);
-                onOpenChange(false); // Close sheet after save
-              }}
+              onUpdate={handleSaveAndClose}
               onSync={onSync}
               disablePresence={true}
               autoStartEdit={true}
-              onCancelEdit={() => {
-                setHasUnsavedChanges(false);
-                onOpenChange(false);
-              }}
+              onCancelEdit={handleCancelAndClose}
               onDataChange={(hasChanges) => {
                 setHasUnsavedChanges(hasChanges);
               }}
