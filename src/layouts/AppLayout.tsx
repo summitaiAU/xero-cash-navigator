@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import type { Invoice } from "@/types/invoice";
 import { cn } from "@/lib/utils";
@@ -11,6 +12,7 @@ export const AppLayout: React.FC = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
     return stored === null ? true : stored === "true";
@@ -94,21 +96,25 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="h-screen w-full flex bg-background overflow-hidden">
-      <SimpleSidebar
-        viewState={viewState}
-        onViewStateChange={() => {}} // Navigation handled by SimpleSidebar internally
-        payableCount={payableCount}
-        paidCount={paidCount}
-        flaggedCount={flaggedCount}
-        reviewCount={reviewCount}
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={handleToggleSidebar}
-        onSignOut={handleSignOut}
-        userName={user?.email}
-      />
+      {/* Hide sidebar on mobile (< 1024px) */}
+      {!isMobile && (
+        <SimpleSidebar
+          viewState={viewState}
+          onViewStateChange={() => {}} // Navigation handled by SimpleSidebar internally
+          payableCount={payableCount}
+          paidCount={paidCount}
+          flaggedCount={flaggedCount}
+          reviewCount={reviewCount}
+          isCollapsed={sidebarCollapsed}
+          onToggleCollapse={handleToggleSidebar}
+          onSignOut={handleSignOut}
+          userName={user?.email}
+        />
+      )}
       <main className={cn(
         "flex-1 min-w-0 h-full relative overflow-hidden transition-all duration-300",
-        sidebarCollapsed ? "pl-16" : "pl-48"
+        // Only add left padding for desktop when sidebar is visible
+        !isMobile && (sidebarCollapsed ? "pl-16" : "pl-48")
       )}>
         <React.Suspense
           fallback={
