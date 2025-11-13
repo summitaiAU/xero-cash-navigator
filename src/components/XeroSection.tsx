@@ -32,6 +32,7 @@ interface XeroSectionProps {
   onSync: () => void;
   loading?: boolean;
   disablePresence?: boolean; // Disable presence tracking in viewer mode
+  onEditingChange?: (isEditing: boolean) => void; // Notify parent of editing state changes
 }
 
 // Generate unique ID for line items
@@ -166,7 +167,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   onUpdate, 
   onSync,
   loading = false,
-  disablePresence = false
+  disablePresence = false,
+  onEditingChange
 }) => {
   const [invoiceData, setInvoiceData] = useState<ProcessedXeroData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -268,11 +270,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       })
     });
     setIsEditing(true);
+    onEditingChange?.(true);
     setSaveError(null);
   };
 
   const cancelEditing = () => {
     setIsEditing(false);
+    onEditingChange?.(false);
     setEditableData(null);
     setSaveError(null);
   };
@@ -462,6 +466,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
       setInvoiceData(processSupabaseData(updatedInvoice));
       setIsEditing(false);
+      onEditingChange?.(false);
       setEditableData(null);
       onUpdate(updatedInvoice);
       toast({ title: 'Invoice Saved', description: 'Invoice changes saved successfully.' });

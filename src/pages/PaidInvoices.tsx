@@ -8,6 +8,7 @@ import { PaidInvoiceViewer } from "@/components/paid/PaidInvoiceViewer";
 import { ExportDialog } from "@/components/paid/ExportDialog";
 import { Invoice } from "@/types/invoice";
 import { useRealtime } from "@/contexts/RealtimeContext";
+import { RealtimeNotifications } from "@/components/RealtimeNotifications";
 import {
   fetchPaidInvoices,
   prefetchPaidInvoicesPage,
@@ -577,6 +578,17 @@ export default function PaidInvoices() {
           invoiceDateFrom: filters.invoiceDateFrom,
           invoiceDateTo: filters.invoiceDateTo,
         }}
+      />
+
+      {/* Real-time notifications for invoice updates */}
+      <RealtimeNotifications 
+        viewState="paid" 
+        onInvoiceListUpdate={() => {
+          // Invalidate cache to force fresh fetch
+          paidInvoicesCacheService.invalidateAll();
+          // Reload with silent update
+          loadInvoices(false);
+        }} 
       />
     </div>
   );

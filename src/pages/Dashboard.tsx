@@ -55,6 +55,7 @@ export const Dashboard: React.FC = () => {
   const [isViewLoading, setIsViewLoading] = useState(false);
   const [showActivityDrawer, setShowActivityDrawer] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditingXero, setIsEditingXero] = useState(false);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -72,7 +73,7 @@ export const Dashboard: React.FC = () => {
   // Multi-user presence tracking
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
     currentInvoiceId: currentInvoice?.id,
-    isEditing: false, // We'll update this based on actual editing state
+    isEditing: isEditingXero,
   });
 
   // Desktop fixed layout measurements
@@ -755,14 +756,15 @@ export const Dashboard: React.FC = () => {
                         />
                       )}
                       
-                      <XeroSection
-                        invoice={currentInvoice}
-                        onUpdate={handleXeroUpdate}
-                        onSync={() =>
-                          currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
-                        }
-                      loading={isXeroLoading}
-                    />
+              <XeroSection
+                invoice={currentInvoice}
+                onUpdate={handleXeroUpdate}
+                onEditingChange={setIsEditingXero}
+                onSync={() =>
+                  currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
+                }
+                loading={isXeroLoading}
+              />
 
                     {viewState === "paid" ? (
                       <PaidInvoiceSection
