@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Download, RefreshCw, Plus, X, AlertCircle } from "lucide-react";
+import { Download, RefreshCw, Plus, X, AlertCircle, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -321,23 +321,21 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       // iOS Safari - Show open button instead of embed
       if (isIOS && blobUrl) {
         return (
-          <div className="w-full bg-white rounded-lg shadow-sm p-8" style={{ minHeight: "70vh" }}>
-            <div className="flex flex-col items-center justify-center h-full gap-6">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">PDF Preview</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  PDF preview is not supported on iOS. Open in a new tab to view.
-                </p>
-              </div>
-              <Button 
-                onClick={() => window.open(blobUrl, "_blank")} 
-                size="lg"
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Open PDF
-              </Button>
+          <div className="flex flex-col items-center justify-center min-h-[400px] gap-6 bg-slate-50 border border-slate-200 rounded-xl p-8">
+            <div className="text-center">
+              <h3 className="text-base font-semibold mb-2">PDF Preview</h3>
+              <p className="text-sm text-muted-foreground">
+                PDF preview is not supported on iOS. Open in a new tab to view.
+              </p>
             </div>
+            <Button 
+              onClick={() => window.open(blobUrl, "_blank")} 
+              size="lg"
+              className="h-12 px-8"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Open PDF
+            </Button>
           </div>
         );
       }
@@ -410,12 +408,12 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       }
 
       return (
-        <div className="flex items-center justify-center min-h-[400px] p-8 bg-muted/10 rounded-lg overflow-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="flex items-center justify-center min-h-[400px] p-8 bg-slate-50 border border-slate-200 rounded-xl overflow-auto" style={{ WebkitOverflowScrolling: "touch" }}>
           {blobUrl ? (
             <img
               src={blobUrl}
               alt={attachment.filename}
-              className="max-w-full h-auto rounded shadow-sm"
+              className="max-w-full h-auto rounded-lg shadow-sm"
               onError={() => {
                 setBlobError(true);
                 toast({
@@ -487,16 +485,170 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
     return "secondary";
   };
 
+  if (isMobile) {
+    return (
+      <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
+        {/* Premium Mobile Overlay with Backdrop */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={onClose}>
+          {/* Premium Card Container */}
+          <div 
+            className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden animate-in fade-in-0 zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Row 1: Title Bar with Close Button */}
+            <div className="flex items-center justify-between h-14 px-4 border-b border-slate-200">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={onClose}
+                className="h-10 w-10 -ml-2"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+              
+              <DialogTitle className="flex-1 text-center text-sm font-semibold truncate px-2">
+                {loading ? <Skeleton className="h-5 w-48 mx-auto" /> : attachment?.filename || "Attachment"}
+              </DialogTitle>
+              
+              <div className="w-10" /> {/* Spacer for centering */}
+            </div>
+
+            {/* Row 2: Metadata Section */}
+            {!loading && attachment && (
+              <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-200">
+                <div className="mb-2">
+                  <Badge variant={getStatusColor()} className="text-xs">
+                    {attachment.status}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                  <span className="text-muted-foreground font-medium">Type:</span>
+                  <span className="text-foreground">{attachment.mime_type}</span>
+                  
+                  <span className="text-muted-foreground font-medium">Size:</span>
+                  <span className="text-foreground font-mono">{formatFileSize(attachment.size_bytes)}</span>
+                  
+                  <span className="text-muted-foreground font-medium">Date:</span>
+                  <span className="text-foreground">{formatDateTimeShortSydney(attachment.created_at)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Row 3: Actions */}
+            {!loading && attachment && (
+              <div className="px-4 py-3 bg-white border-b border-slate-200">
+                {/* Primary Action */}
+                {attachment.status === "review" && onAddInvoice ? (
+                  <Button 
+                    onClick={() => onAddInvoice(attachment)}
+                    className="w-full h-11 mb-2 bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add as Invoice
+                  </Button>
+                ) : attachment.data_base64url ? (
+                  <Button 
+                    onClick={handleDownload}
+                    variant="outline"
+                    className="w-full h-11 mb-2"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                ) : null}
+
+                {/* Secondary Actions */}
+                <div className="flex items-center justify-center gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={loadAttachment}
+                    className="h-10 w-10"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  
+                  {attachment.status === "review" && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={handleIgnore}
+                      className="h-10 w-10 text-muted-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                  
+                  {attachment.data_base64url && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => {
+                        if (blobUrl) {
+                          window.open(blobUrl, "_blank");
+                        } else {
+                          handleDownload();
+                        }
+                      }}
+                      className="h-10 w-10"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Error Section */}
+            {!loading && attachment && (attachment.error_code || attachment.error_message) && attachment.status === "review" && (
+              <div className="px-4 py-2 bg-amber-50 border-b border-amber-200">
+                <Collapsible>
+                  <CollapsibleTrigger className="text-sm text-amber-700 hover:text-amber-800 flex items-center gap-1.5 font-medium">
+                    <AlertCircle className="w-4 h-4" />
+                    View Details
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2 p-3 bg-amber-100/50 border border-amber-200 rounded-lg text-xs">
+                    {attachment.error_code && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Error Code:</span> {attachment.error_code}
+                      </div>
+                    )}
+                    {attachment.error_message && (
+                      <div>
+                        <span className="font-semibold">Message:</span> {attachment.error_message}
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto px-6 py-4" style={{ WebkitOverflowScrolling: "touch" }}>
+              {loading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-96 w-full" />
+                </div>
+              ) : attachment ? (
+                renderViewer()
+              ) : (
+                <div className="flex items-center justify-center h-96 text-muted-foreground">
+                  Select an attachment to preview
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </Dialog>
+    );
+  }
+
+  // Desktop Layout (unchanged)
   return (
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={`
-        ${isMobile 
-          ? 'fixed inset-2 sm:inset-4 !translate-x-0 !translate-y-0 max-w-none rounded-2xl p-0 z-50 shadow-lg border' 
-          : 'max-w-5xl max-h-[95vh]'
-        } 
-        overflow-hidden flex flex-col bg-white
-      `} hideClose>
-        <DialogHeader className={`flex-shrink-0 ${isMobile ? 'sticky top-0 z-50 bg-white' : 'pb-4'} border-b`}>
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="flex-1 min-w-0 text-center">
               <DialogTitle className="text-base font-semibold truncate">
@@ -516,78 +668,36 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             </div>
           </div>
           
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              {/* Zoom controls removed - use native PDF viewer zoom */}
-            </div>
-            
-            <div className="flex items-center gap-3">
-              {isMobile ? (
-                <>
-                  {attachment?.data_base64url && (
-                    <Button variant="outline" size="icon" onClick={handleDownload} aria-label="Download">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  )}
-                  <Button variant="outline" size="icon" onClick={loadAttachment} aria-label="Refresh">
-                    <RefreshCw className="w-4 h-4" />
+          <div className="flex items-center justify-end gap-3">
+            {attachment?.data_base64url && (
+              <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Download className="w-3 h-3 mr-1" />
+                <span className="text-xs">Download</span>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={loadAttachment} aria-label="Refresh">
+              <RefreshCw className="w-3 h-3" />
+              <span className="sr-only">Refresh</span>
+            </Button>
+            {attachment && attachment.status === "review" && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleIgnore}
+                  className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  <span className="text-xs">Ignore</span>
+                </Button>
+                {onAddInvoice && (
+                  <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
+                    <Plus className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Add Invoice</span>
                   </Button>
-                  {attachment && attachment.status === "review" && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={handleIgnore}
-                        aria-label="Ignore"
-                        className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                      {onAddInvoice && (
-                        <Button variant="default" size="icon" onClick={() => onAddInvoice(attachment)} aria-label="Add Invoice">
-                          <Plus className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-                    <X className="w-4 h-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {attachment?.data_base64url && (
-                    <Button variant="outline" size="sm" onClick={handleDownload}>
-                      <Download className="w-3 h-3 mr-1" />
-                      <span className="text-xs">Download</span>
-                    </Button>
-                  )}
-                  <Button variant="outline" size="sm" onClick={loadAttachment} aria-label="Refresh">
-                    <RefreshCw className="w-3 h-3" />
-                    <span className="sr-only">Refresh</span>
-                  </Button>
-                  {attachment && attachment.status === "review" && (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleIgnore}
-                        className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        <span className="text-xs">Ignore</span>
-                      </Button>
-                      {onAddInvoice && (
-                        <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
-                          <Plus className="w-3 h-3 mr-1" />
-                          <span className="text-xs">Add Invoice</span>
-                        </Button>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </div>
 
           {!loading && attachment && (attachment.error_code || attachment.error_message) && attachment.status === "review" && (
