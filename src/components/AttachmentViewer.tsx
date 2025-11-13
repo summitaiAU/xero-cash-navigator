@@ -491,11 +491,11 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={`
         ${isMobile 
-          ? 'fixed !left-0 !top-0 !translate-x-0 !translate-y-0 inset-0 m-0 h-screen w-screen max-w-none rounded-none p-0 z-50' 
+          ? 'fixed inset-2 sm:inset-4 !translate-x-0 !translate-y-0 max-w-none rounded-2xl p-0 z-50 shadow-lg border' 
           : 'max-w-5xl max-h-[95vh]'
         } 
         overflow-hidden flex flex-col bg-white
-      `}>
+      `} hideClose>
         <DialogHeader className={`flex-shrink-0 ${isMobile ? 'sticky top-0 z-50 bg-white' : 'pb-4'} border-b`}>
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="flex-1 min-w-0 text-center">
@@ -522,32 +522,68 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             </div>
             
             <div className="flex items-center gap-3">
-              {attachment?.data_base64url && (
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="w-3 h-3 mr-1" />
-                  <span className="text-xs">Download</span>
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={loadAttachment} aria-label="Refresh">
-                <RefreshCw className="w-3 h-3" />
-                <span className="sr-only">Refresh</span>
-              </Button>
-              {attachment && attachment.status === "review" && (
+              {isMobile ? (
                 <>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleIgnore}
-                    className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
-                  >
-                    <X className="w-3 h-3 mr-1" />
-                    <span className="text-xs">Ignore</span>
-                  </Button>
-                  {onAddInvoice && (
-                    <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
-                      <Plus className="w-3 h-3 mr-1" />
-                      <span className="text-xs">Add Invoice</span>
+                  {attachment?.data_base64url && (
+                    <Button variant="outline" size="icon" onClick={handleDownload} aria-label="Download">
+                      <Download className="w-4 h-4" />
                     </Button>
+                  )}
+                  <Button variant="outline" size="icon" onClick={loadAttachment} aria-label="Refresh">
+                    <RefreshCw className="w-4 h-4" />
+                  </Button>
+                  {attachment && attachment.status === "review" && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={handleIgnore}
+                        aria-label="Ignore"
+                        className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                      {onAddInvoice && (
+                        <Button variant="default" size="icon" onClick={() => onAddInvoice(attachment)} aria-label="Add Invoice">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {attachment?.data_base64url && (
+                    <Button variant="outline" size="sm" onClick={handleDownload}>
+                      <Download className="w-3 h-3 mr-1" />
+                      <span className="text-xs">Download</span>
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={loadAttachment} aria-label="Refresh">
+                    <RefreshCw className="w-3 h-3" />
+                    <span className="sr-only">Refresh</span>
+                  </Button>
+                  {attachment && attachment.status === "review" && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleIgnore}
+                        className="border-muted-foreground/20 text-muted-foreground hover:bg-muted"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        <span className="text-xs">Ignore</span>
+                      </Button>
+                      {onAddInvoice && (
+                        <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
+                          <Plus className="w-3 h-3 mr-1" />
+                          <span className="text-xs">Add Invoice</span>
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               )}
