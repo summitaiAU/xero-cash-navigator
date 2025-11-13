@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobileHamburgerMenu } from './MobileHamburgerMenu';
 import { MobilePDFViewer } from './MobilePDFViewer';
@@ -69,6 +69,7 @@ export const MobileDashboard = ({
   const [isEditingXero, setIsEditingXero] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const shimmerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   
   // Get lock status for current invoice
@@ -83,14 +84,29 @@ export const MobileDashboard = ({
   
   // Handle real-time invoice list updates
   const handleRealtimeListUpdate = useCallback(() => {
+    // Clear any existing timeout to prevent overlapping shimmer effects
+    if (shimmerTimeoutRef.current) {
+      clearTimeout(shimmerTimeoutRef.current);
+    }
+    
     setIsUpdating(true);
     onInvoiceListUpdate?.();
     
-    // Clear shimmer after 2 seconds
-    setTimeout(() => {
+    // Schedule new timeout
+    shimmerTimeoutRef.current = setTimeout(() => {
       setIsUpdating(false);
+      shimmerTimeoutRef.current = null;
     }, 2000);
   }, [onInvoiceListUpdate]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shimmerTimeoutRef.current) {
+        clearTimeout(shimmerTimeoutRef.current);
+      }
+    };
+  }, []);
   
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
