@@ -38,6 +38,9 @@ interface XeroSectionProps {
   disablePresence?: boolean; // Disable presence tracking in viewer mode
   onEditingChange?: (isEditing: boolean) => void; // Notify parent of editing state changes
   isLockedByOther?: boolean; // Disable editing when locked by another user
+  autoStartEdit?: boolean; // Automatically start in edit mode (for mobile)
+  onCancelEdit?: () => void; // Callback when edit is cancelled
+  onDataChange?: (hasChanges: boolean) => void; // Notify parent when data changes
 }
 
 // Generate unique ID for line items
@@ -203,7 +206,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   loading = false,
   disablePresence = false,
   onEditingChange,
-  isLockedByOther = false
+  isLockedByOther = false,
+  autoStartEdit = false,
+  onCancelEdit,
+  onDataChange
 }) => {
   const [invoiceData, setInvoiceData] = useState<ProcessedXeroData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -211,6 +217,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   // Edit mode state management
   const [isEditing, setIsEditing] = useState(false);
   const [editableData, setEditableData] = useState<any>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
@@ -248,6 +255,24 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     
     return () => clearInterval(heartbeat);
   }, [disablePresence, isEditing, invoice.id]);
+
+  // Auto-start edit mode when autoStartEdit is true (for mobile)
+  useEffect(() => {
+    if (autoStartEdit && !isEditing && !dataLoading && invoiceData) {
+      startEditing();
+    }
+  }, [autoStartEdit, isEditing, dataLoading, invoiceData]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (isEditing && editableData) {
+      setHasUnsavedChanges(true);
+      onDataChange?.(true);
+    } else {
+      setHasUnsavedChanges(false);
+      onDataChange?.(false);
+    }
+  }, [isEditing, editableData, onDataChange]);
 
   // Edit mode functions
   const startEditing = async () => {
@@ -369,6 +394,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     onEditingChange?.(false);
     setEditableData(null);
     setSaveError(null);
+    setHasUnsavedChanges(false);
+    onCancelEdit?.(); // Notify parent that edit was cancelled
   };
 
   // Approval functions

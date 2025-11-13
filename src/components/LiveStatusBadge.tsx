@@ -49,16 +49,15 @@ export const LiveStatusBadge: React.FC = () => {
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
-          className={`gap-2 h-8 px-3 rounded-full ${config.bgColor} ${config.textColor} hover:${config.bgColor} hover:opacity-90`}
+          size="icon"
+          className="h-8 w-8 rounded-full hover:bg-transparent"
         >
           <div className="relative">
-            <div className={`h-2 w-2 rounded-full ${config.dotColor}`} />
+            <div className={`h-2.5 w-2.5 rounded-full ${config.dotColor}`} />
             {config.pulseAnimation && (
-              <div className={`absolute inset-0 h-2 w-2 rounded-full ${config.dotColor} animate-ping opacity-75`} />
+              <div className={`absolute inset-0 h-2.5 w-2.5 rounded-full ${config.dotColor} animate-ping opacity-75`} />
             )}
           </div>
-          <span className="text-xs font-medium">{config.label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-64" align="end">
