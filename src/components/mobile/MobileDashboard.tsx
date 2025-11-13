@@ -89,9 +89,10 @@ export const MobileDashboard = ({
   
   // Handle real-time invoice list updates
   const handleRealtimeListUpdate = useCallback(() => {
-    // Clear any existing timeout to prevent overlapping shimmer effects
+    // If shimmer is already active, don't interrupt it - let it complete
     if (shimmerTimeoutRef.current) {
-      clearTimeout(shimmerTimeoutRef.current);
+      console.log('[MobileDashboard] Shimmer already active, skipping duplicate update');
+      return;
     }
     
     setIsUpdating(true);

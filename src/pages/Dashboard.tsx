@@ -167,9 +167,10 @@ export const Dashboard: React.FC = () => {
   const handleRealtimeListUpdate = useCallback(async () => {
     if (!currentInvoice) return;
     
-    // Clear any existing timeout to prevent overlapping shimmer effects
+    // If shimmer is already active, don't interrupt it - let it complete
     if (shimmerTimeoutRef.current) {
-      clearTimeout(shimmerTimeoutRef.current);
+      console.log('[Dashboard] Shimmer already active, skipping duplicate update');
+      return;
     }
     
     setIsUpdating(true);
