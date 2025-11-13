@@ -32,6 +32,14 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
     }).format(value);
   };
 
+  // Helper to compare floating point numbers with tolerance
+  const isFullPayment = (enteredAmount: string, remaining: number): boolean => {
+    const numAmount = parseFloat(enteredAmount);
+    if (isNaN(numAmount)) return false;
+    // Use tolerance of 0.001 for floating point comparison
+    return Math.abs(numAmount - remaining) < 0.001;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -113,7 +121,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
               required
               autoFocus
             />
-            {amount && parseFloat(amount) === remainingAmount && (
+            {amount && isFullPayment(amount, remainingAmount) && (
               <p className="text-sm text-green-600 font-medium">
                 This will mark the invoice as fully paid
               </p>
@@ -132,7 +140,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
             <Button
               type="submit"
               disabled={isSubmitting || !amount}
-              className={parseFloat(amount || '0') === remainingAmount ? 'bg-green-600 hover:bg-green-700' : ''}
+              className={isFullPayment(amount, remainingAmount) ? 'bg-green-600 hover:bg-green-700' : ''}
             >
               {isSubmitting ? (
                 <>
@@ -140,7 +148,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
                   Processing...
                 </>
               ) : (
-                parseFloat(amount || '0') === remainingAmount ? 'Mark as Paid' : 'Mark as Partially Paid'
+                isFullPayment(amount, remainingAmount) ? 'Mark as Paid' : 'Mark as Partially Paid'
               )}
             </Button>
           </div>
