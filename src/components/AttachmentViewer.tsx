@@ -322,7 +322,15 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       }
 
       return (
-        <div className="w-full bg-white rounded-lg shadow-sm" style={{ minHeight: "70vh", overflow: "auto", WebkitOverflowScrolling: "touch" }}>
+        <div 
+          className="w-full bg-white rounded-lg shadow-sm" 
+          style={{ 
+            minHeight: "70vh", 
+            overflow: "auto", 
+            WebkitOverflowScrolling: "touch",
+            touchAction: "manipulation"
+          }}
+        >
           {blobUrl ? (
             isSafari && !isIOS ? (
               // Desktop Safari only - use object tag
@@ -330,7 +338,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                 data={blobUrl}
                 type="application/pdf"
                 className="w-full border-0 rounded-lg"
-                style={{ minHeight: "70vh", width: "100%" }}
+                style={{ minHeight: "70vh", width: "100%", touchAction: "manipulation" }}
               >
                 <div className="flex flex-col items-center justify-center p-8 gap-4">
                   <p className="text-muted-foreground">Unable to display PDF in browser</p>
@@ -341,11 +349,15 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                 </div>
               </object>
             ) : (
-              // All other browsers including iOS - use iframe
+              // All other browsers including iOS - use iframe with pinch-to-zoom enabled
               <iframe
                 src={`${blobUrl}#view=FitH&zoom=page-width`}
                 className="w-full border-0 rounded-lg"
-                style={{ minHeight: "70vh", width: "100%" }}
+                style={{ 
+                  minHeight: "70vh", 
+                  width: "100%",
+                  touchAction: "manipulation"
+                }}
                 title={attachment.filename}
                 onError={() => {
                   setBlobError(true);
