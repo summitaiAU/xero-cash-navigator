@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getSydneyNow, getDateStringSydney } from '@/lib/dateUtils';
+import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, subQuarters, startOfYear, endOfYear } from 'date-fns';
 import {
   Sheet,
   SheetContent,
@@ -41,6 +43,65 @@ const DATE_PRESETS = [
   { value: 'thisYear', label: 'This year' },
   { value: 'custom', label: 'Custom range' },
 ];
+
+const calculateDateRange = (preset: string): { from: string; to: string } | null => {
+  const now = getSydneyNow();
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
+  
+  switch (preset) {
+    case 'today':
+      return {
+        from: getDateStringSydney(todayStart),
+        to: getDateStringSydney(todayEnd),
+      };
+    case 'yesterday':
+      const yesterday = subDays(todayStart, 1);
+      return {
+        from: getDateStringSydney(startOfDay(yesterday)),
+        to: getDateStringSydney(endOfDay(yesterday)),
+      };
+    case 'last7days':
+      return {
+        from: getDateStringSydney(subDays(todayStart, 7)),
+        to: getDateStringSydney(todayEnd),
+      };
+    case 'last30days':
+      return {
+        from: getDateStringSydney(subDays(todayStart, 30)),
+        to: getDateStringSydney(todayEnd),
+      };
+    case 'thisMonth':
+      return {
+        from: getDateStringSydney(startOfMonth(now)),
+        to: getDateStringSydney(endOfMonth(now)),
+      };
+    case 'lastMonth':
+      const lastMonth = subMonths(now, 1);
+      return {
+        from: getDateStringSydney(startOfMonth(lastMonth)),
+        to: getDateStringSydney(endOfMonth(lastMonth)),
+      };
+    case 'thisQuarter':
+      return {
+        from: getDateStringSydney(startOfQuarter(now)),
+        to: getDateStringSydney(endOfQuarter(now)),
+      };
+    case 'lastQuarter':
+      const lastQuarter = subQuarters(now, 1);
+      return {
+        from: getDateStringSydney(startOfQuarter(lastQuarter)),
+        to: getDateStringSydney(endOfQuarter(lastQuarter)),
+      };
+    case 'thisYear':
+      return {
+        from: getDateStringSydney(startOfYear(now)),
+        to: getDateStringSydney(endOfYear(now)),
+      };
+    default:
+      return null;
+  }
+};
 
 export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
   open,
@@ -93,22 +154,52 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
     if (field === 'invoiceDate') {
       const isCurrentPreset = invoiceDatePreset === preset;
       setInvoiceDatePreset(isCurrentPreset ? undefined : preset);
-      if (preset !== 'custom') {
+      
+      if (isCurrentPreset) {
+        // Deselect - clear dates
         setLocalFilters({
           ...localFilters,
           invoiceDateFrom: undefined,
           invoiceDateTo: undefined,
         });
+      } else if (preset === 'custom') {
+        // Custom - keep existing dates or clear if none
+        // User will manually enter dates
+      } else {
+        // Calculate date range based on preset
+        const dateRange = calculateDateRange(preset);
+        if (dateRange) {
+          setLocalFilters({
+            ...localFilters,
+            invoiceDateFrom: dateRange.from,
+            invoiceDateTo: dateRange.to,
+          });
+        }
       }
     } else {
       const isCurrentPreset = paidDatePreset === preset;
       setPaidDatePreset(isCurrentPreset ? undefined : preset);
-      if (preset !== 'custom') {
+      
+      if (isCurrentPreset) {
+        // Deselect - clear dates
         setLocalFilters({
           ...localFilters,
           paidDateFrom: undefined,
           paidDateTo: undefined,
         });
+      } else if (preset === 'custom') {
+        // Custom - keep existing dates or clear if none
+        // User will manually enter dates
+      } else {
+        // Calculate date range based on preset
+        const dateRange = calculateDateRange(preset);
+        if (dateRange) {
+          setLocalFilters({
+            ...localFilters,
+            paidDateFrom: dateRange.from,
+            paidDateTo: dateRange.to,
+          });
+        }
       }
     }
   };
