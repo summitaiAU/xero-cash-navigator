@@ -34,7 +34,7 @@ export const MobileHeader = ({
   const [showJumpSheet, setShowJumpSheet] = useState(false);
 
   return (
-    <header className="sticky top-0 left-0 right-0 bg-background border-b border-border z-50">
+    <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50">
       {/* Row 1: Hamburger, Logo, Invoice Info, Search, 3-dots */}
       <div className="h-14 flex items-center justify-between px-2 gap-1">
         <div className="flex items-center gap-1">

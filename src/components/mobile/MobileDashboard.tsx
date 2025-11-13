@@ -236,7 +236,7 @@ export const MobileDashboard = ({
         <>
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="flex-1 min-h-0 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
+              className="flex-1 min-h-0 pt-14 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
             {/* Lock Banner */}
