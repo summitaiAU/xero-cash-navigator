@@ -106,7 +106,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
               type="number"
               step="0.01"
               min="0.01"
-              max={remainingAmount}
+              max={remainingAmount > 0 ? remainingAmount : undefined}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
