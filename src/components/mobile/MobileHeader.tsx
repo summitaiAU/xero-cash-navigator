@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { MoreVertical, Menu, Search } from 'lucide-react';
+import { MoreVertical, Menu } from 'lucide-react';
+import SodhiLogo from '@/assets/sodhi-logo.svg';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -30,10 +31,9 @@ export const MobileHeader = ({
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50">
-      {/* Row 1: Logo, Menu, Supplier Name, Search, 3-dots */}
+      {/* Row 1: Hamburger, Logo, Invoice Info, Search, 3-dots */}
       <div className="h-14 flex items-center justify-between px-2 gap-1">
         <div className="flex items-center gap-1">
-          <img src="/sodhi-logo.svg" alt="Sodhi" className="h-6 w-auto" />
           <Button
             variant="ghost"
             size="icon"
@@ -42,12 +42,21 @@ export const MobileHeader = ({
           >
             <Menu className="h-5 w-5" />
           </Button>
+          <img src={SodhiLogo} alt="Sodhi" className="h-6 w-auto" />
         </div>
 
-        <div className="flex-1 min-w-0 px-2">
-          <p className="text-xs font-medium text-muted-foreground truncate text-center">
-            {currentInvoice?.supplier || 'No Supplier'}
-          </p>
+        <div className="flex-1 min-w-0 px-2 flex items-center justify-between">
+          <div className="flex flex-col min-w-0">
+            <p className="text-sm font-semibold truncate">
+              {currentInvoice?.invoice_number || 'No Invoice'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {currentInvoice?.supplier || 'No Supplier'}
+            </p>
+          </div>
+          <div className="ml-2 font-semibold text-sm tabular-nums">
+            ${currentInvoice?.total_amount?.toLocaleString() || '0'}
+          </div>
         </div>
 
         <div className="flex items-center gap-1">
