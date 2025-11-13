@@ -141,11 +141,32 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
     }
   };
 
+  const shimmerTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
   const handleRealtimeListUpdate = () => {
+    // If shimmer is already active, don't interrupt it - let it complete
+    if (shimmerTimeoutRef.current) {
+      console.log('[MobilePaidInvoiceViewer] Shimmer already active, skipping duplicate update');
+      return;
+    }
+
     setIsUpdating(true);
     onUpdate(invoice); // Trigger parent refresh
-    setTimeout(() => setIsUpdating(false), 2000);
+    
+    shimmerTimeoutRef.current = setTimeout(() => {
+      setIsUpdating(false);
+      shimmerTimeoutRef.current = null;
+    }, 2000);
   };
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (shimmerTimeoutRef.current) {
+        clearTimeout(shimmerTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
