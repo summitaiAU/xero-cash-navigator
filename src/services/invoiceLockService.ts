@@ -19,6 +19,13 @@ class InvoiceLockService {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { success: false, error: 'Not authenticated' };
 
+      // Cleanup expired locks first
+      console.log('[invoiceLockService] Running cleanup before lock acquisition');
+      const { error: cleanupErr } = await supabase.rpc('cleanup_expired_locks');
+      if (cleanupErr) {
+        console.warn('[invoiceLockService] Cleanup failed:', cleanupErr);
+      }
+
       // Try to insert lock
       const { data, error } = await supabase
         .from('invoice_locks')
@@ -44,6 +51,25 @@ class InvoiceLockService {
         }
         
         if (existingLock) {
+          // CRITICAL FIX: Check if the existing lock is owned by the SAME user
+          if (existingLock.locked_by_user_id === user.id) {
+            console.log('[invoiceLockService] User already owns this lock, extending it');
+            
+            // Extend the existing lock
+            const { error: updateErr } = await supabase
+              .from('invoice_locks')
+              .update({ lock_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() })
+              .eq('id', existingLock.id);
+              
+            if (updateErr) {
+              console.error('[invoiceLockService] Failed to extend own lock:', updateErr);
+            }
+            
+            // Return success with the existing lock
+            return { success: true, lock: existingLock as InvoiceLock };
+          }
+          
+          // Different user owns the lock
           return { 
             success: false, 
             error: `Invoice is locked by ${existingLock.locked_by_email}`,
@@ -114,6 +140,32 @@ class InvoiceLockService {
       return { success: !error };
     } catch {
       return { success: false };
+    }
+  }
+
+  // Force release user's own lock (for recovery scenarios)
+  async releaseOwnLock(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false, error: 'Not authenticated' };
+
+      console.log('[invoiceLockService] Force releasing own lock for invoice:', invoiceId);
+
+      const { error } = await supabase
+        .from('invoice_locks')
+        .delete()
+        .eq('invoice_id', invoiceId)
+        .eq('locked_by_user_id', user.id);
+
+      if (error) {
+        console.error('[invoiceLockService] Force release failed:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('[invoiceLockService] Own lock force-released');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
     }
   }
 
