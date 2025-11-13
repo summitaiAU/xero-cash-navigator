@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { PDFViewer } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
@@ -61,6 +61,7 @@ export const Dashboard: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingXero, setIsEditingXero] = useState(false);
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
+  const shimmerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -166,6 +167,11 @@ export const Dashboard: React.FC = () => {
   const handleRealtimeListUpdate = useCallback(async () => {
     if (!currentInvoice) return;
     
+    // Clear any existing timeout to prevent overlapping shimmer effects
+    if (shimmerTimeoutRef.current) {
+      clearTimeout(shimmerTimeoutRef.current);
+    }
+    
     setIsUpdating(true);
     
     try {
@@ -212,7 +218,11 @@ export const Dashboard: React.FC = () => {
         variant: "destructive",
       });
     } finally {
-      setTimeout(() => setIsUpdating(false), 2000);
+      // Schedule new timeout
+      shimmerTimeoutRef.current = setTimeout(() => {
+        setIsUpdating(false);
+        shimmerTimeoutRef.current = null;
+      }, 2000);
     }
   }, [currentInvoice, viewState, toast]);
 
@@ -238,6 +248,15 @@ export const Dashboard: React.FC = () => {
   // Load all invoices for search on mount only
   useEffect(() => {
     loadAllInvoices();
+  }, []);
+
+  // Cleanup shimmer timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (shimmerTimeoutRef.current) {
+        clearTimeout(shimmerTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Load Xero data for current invoice when it changes
