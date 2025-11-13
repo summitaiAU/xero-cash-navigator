@@ -221,6 +221,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [isAddingNewEntity, setIsAddingNewEntity] = useState(false);
+  const [originalEntity, setOriginalEntity] = useState<string>('');
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -321,6 +323,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     
     console.log('[XeroSection] Lock acquired, entering edit mode');
     
+    setOriginalEntity(invoice.entity || '');
+    setIsAddingNewEntity(false);
+    
     setEditableData({
       entity: invoice.entity,
       project: invoice.project || invoiceData.reference,
@@ -395,6 +400,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     setEditableData(null);
     setSaveError(null);
     setHasUnsavedChanges(false);
+    setIsAddingNewEntity(false);
+    setOriginalEntity('');
     onCancelEdit?.(); // Notify parent that edit was cancelled
   };
 
@@ -768,19 +775,53 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Entity</Label>
               {isEditing ? (
-                <select
-                  value={editableData?.entity || ''}
-                  onChange={(e) => setEditableData({...editableData, entity: e.target.value})}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 z-10"
-                >
-                  <option value="Sodhi Property Developers Pty Ltd">Sodhi Property Developers Pty Ltd</option>
-                  <option value="NALA Properties Pty Ltd">NALA Properties Pty Ltd</option>
-                  {invoice.entity && 
-                   invoice.entity !== 'Sodhi Property Developers Pty Ltd' && 
-                   invoice.entity !== 'NALA Properties Pty Ltd' && (
-                    <option value={invoice.entity}>{invoice.entity}</option>
-                  )}
-                </select>
+                isAddingNewEntity ? (
+                  // Text input mode with X button
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={editableData?.entity || ''}
+                      onChange={(e) => setEditableData({...editableData, entity: e.target.value})}
+                      placeholder="Enter new entity name"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setIsAddingNewEntity(false);
+                        setEditableData({...editableData, entity: originalEntity});
+                      }}
+                      className="shrink-0 h-10 w-10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  // Dropdown mode
+                  <select
+                    value={editableData?.entity || ''}
+                    onChange={(e) => {
+                      if (e.target.value === '__ADD_NEW__') {
+                        setIsAddingNewEntity(true);
+                        setEditableData({...editableData, entity: ''});
+                      } else {
+                        setEditableData({...editableData, entity: e.target.value});
+                      }
+                    }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 z-10"
+                  >
+                    <option value="Sodhi Property Developers Pty Ltd">Sodhi Property Developers Pty Ltd</option>
+                    <option value="NALA Properties Pty Ltd">NALA Properties Pty Ltd</option>
+                    {invoice.entity && 
+                     invoice.entity !== 'Sodhi Property Developers Pty Ltd' && 
+                     invoice.entity !== 'NALA Properties Pty Ltd' && (
+                      <option value={invoice.entity}>{invoice.entity}</option>
+                    )}
+                    <option value="__ADD_NEW__">Add New...</option>
+                  </select>
+                )
               ) : (
                 <div className="font-medium text-sm md:text-base break-words">{invoice.entity || 'Not specified'}</div>
               )}
