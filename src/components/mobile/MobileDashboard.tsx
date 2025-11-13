@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobileHamburgerMenu } from './MobileHamburgerMenu';
 import { MobilePDFViewer } from './MobilePDFViewer';
@@ -11,8 +11,11 @@ import { MobileEditSheet } from './MobileEditSheet';
 import { MobileFloatingNav } from './MobileFloatingNav';
 import { InvoiceLockBanner } from '@/components/InvoiceLockBanner';
 import { RemittanceSection } from '@/components/RemittanceSection';
+import { RealtimeNotifications } from '@/components/RealtimeNotifications';
+import { UpdateShimmer } from '@/components/UpdateShimmer';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { useInvoiceLock } from '@/hooks/useInvoiceLock';
+import { useUserPresence } from '@/hooks/useUserPresence';
 import { useToast } from '@/hooks/use-toast';
 import { approveInvoice, undoApproveInvoice } from '@/services/invoiceService';
 
@@ -37,6 +40,7 @@ interface MobileDashboardProps {
   onPartialPaymentUpdate?: () => Promise<void>;
   onFlagInvoice?: (invoiceId: string) => void;
   onInvoiceSearch: (invoice: Invoice) => void;
+  onInvoiceListUpdate?: () => void;
 }
 
 export const MobileDashboard = ({
@@ -60,13 +64,33 @@ export const MobileDashboard = ({
   onPartialPaymentUpdate,
   onFlagInvoice,
   onInvoiceSearch,
+  onInvoiceListUpdate,
 }: MobileDashboardProps) => {
   const [isEditingXero, setIsEditingXero] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   
   // Get lock status for current invoice
   const { isLockedByOther, lockedByUser } = useInvoiceLock(currentInvoice?.id);
+  
+  // Track user presence for current invoice
+  const { usersOnCurrentInvoice } = useUserPresence({
+    currentInvoiceId: currentInvoice?.id,
+    isEditing: isEditingXero,
+    disabled: false,
+  });
+  
+  // Handle real-time invoice list updates
+  const handleRealtimeListUpdate = useCallback(() => {
+    setIsUpdating(true);
+    onInvoiceListUpdate?.();
+    
+    // Clear shimmer after 2 seconds
+    setTimeout(() => {
+      setIsUpdating(false);
+    }, 2000);
+  }, [onInvoiceListUpdate]);
   
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -168,6 +192,7 @@ export const MobileDashboard = ({
         onJumpToInvoice={onJumpToInvoice}
         onOpenHamburgerMenu={() => onToggleHamburgerMenu(true)}
         onInvoiceSearch={onInvoiceSearch}
+        viewersOnInvoice={usersOnCurrentInvoice}
       />
 
       <MobileHamburgerMenu
@@ -191,10 +216,11 @@ export const MobileDashboard = ({
         </div>
       )}
       
-      <main 
-        className="pt-14 pb-6 overflow-y-auto" 
-        style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
-      >
+      <UpdateShimmer show={isUpdating}>
+        <main 
+          className="pt-14 pb-6 overflow-y-auto" 
+          style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
+        >
         <div id="mobile-pdf-section" className="scroll-mt-16">
           <MobilePDFViewer invoice={currentInvoice} />
         </div>
@@ -268,7 +294,8 @@ export const MobileDashboard = ({
             />
           </div>
         )}
-      </main>
+        </main>
+      </UpdateShimmer>
       
       {/* Edit Sheet */}
       <MobileEditSheet
@@ -285,6 +312,12 @@ export const MobileDashboard = ({
         totalInvoices={invoices.length}
         onPrevious={onNavigatePrevious}
         onNext={onNavigateNext}
+      />
+      
+      {/* Real-time Notifications */}
+      <RealtimeNotifications 
+        viewState={viewState} 
+        onInvoiceListUpdate={handleRealtimeListUpdate} 
       />
     </div>
   );

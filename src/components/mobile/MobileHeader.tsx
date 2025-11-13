@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { MoreVertical, Menu } from 'lucide-react';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
 import { Button } from '@/components/ui/button';
+import { ViewerPresenceChips } from '@/components/ViewerPresenceChips';
+import { LiveStatusBadge } from '@/components/LiveStatusBadge';
 import {
   Sheet,
   SheetContent,
@@ -18,6 +20,7 @@ interface MobileHeaderProps {
   onJumpToInvoice: (index: number) => void;
   onOpenHamburgerMenu: () => void;
   onInvoiceSearch: (invoice: Invoice) => void;
+  viewersOnInvoice?: Array<{ user_id: string; user_email: string; status: string }>;
 }
 
 export const MobileHeader = ({
@@ -26,6 +29,7 @@ export const MobileHeader = ({
   onJumpToInvoice,
   onOpenHamburgerMenu,
   onInvoiceSearch,
+  viewersOnInvoice = [],
 }: MobileHeaderProps) => {
   const [showJumpSheet, setShowJumpSheet] = useState(false);
 
@@ -60,6 +64,17 @@ export const MobileHeader = ({
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Live Status Badge */}
+          <LiveStatusBadge />
+          
+          {/* Presence Chips */}
+          {currentInvoice && viewersOnInvoice.length > 0 && (
+            <ViewerPresenceChips 
+              invoiceId={currentInvoice.id} 
+              maxVisible={2}
+            />
+          )}
+          
           <InvoiceSearch 
             invoices={invoices}
             onInvoiceSelect={onInvoiceSearch}

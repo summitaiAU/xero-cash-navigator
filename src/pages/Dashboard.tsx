@@ -719,6 +719,7 @@ export const Dashboard: React.FC = () => {
         }}
         onFlagInvoice={handleFlagInvoice}
         onInvoiceSearch={handleInvoiceSelect}
+        onInvoiceListUpdate={handleRealtimeListUpdate}
       />
     );
   }
