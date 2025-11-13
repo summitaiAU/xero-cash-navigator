@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Search, Edit, Lock } from 'lucide-react';
+import { ChevronLeft, Search, Edit, Lock, CheckCircle, XCircle } from 'lucide-react';
 import { MobilePDFViewer } from './MobilePDFViewer';
 import { MobileInvoiceDetails } from './MobileInvoiceDetails';
 import { MobileLineItems } from './MobileLineItems';
@@ -12,6 +12,7 @@ import { RemittanceSection } from '@/components/RemittanceSection';
 import { UpdateShimmer } from '@/components/UpdateShimmer';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 import { invoiceLockService } from '@/services/invoiceLockService';
+import { approveInvoice, undoApproveInvoice } from '@/services/invoiceService';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -116,6 +117,28 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
     setIsEditingSheet(false);
   };
 
+  const handleApprove = async () => {
+    try {
+      await approveInvoice(invoice.id);
+      toast.success('Invoice approved successfully');
+      onUpdate({ ...invoice, approved: true });
+    } catch (error) {
+      console.error('Error approving invoice:', error);
+      toast.error('Failed to approve invoice');
+    }
+  };
+
+  const handleUndoApproval = async () => {
+    try {
+      await undoApproveInvoice(invoice.id);
+      toast.success('Approval undone successfully');
+      onUpdate({ ...invoice, approved: false });
+    } catch (error) {
+      console.error('Error undoing approval:', error);
+      toast.error('Failed to undo approval');
+    }
+  };
+
   const handleRealtimeListUpdate = () => {
     setIsUpdating(true);
     onUpdate(invoice); // Trigger parent refresh
@@ -175,23 +198,44 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
           isApproved={invoice.approved}
         />
         
-        {/* Edit Button */}
-        <div className="mx-2 mt-3 space-y-2">
+        {/* Action Buttons Row */}
+        <div className="mx-2 mt-3 flex gap-2">
+          {/* Approve/Undo Button */}
+          <Button
+            onClick={invoice.approved ? handleUndoApproval : handleApprove}
+            disabled={isLockedByOther}
+            className="flex-1 h-11"
+            variant={invoice.approved ? 'outline' : 'default'}
+          >
+            {invoice.approved ? (
+              <>
+                <XCircle className="h-4 w-4 mr-2" />
+                Undo Approval
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve Invoice
+              </>
+            )}
+          </Button>
+
+          {/* Edit Button */}
           <Button
             onClick={handleStartEdit}
             disabled={isLockedByOther}
-            className="w-full h-11"
+            className="flex-1 h-11"
             variant="outline"
           >
             {isLockedByOther ? (
               <>
                 <Lock className="h-4 w-4 mr-2" />
-                Locked by {lockedByUser}
+                Locked
               </>
             ) : (
               <>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit Invoice
+                Edit
               </>
             )}
           </Button>

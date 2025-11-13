@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Receipt } from 'lucide-react';
+import { Receipt } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -114,9 +114,6 @@ export const MobilePaidInvoicesList: React.FC<MobilePaidInvoicesListProps> = ({
               Paid: {formatDateShort(invoice.paid_date)}
             </span>
           </div>
-
-          {/* Chevron indicator */}
-          <ChevronRight className="h-4 w-4 text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2" />
         </button>
       ))}
     </div>

@@ -96,14 +96,53 @@ export default function PaidInvoices() {
 
   // Generate filter chips
   const activeFilterChips: Array<{ key: string; label: string; value: string }> = [];
+  
+  // Entities
   if (filters.entities) {
     filters.entities.forEach(e => activeFilterChips.push({ key: "entities", label: "Entity", value: e }));
   }
+  
+  // Suppliers
   if (filters.suppliers) {
     filters.suppliers.forEach(s => activeFilterChips.push({ key: "suppliers", label: "Supplier", value: s }));
   }
+  
+  // Statuses (exclude default PAID status)
   if (filters.statuses && filters.statuses.length > 0 && !(filters.statuses.length === 1 && filters.statuses[0] === "PAID")) {
     filters.statuses.forEach(st => activeFilterChips.push({ key: "statuses", label: "Status", value: st }));
+  }
+  
+  // Invoice Date Range
+  if (filters.invoiceDateFrom || filters.invoiceDateTo) {
+    const fromDate = filters.invoiceDateFrom ? new Date(filters.invoiceDateFrom).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : 'Start';
+    const toDate = filters.invoiceDateTo ? new Date(filters.invoiceDateTo).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : 'End';
+    activeFilterChips.push({ 
+      key: "invoiceDate", 
+      label: "Invoice Date", 
+      value: `${fromDate} - ${toDate}` 
+    });
+  }
+  
+  // Paid Date Range
+  if (filters.paidDateFrom || filters.paidDateTo) {
+    const fromDate = filters.paidDateFrom ? new Date(filters.paidDateFrom).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : 'Start';
+    const toDate = filters.paidDateTo ? new Date(filters.paidDateTo).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' }) : 'End';
+    activeFilterChips.push({ 
+      key: "paidDate", 
+      label: "Date Paid", 
+      value: `${fromDate} - ${toDate}` 
+    });
+  }
+  
+  // Price Range
+  if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
+    const minPrice = filters.priceMin !== undefined ? `$${filters.priceMin.toLocaleString()}` : 'No min';
+    const maxPrice = filters.priceMax !== undefined ? `$${filters.priceMax.toLocaleString()}` : 'No max';
+    activeFilterChips.push({ 
+      key: "priceRange", 
+      label: "Price", 
+      value: `${minPrice} - ${maxPrice}` 
+    });
   }
 
   // Defer initial data fetching to allow previous page cleanup
@@ -397,10 +436,34 @@ export default function PaidInvoices() {
 
   const handleRemoveFilter = useCallback(
     (key: string, value: string) => {
-      const current = filters[key as keyof PaidInvoicesFilters];
-      if (Array.isArray(current)) {
-        const updated = current.filter((v) => v !== value);
-        updateParams({ [key]: updated.length > 0 ? updated.join(",") : null, page: "0" });
+      if (key === "invoiceDate") {
+        // Clear invoice date range
+        updateParams({ 
+          invoiceDateFrom: null, 
+          invoiceDateTo: null, 
+          page: "0" 
+        });
+      } else if (key === "paidDate") {
+        // Clear paid date range
+        updateParams({ 
+          paidDateFrom: null, 
+          paidDateTo: null, 
+          page: "0" 
+        });
+      } else if (key === "priceRange") {
+        // Clear price range
+        updateParams({ 
+          priceMin: null, 
+          priceMax: null, 
+          page: "0" 
+        });
+      } else {
+        // Handle array filters (entities, suppliers, statuses)
+        const current = filters[key as keyof PaidInvoicesFilters];
+        if (Array.isArray(current)) {
+          const updated = current.filter((v) => v !== value);
+          updateParams({ [key]: updated.length > 0 ? updated.join(",") : null, page: "0" });
+        }
       }
     },
     [filters, searchParams]

@@ -137,9 +137,6 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
         {/* Header */}
         <SheetHeader className="px-4 py-3 border-b border-border">
           <SheetTitle className="text-lg font-semibold">Filter invoices</SheetTitle>
-          <SheetClose className="absolute right-4 top-3">
-            <X className="h-5 w-5" />
-          </SheetClose>
         </SheetHeader>
 
         {/* Scrollable Filter Content */}
@@ -273,16 +270,18 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
                 value={entitySearch}
                 onChange={(e) => setEntitySearch(e.target.value)}
               />
-              <ScrollArea className="max-h-40">
-                {filteredEntities.map(entity => (
-                  <label key={entity} className="flex items-center gap-2 py-2 cursor-pointer">
-                    <Checkbox
-                      checked={localFilters.entities?.includes(entity)}
-                      onCheckedChange={() => toggleEntity(entity)}
-                    />
-                    <span className="text-sm">{entity}</span>
-                  </label>
-                ))}
+              <ScrollArea className="h-40 rounded-md border border-border">
+                <div className="p-2">
+                  {filteredEntities.map(entity => (
+                    <label key={entity} className="flex items-center gap-2 py-2 cursor-pointer">
+                      <Checkbox
+                        checked={localFilters.entities?.includes(entity)}
+                        onCheckedChange={() => toggleEntity(entity)}
+                      />
+                      <span className="text-sm">{entity}</span>
+                    </label>
+                  ))}
+                </div>
               </ScrollArea>
             </div>
 
@@ -297,16 +296,18 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
                 value={supplierSearch}
                 onChange={(e) => setSupplierSearch(e.target.value)}
               />
-              <ScrollArea className="max-h-40">
-                {filteredSuppliers.map(supplier => (
-                  <label key={supplier} className="flex items-center gap-2 py-2 cursor-pointer">
-                    <Checkbox
-                      checked={localFilters.suppliers?.includes(supplier)}
-                      onCheckedChange={() => toggleSupplier(supplier)}
-                    />
-                    <span className="text-sm">{supplier}</span>
-                  </label>
-                ))}
+              <ScrollArea className="h-40 rounded-md border border-border">
+                <div className="p-2">
+                  {filteredSuppliers.map(supplier => (
+                    <label key={supplier} className="flex items-center gap-2 py-2 cursor-pointer">
+                      <Checkbox
+                        checked={localFilters.suppliers?.includes(supplier)}
+                        onCheckedChange={() => toggleSupplier(supplier)}
+                      />
+                      <span className="text-sm">{supplier}</span>
+                    </label>
+                  ))}
+                </div>
               </ScrollArea>
             </div>
           </div>
