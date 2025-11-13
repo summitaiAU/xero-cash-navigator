@@ -8,6 +8,8 @@ import { MobileTotals } from './MobileTotals';
 import { MobileActions } from './MobileActions';
 import { MobilePayment } from './MobilePayment';
 import { MobileEditSheet } from './MobileEditSheet';
+import { InvoiceLockBanner } from '@/components/InvoiceLockBanner';
+import { RemittanceSection } from '@/components/RemittanceSection';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { useInvoiceLock } from '@/hooks/useInvoiceLock';
 import { useToast } from '@/hooks/use-toast';
@@ -67,12 +69,44 @@ export const MobileDashboard = ({
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
   const MIN_SWIPE_DISTANCE = 50;
+  
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
+  
   const handleStartEdit = () => {
     setIsEditingXero(true);
   };
 
   const handleApprove = async () => {
     if (!currentInvoice) return;
+    
+    // Validation: Check required fields
+    if (!currentInvoice.entity) {
+      toast({ 
+        title: 'Approval Failed', 
+        description: 'Entity is required. Please edit the invoice.',
+        variant: 'destructive',
+      });
+      scrollToSection('mobile-details-section');
+      return;
+    }
+    
+    if (!currentInvoice.project) {
+      toast({ 
+        title: 'Approval Failed', 
+        description: 'Project is required. Please edit the invoice.',
+        variant: 'destructive',
+      });
+      scrollToSection('mobile-details-section');
+      return;
+    }
     
     setIsApproving(true);
     try {
@@ -181,6 +215,16 @@ export const MobileDashboard = ({
         onSignOut={onSignOut}
       />
       
+      {/* Lock Banner */}
+      {isLockedByOther && (
+        <div className="sticky top-14 z-40 mx-2 mt-2">
+          <InvoiceLockBanner
+            invoiceId={currentInvoice.id}
+            isCurrentUserEditing={isEditingXero}
+          />
+        </div>
+      )}
+      
       <main 
         className="pt-14 pb-6 overflow-y-auto" 
         style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
@@ -188,49 +232,78 @@ export const MobileDashboard = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <MobilePDFViewer invoice={currentInvoice} />
+        <div id="mobile-pdf-section" className="scroll-mt-16">
+          <MobilePDFViewer invoice={currentInvoice} />
+        </div>
         
         {/* Invoice Details Section */}
-        <MobileInvoiceDetails 
-          invoice={currentInvoice}
-          onSupplierClick={(supplier) => {
-            console.log('Filter by supplier:', supplier);
-          }}
-        />
+        <div id="mobile-details-section" className="scroll-mt-16">
+          <MobileInvoiceDetails 
+            invoice={currentInvoice}
+            onSupplierClick={(supplier) => {
+              console.log('Filter by supplier:', supplier);
+            }}
+          />
+        </div>
         
         {/* Line Items Section */}
         {currentInvoice.xero_data?.lineItems && (
-          <MobileLineItems lineItems={currentInvoice.xero_data.lineItems} />
+          <div id="mobile-lineitems-section" className="scroll-mt-16">
+            <MobileLineItems lineItems={currentInvoice.xero_data.lineItems} />
+          </div>
         )}
         
         {/* Totals Section */}
-        <MobileTotals 
-          subtotal={currentInvoice.xero_data?.subtotal || currentInvoice.subtotal || 0}
-          totalTax={currentInvoice.xero_data?.totalTax || currentInvoice.gst || 0}
-          total={currentInvoice.xero_data?.total || currentInvoice.total_amount || currentInvoice.amount || 0}
-          isApproved={currentInvoice.approved}
-        />
+        <div id="mobile-totals-section" className="scroll-mt-16">
+          <MobileTotals 
+            subtotal={currentInvoice.xero_data?.subtotal || currentInvoice.subtotal || 0}
+            totalTax={currentInvoice.xero_data?.totalTax || currentInvoice.gst || 0}
+            total={currentInvoice.xero_data?.total || currentInvoice.total_amount || currentInvoice.amount || 0}
+            isApproved={currentInvoice.approved}
+          />
+        </div>
         
         {/* Action Buttons */}
-        <MobileActions
-          invoice={currentInvoice}
-          onStartEdit={handleStartEdit}
-          onApprove={handleApprove}
-          onUndoApprove={handleUndoApprove}
-          isEditing={isEditingXero}
-          isApproving={isApproving}
-          isLockedByOther={isLockedByOther}
-          lockedByUser={lockedByUser}
-        />
+        <div id="mobile-actions-section" className="scroll-mt-16">
+          <MobileActions
+            invoice={currentInvoice}
+            onStartEdit={handleStartEdit}
+            onApprove={handleApprove}
+            onUndoApprove={handleUndoApprove}
+            isEditing={isEditingXero}
+            isApproving={isApproving}
+            isLockedByOther={isLockedByOther}
+            lockedByUser={lockedByUser}
+          />
+        </div>
         
         {/* Payment Confirmation */}
-        <MobilePayment
-          invoice={currentInvoice}
-          onMarkAsPaid={onMarkAsPaid}
-          onPartialPaymentUpdate={onPartialPaymentUpdate}
-          isLockedByOther={isLockedByOther}
-          loading={false}
-        />
+        <div id="mobile-payment-section" className="scroll-mt-16">
+          <MobilePayment
+            invoice={currentInvoice}
+            onMarkAsPaid={onMarkAsPaid}
+            onPartialPaymentUpdate={onPartialPaymentUpdate}
+            isLockedByOther={isLockedByOther}
+            loading={false}
+          />
+        </div>
+        
+        {/* Remittance Section - Only for Paid/Partially Paid Invoices */}
+        {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY PAID') && (
+          <div className="mx-2 mt-3">
+            <RemittanceSection
+              invoice={currentInvoice}
+              compact={true}
+              onRemittanceSent={(invoiceId, email) => {
+                onXeroUpdate({ remittance_sent: true, remittance_email: email });
+                toast({
+                  title: 'Remittance Sent',
+                  description: `Remittance sent to ${email}`,
+                });
+              }}
+            />
+          </div>
+        )}
       </main>
       
       {/* Edit Sheet */}
