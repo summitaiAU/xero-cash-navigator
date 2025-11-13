@@ -52,19 +52,38 @@ const genLineItemId = () => {
 
 // Process Supabase data for display
 const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
-  // Parse list_items if it's a string
+  // Parse line items - prefer list_items over xero_data
   let parsedItems: any[] = [];
-  if (invoice.xero_data?.lineItems) {
-    parsedItems = invoice.xero_data.lineItems;
-  } else if (typeof invoice.list_items === 'string') {
+  let dataSource = 'none';
+  
+  const rawList = invoice.list_items;
+  if (Array.isArray(rawList)) {
+    parsedItems = rawList;
+    dataSource = 'list_items (array)';
+  } else if (typeof rawList === 'string') {
     try {
-      parsedItems = JSON.parse(invoice.list_items);
-    } catch (error) {
-      parsedItems = [];
+      parsedItems = JSON.parse(rawList);
+      dataSource = 'list_items (parsed)';
+    } catch (e) {
+      console.error('Failed to parse list_items:', e);
     }
-  } else if (Array.isArray(invoice.list_items)) {
-    parsedItems = invoice.list_items;
+  } else if (invoice.xero_data?.lineItems) {
+    parsedItems = invoice.xero_data.lineItems;
+    dataSource = 'xero_data (fallback)';
   }
+
+  // Safeguard: if using xero_data but it lacks per-line GST fields, fall back to list_items
+  if (parsedItems === invoice.xero_data?.lineItems) {
+    const hasPerLineKeys = parsedItems.some((it: any) =>
+      'gst_included' in it || 'gst_exempt' in it || 'line_gst' in it || 'line_total_ex_gst' in it || 'line_total_inc_gst' in it
+    );
+    if (!hasPerLineKeys && Array.isArray(rawList)) {
+      parsedItems = rawList;
+      dataSource = 'list_items (safeguard)';
+    }
+  }
+
+  console.log('[XeroSection] processSupabaseData using:', dataSource);
 
   // Step 1: Check if ANY line item has per-line GST data (new format)
   const hasPerLineGstData = parsedItems.some(item => 
