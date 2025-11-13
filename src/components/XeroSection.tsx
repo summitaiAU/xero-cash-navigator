@@ -189,6 +189,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     disabled: disablePresence
   });
 
+  // Release lock if component unmounts while editing
+  useEffect(() => {
+    return () => {
+      if (isEditing && invoice.id) {
+        import('@/services/invoiceLockService').then(({ invoiceLockService }) => {
+          invoiceLockService.releaseLock(invoice.id);
+          console.log('[XeroSection] Lock released (unmount cleanup)');
+        });
+      }
+    };
+  }, [isEditing, invoice.id]);
+
   // Lock heartbeat to keep lock alive while editing (disabled in viewer mode)
   useEffect(() => {
     if (disablePresence || !isEditing || !invoice.id) return;
@@ -202,61 +214,43 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   }, [disablePresence, isEditing, invoice.id]);
 
   // Edit mode functions
-  const startEditing = () => {
+  const startEditing = async () => {
     if (!invoiceData) {
       console.error('No data available for editing');
       return;
     }
     
-    // Parse list_items to check format
-    let parsedItems: any[] = [];
-    if (typeof invoice.list_items === 'string') {
-      try {
-        parsedItems = JSON.parse(invoice.list_items);
-      } catch (error) {
-        parsedItems = [];
-      }
-    } else if (Array.isArray(invoice.list_items)) {
-      parsedItems = invoice.list_items;
+    // Try to acquire lock BEFORE entering edit mode
+    const { invoiceLockService } = await import('@/services/invoiceLockService');
+    const lockResult = await invoiceLockService.acquireLock(invoice.id);
+    
+    if (!lockResult.success) {
+      // Lock failed - another user is editing
+      toast({
+        title: 'Invoice Locked',
+        description: lockResult.error || 'Another user is currently editing this invoice',
+        variant: 'destructive'
+      });
+      return; // Don't enter edit mode
     }
     
-    // Check if line items have per-line GST data (new format)
-    const hasPerLineGstData = parsedItems.some(item => 
-      'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
-    );
-    
-    // For old format, check invoice-level GST
-    const invoiceLevelGst = Number(invoice.gst) || 0;
-    const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
+    console.log('[XeroSection] Lock acquired, entering edit mode');
     
     setEditableData({
-      entity: invoice.entity || '',
-      project: invoice.project || '',
-      supplierName: invoice.supplier_name || invoice.supplier || '',
-      invoiceNumber: invoice.invoice_no || invoice.invoice_number || '',
-      invoiceDate: invoice.invoice_date || '',
-      dueDate: invoice.due_date || '',
-      currency: invoice.currency || 'AUD',
+      entity: invoice.entity,
+      project: invoice.project || invoiceData.reference,
+      supplierName: invoice.supplier_name || invoiceData.contactName,
+      invoiceNumber: invoiceData.invoiceNumber,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      currency: invoiceData.currency,
+      gstIncluded: invoiceData.lineItems.some(item => item.gstIncluded),
       lineItems: invoiceData.lineItems.map((item, index) => {
-        // Determine tax type and gstIncluded based on actual GST data
-        let taxType = 'NONE';
-        let gstIncluded = false;
+        // Determine if GST is included for this specific line item
+        const gstIncluded = item.taxRate === 'No Tax';
         
-        if (item.lineGst !== undefined) {
-          // New format: use per-line GST
-          if (item.lineGst > 0) {
-            taxType = 'INPUT';
-            gstIncluded = false; // GST applies, checkbox unchecked
-          } else {
-            taxType = 'NONE';
-            gstIncluded = true; // GST excluded, checkbox checked
-          }
-        } else {
-          // Old format: Default to GST excluded (safer default)
-          // User must manually uncheck if GST should apply
-          taxType = 'NONE';
-          gstIncluded = true; // GST excluded, checkbox checked
-        }
+        // For old-format line items, set taxType based on whether GST is included
+        const taxType = gstIncluded ? 'NONE' : 'INPUT2';
         
         return {
           id: `item_${Date.now()}_${index}`,
@@ -274,7 +268,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     setSaveError(null);
   };
 
-  const cancelEditing = () => {
+  const cancelEditing = async () => {
+    // Release lock before exiting edit mode
+    const { invoiceLockService } = await import('@/services/invoiceLockService');
+    await invoiceLockService.releaseLock(invoice.id);
+    console.log('[XeroSection] Lock released (cancel)');
+    
     setIsEditing(false);
     onEditingChange?.(false);
     setEditableData(null);
@@ -463,6 +462,11 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         gst: totals.totalTax,
         total_amount: totals.total
       };
+
+      // Release lock after successful save
+      const { invoiceLockService } = await import('@/services/invoiceLockService');
+      await invoiceLockService.releaseLock(invoice.id);
+      console.log('[XeroSection] Lock released (save)');
 
       setInvoiceData(processSupabaseData(updatedInvoice));
       setIsEditing(false);

@@ -752,7 +752,7 @@ export const Dashboard: React.FC = () => {
                       {currentInvoice && (
                         <InvoiceLockBanner 
                           invoiceId={currentInvoice.id}
-                          isCurrentUserEditing={false}
+                          isCurrentUserEditing={isEditingXero}
                         />
                       )}
                       
