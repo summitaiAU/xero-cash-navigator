@@ -103,6 +103,27 @@ const calculateDateRange = (preset: string): { from: string; to: string } | null
   }
 };
 
+const detectPresetFromDates = (fromDate?: string, toDate?: string): string | undefined => {
+  // If no dates at all, return undefined (no preset selected)
+  if (!fromDate && !toDate) return undefined;
+  
+  // If incomplete dates, consider it custom
+  if (!fromDate || !toDate) return 'custom';
+  
+  // Calculate all preset ranges and check for matches
+  const presets = ['today', 'yesterday', 'last7days', 'last30days', 'thisMonth', 'lastMonth', 'thisQuarter', 'lastQuarter', 'thisYear'];
+  
+  for (const preset of presets) {
+    const range = calculateDateRange(preset);
+    if (range && fromDate === range.from && toDate === range.to) {
+      return preset;
+    }
+  }
+  
+  // Dates don't match any preset - must be custom
+  return 'custom';
+};
+
 export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
   open,
   onOpenChange,
@@ -121,6 +142,11 @@ export const MobileFilterSheet: React.FC<MobileFilterSheetProps> = ({
   useEffect(() => {
     if (open) {
       setLocalFilters(filters);
+      
+      // Detect and set the correct presets based on incoming filter dates
+      setInvoiceDatePreset(detectPresetFromDates(filters.invoiceDateFrom, filters.invoiceDateTo));
+      setPaidDatePreset(detectPresetFromDates(filters.paidDateFrom, filters.paidDateTo));
+      
       fetchUniqueEntities().then(setEntities);
       fetchUniqueSuppliers().then(setSuppliers);
     }
