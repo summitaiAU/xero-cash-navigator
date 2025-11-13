@@ -113,6 +113,21 @@ export const MobileDashboard = ({
     };
   }, []);
   
+  // Set dynamic viewport height for iOS
+  useEffect(() => {
+    const setVh = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    setVh();
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', setVh);
+    return () => {
+      window.removeEventListener('resize', setVh);
+      window.removeEventListener('orientationchange', setVh);
+    };
+  }, []);
+  
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
     if (element) {
@@ -231,8 +246,8 @@ export const MobileDashboard = ({
           
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="pt-14 pb-2 overflow-y-auto" 
-              style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
+              className="pt-14 pb-[calc(env(safe-area-inset-bottom,0px)+8px)] overflow-y-auto" 
+              style={{ height: 'calc(var(--vh, 1vh) * 100 - 56px)', WebkitOverflowScrolling: 'touch' }}
             >
             <div id="mobile-pdf-section" className="scroll-mt-16">
               <MobilePDFViewer invoice={currentInvoice} />
