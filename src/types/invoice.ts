@@ -79,6 +79,7 @@ export interface Invoice {
   supplier_email_on_invoice?: string;
   sender_email?: string;
   remittance_sent?: boolean;
+  remittance_embed_link?: string;
   project?: string;
   approved?: boolean;
   partially_paid?: boolean;

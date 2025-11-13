@@ -195,6 +195,7 @@ export async function fetchPaidInvoices({
       partial_payment_made_at:
         (invoice as any).partial_payment_made_at || undefined,
       remittance_sent_at: (invoice as any).remittance_sent_at || undefined,
+      remittance_embed_link: (invoice as any).remittance_embed_link || undefined,
       flag_email_sent_at: (invoice as any).flag_email_sent_at || undefined,
 
       xero_data: {
@@ -380,6 +381,7 @@ export async function fetchInvoiceById(
       last_edited_by_email: data.last_edited_by_email || undefined,
       partial_payment_made_at: (data as any).partial_payment_made_at || undefined,
       remittance_sent_at: (data as any).remittance_sent_at || undefined,
+      remittance_embed_link: (data as any).remittance_embed_link || undefined,
       flag_email_sent_at: (data as any).flag_email_sent_at || undefined,
       xero_data: {
         invoiceNumber: data.invoice_no || "",

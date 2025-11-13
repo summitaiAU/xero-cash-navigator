@@ -8,6 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InvoiceEditInfo } from "@/components/InvoiceEditInfo";
+import { RemittanceSection } from "@/components/RemittanceSection";
 import { Lock, Copy, Check } from "lucide-react";
 import { formatDateSydney } from "@/lib/dateUtils";
 import { toast } from "sonner";
@@ -229,7 +230,7 @@ export function PaidInvoiceViewer({
 
                     {/* Right: Xero Details */}
                     <ResizablePanel defaultSize={48} minSize={35} className="bg-background">
-                      <div className="h-full overflow-auto p-4">
+                      <div className="h-full overflow-auto p-4 space-y-6">
                         <XeroSection 
                           invoice={invoice} 
                           onUpdate={(updatedInvoice) => {
@@ -239,6 +240,18 @@ export function PaidInvoiceViewer({
                           disablePresence={true}
                           isLockedByOther={isLockedByOther}
                         />
+                        
+                        {/* Remittance Section - only show for paid invoices */}
+                        {(invoice.status === 'PAID' || invoice.status === 'PARTIALLY PAID') && (
+                          <RemittanceSection 
+                            invoice={invoice}
+                            onRemittanceSent={(invoiceId, email) => {
+                              // Refresh invoice data after remittance is sent
+                              onInvoiceUpdated?.({ ...invoice, remittance_sent: true, remittance_email: email });
+                              toast.success("Remittance sent successfully");
+                            }}
+                          />
+                        )}
                       </div>
                     </ResizablePanel>
                   </ResizablePanelGroup>
