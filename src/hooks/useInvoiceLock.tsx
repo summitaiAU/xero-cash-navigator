@@ -6,10 +6,12 @@ export const useInvoiceLock = (invoiceId: string | undefined) => {
   const { user } = useAuth();
   const [lock, setLock] = useState<InvoiceLock | null>(null);
   const lastEventAtRef = useRef<number>(Date.now());
+  const lockRef = useRef<InvoiceLock | null>(null);
 
   useEffect(() => {
     if (!invoiceId || !user?.id) {
       setLock(null);
+      lockRef.current = null;
       return;
     }
 
@@ -19,23 +21,26 @@ export const useInvoiceLock = (invoiceId: string | undefined) => {
     const unsubscribe = invoiceLockService.subscribeLockChanges(invoiceId, (newLock) => {
       console.log('[useInvoiceLock] Received realtime lock update:', newLock);
       lastEventAtRef.current = Date.now();
+      lockRef.current = newLock;
       setLock(newLock);
     });
 
     // Fetch initial lock
     invoiceLockService.getLock(invoiceId).then((initialLock) => {
       console.log('[useInvoiceLock] Initial lock fetch:', initialLock);
+      lockRef.current = initialLock;
       setLock(initialLock);
     });
 
-    // Fallback polling: poll every 5s if no realtime event for 10s OR if lock is null
+    // Fallback polling: poll every 5s if no realtime event for 10s
     const pollInterval = setInterval(async () => {
       const timeSinceLastEvent = Date.now() - lastEventAtRef.current;
-      const shouldPoll = timeSinceLastEvent > 10000 || lock === null;
+      const shouldPoll = timeSinceLastEvent > 10000;
       
       if (shouldPoll) {
-        console.log('[useInvoiceLock] Fallback poll triggered (no event for', Math.round(timeSinceLastEvent / 1000), 's or lock is null)');
+        console.log('[useInvoiceLock] Fallback poll triggered (no event for', Math.round(timeSinceLastEvent / 1000), 's)');
         const currentLock = await invoiceLockService.getLock(invoiceId);
+        lockRef.current = currentLock;
         setLock(currentLock);
         lastEventAtRef.current = Date.now(); // Reset timer after successful poll
       }
@@ -46,7 +51,7 @@ export const useInvoiceLock = (invoiceId: string | undefined) => {
       if (unsubscribe) unsubscribe();
       clearInterval(pollInterval);
     };
-  }, [invoiceId, user?.id, lock]);
+  }, [invoiceId, user?.id]);
 
   const isLockedByOther = lock !== null && lock.locked_by_user_id !== user?.id;
   const lockedByUser = isLockedByOther ? lock?.locked_by_email : undefined;

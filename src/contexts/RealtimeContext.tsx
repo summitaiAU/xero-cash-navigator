@@ -235,14 +235,20 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
       return true;
     });
     
+    // Deduplicate by user_id, keeping the most recent entry
+    const uniqueUsers = Array.from(
+      new Map(filtered.map(u => [u.user_id, u])).values()
+    );
+    
     console.log('[presence] getUsersOnInvoice:', { 
       invoiceId, 
       totalActive: activeUsers.length, 
       filtered: filtered.length,
-      users: filtered.map(u => ({ email: u.user_email, status: u.status }))
+      unique: uniqueUsers.length,
+      users: uniqueUsers.map(u => ({ email: u.user_email, status: u.status }))
     });
     
-    return filtered;
+    return uniqueUsers;
   }, [activeUsers, currentUserId]);
 
   const isInvoiceBeingEdited = React.useCallback((invoiceId: string) => {
