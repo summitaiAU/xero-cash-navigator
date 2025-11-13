@@ -343,7 +343,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             ) : (
               // All other browsers including iOS - use iframe
               <iframe
-                src={blobUrl}
+                src={`${blobUrl}#view=FitH&zoom=page-width`}
                 className="w-full border-0 rounded-lg"
                 style={{ minHeight: "70vh", width: "100%" }}
                 title={attachment.filename}
