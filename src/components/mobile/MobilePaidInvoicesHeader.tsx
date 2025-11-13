@@ -22,10 +22,14 @@ interface MobilePaidInvoicesHeaderProps {
 }
 
 const SORT_OPTIONS = [
-  { value: 'paid_date', label: 'Date Paid', direction: 'desc' as const },
   { value: 'invoice_date', label: 'Invoice Date', direction: 'desc' as const },
+  { value: 'invoice_date', label: 'Invoice Date', direction: 'asc' as const },
+  { value: 'due_date', label: 'Due Date', direction: 'desc' as const },
+  { value: 'due_date', label: 'Due Date', direction: 'asc' as const },
   { value: 'total_amount', label: 'Amount', direction: 'desc' as const },
-  { value: 'supplier', label: 'Supplier', direction: 'asc' as const },
+  { value: 'total_amount', label: 'Amount', direction: 'asc' as const },
+  { value: 'paid_date', label: 'Date Paid', direction: 'desc' as const },
+  { value: 'paid_date', label: 'Date Paid', direction: 'asc' as const },
 ];
 
 export const MobilePaidInvoicesHeader: React.FC<MobilePaidInvoicesHeaderProps> = ({
@@ -74,7 +78,8 @@ export const MobilePaidInvoicesHeader: React.FC<MobilePaidInvoicesHeaderProps> =
         {/* Search Input */}
         <Input
           placeholder="Search invoices..."
-          className="h-10 rounded-lg px-3 text-sm flex-1"
+          className="h-10 rounded-lg px-3 text-base flex-1"
+          style={{ fontSize: '16px' }}
           value={localSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
