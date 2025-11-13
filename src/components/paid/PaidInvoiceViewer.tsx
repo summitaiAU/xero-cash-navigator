@@ -19,6 +19,7 @@ interface PaidInvoiceViewerProps {
   lockedByUser?: string;
   onSupplierClick?: (supplier: string) => void;
   closing?: boolean;
+  onInvoiceUpdated?: (updatedInvoice: Invoice) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -84,6 +85,7 @@ export function PaidInvoiceViewer({
   lockedByUser,
   onSupplierClick,
   closing = false,
+  onInvoiceUpdated,
 }: PaidInvoiceViewerProps) {
   const [copied, setCopied] = useState(false);
   const pdfRef = useRef<PDFViewerHandle>(null);
@@ -220,7 +222,9 @@ export function PaidInvoiceViewer({
                       <div className="h-full overflow-auto p-4">
                         <XeroSection 
                           invoice={invoice} 
-                          onUpdate={() => {}} 
+                          onUpdate={(updatedInvoice) => {
+                            onInvoiceUpdated?.(updatedInvoice);
+                          }} 
                           onSync={() => {}}
                           disablePresence={true}
                         />

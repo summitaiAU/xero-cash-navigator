@@ -567,6 +567,14 @@ export default function PaidInvoices() {
         lockedByUser={lockedByUser}
         onSupplierClick={handleSupplierClick}
         closing={isViewerClosing || !viewerOpen}
+        onInvoiceUpdated={(updatedInvoice) => {
+          console.log('[PaidInvoices] Invoice updated in viewer:', updatedInvoice.id);
+          paidInvoicesCacheService.invalidateAll();
+          loadInvoices(false);
+          toast.success('Invoice updated', {
+            description: 'Changes saved successfully',
+          });
+        }}
       />
 
       <ExportDialog
