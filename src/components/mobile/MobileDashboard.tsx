@@ -234,108 +234,110 @@ export const MobileDashboard = ({
       
       {currentInvoice ? (
         <>
-          <UpdateShimmer show={isUpdating}>
-            <main 
-              className="flex-1 min-h-0 pt-14 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-            {/* Lock Banner */}
-            {isLockedByOther && (
-              <div className="sticky top-14 z-40 mx-2 mb-2">
-                <InvoiceLockBanner
-                  invoiceId={currentInvoice.id}
-                  isCurrentUserEditing={isEditingXero}
-                />
-              </div>
-            )}
-            <div id="mobile-pdf-section" className="scroll-mt-16">
-              <MobilePDFViewer invoice={currentInvoice} />
-            </div>
-            
-            {/* Invoice Details Section */}
-            <div id="mobile-details-section" className="scroll-mt-16">
-              <MobileInvoiceDetails 
-                invoice={currentInvoice}
-                onSupplierClick={(supplier) => {
-                  console.log('Filter by supplier:', supplier);
-                }}
-              />
-            </div>
-            
-            {/* Line Items Section */}
-            {currentInvoice.xero_data?.lineItems && (
-              <div id="mobile-lineitems-section" className="scroll-mt-16">
-                <MobileLineItems lineItems={currentInvoice.xero_data.lineItems} />
-              </div>
-            )}
-            
-            {/* Totals Section */}
-            <div id="mobile-totals-section" className="scroll-mt-16">
-              <MobileTotals 
-                subtotal={currentInvoice.xero_data?.subtotal || currentInvoice.subtotal || 0}
-                totalTax={currentInvoice.xero_data?.totalTax || currentInvoice.gst || 0}
-                total={currentInvoice.xero_data?.total || currentInvoice.total_amount || currentInvoice.amount || 0}
-                isApproved={currentInvoice.approved}
-              />
-            </div>
-            
-            {/* Conditional Sections Based on View State */}
-            {viewState === 'flagged' ? (
-              /* Flagged Invoice Section */
-              <div id="mobile-flagged-section" className="scroll-mt-16">
-                <MobileFlaggedSection
-                  invoice={currentInvoice}
-                  onResolve={() => onXeroUpdate?.(currentInvoice)}
-                />
-              </div>
-            ) : (
-              <>
-                {/* Action Buttons */}
-                <div id="mobile-actions-section" className="scroll-mt-16">
-                  <MobileActions
-                    invoice={currentInvoice}
-                    onStartEdit={handleStartEdit}
-                    onApprove={handleApprove}
-                    onUndoApprove={handleUndoApprove}
-                    onFlagInvoice={onFlagInvoice || (() => {})}
-                    isEditing={isEditingXero}
-                    isApproving={isApproving}
-                    isLockedByOther={isLockedByOther}
-                    lockedByUser={lockedByUser}
+          <div className="flex-1 min-h-0 relative">
+            <UpdateShimmer show={isUpdating}>
+              <main 
+                className="h-full min-h-0 pt-14 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
+                style={{ WebkitOverflowScrolling: 'touch' }}
+              >
+              {/* Lock Banner */}
+              {isLockedByOther && (
+                <div className="sticky top-14 z-40 mx-2 mb-2">
+                  <InvoiceLockBanner
+                    invoiceId={currentInvoice.id}
+                    isCurrentUserEditing={isEditingXero}
                   />
                 </div>
-                
-                {/* Payment Confirmation */}
-                <div id="mobile-payment-section" className="scroll-mt-16">
-                  <MobilePayment
-                    invoice={currentInvoice}
-                    onMarkAsPaid={onMarkAsPaid}
-                    onPartialPaymentUpdate={onPartialPaymentUpdate}
-                    isLockedByOther={isLockedByOther}
-                    loading={false}
-                  />
-                </div>
-              </>
-            )}
-            
-            {/* Remittance Section - Only for Paid/Partially Paid Invoices */}
-            {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY PAID') && (
-              <div className="mx-2 mt-3">
-                <RemittanceSection
+              )}
+              <div id="mobile-pdf-section" className="scroll-mt-16">
+                <MobilePDFViewer invoice={currentInvoice} />
+              </div>
+              
+              {/* Invoice Details Section */}
+              <div id="mobile-details-section" className="scroll-mt-16">
+                <MobileInvoiceDetails 
                   invoice={currentInvoice}
-                  compact={true}
-                  onRemittanceSent={(invoiceId, email) => {
-                    onXeroUpdate({ remittance_sent: true, remittance_email: email });
-                    toast({
-                      title: 'Remittance Sent',
-                      description: `Remittance sent to ${email}`,
-                    });
+                  onSupplierClick={(supplier) => {
+                    console.log('Filter by supplier:', supplier);
                   }}
                 />
               </div>
-            )}
-            </main>
-          </UpdateShimmer>
+              
+              {/* Line Items Section */}
+              {currentInvoice.xero_data?.lineItems && (
+                <div id="mobile-lineitems-section" className="scroll-mt-16">
+                  <MobileLineItems lineItems={currentInvoice.xero_data.lineItems} />
+                </div>
+              )}
+              
+              {/* Totals Section */}
+              <div id="mobile-totals-section" className="scroll-mt-16">
+                <MobileTotals 
+                  subtotal={currentInvoice.xero_data?.subtotal || currentInvoice.subtotal || 0}
+                  totalTax={currentInvoice.xero_data?.totalTax || currentInvoice.gst || 0}
+                  total={currentInvoice.xero_data?.total || currentInvoice.total_amount || currentInvoice.amount || 0}
+                  isApproved={currentInvoice.approved}
+                />
+              </div>
+              
+              {/* Conditional Sections Based on View State */}
+              {viewState === 'flagged' ? (
+                /* Flagged Invoice Section */
+                <div id="mobile-flagged-section" className="scroll-mt-16">
+                  <MobileFlaggedSection
+                    invoice={currentInvoice}
+                    onResolve={() => onXeroUpdate?.(currentInvoice)}
+                  />
+                </div>
+              ) : (
+                <>
+                  {/* Action Buttons */}
+                  <div id="mobile-actions-section" className="scroll-mt-16">
+                    <MobileActions
+                      invoice={currentInvoice}
+                      onStartEdit={handleStartEdit}
+                      onApprove={handleApprove}
+                      onUndoApprove={handleUndoApprove}
+                      onFlagInvoice={onFlagInvoice || (() => {})}
+                      isEditing={isEditingXero}
+                      isApproving={isApproving}
+                      isLockedByOther={isLockedByOther}
+                      lockedByUser={lockedByUser}
+                    />
+                  </div>
+                  
+                  {/* Payment Confirmation */}
+                  <div id="mobile-payment-section" className="scroll-mt-16">
+                    <MobilePayment
+                      invoice={currentInvoice}
+                      onMarkAsPaid={onMarkAsPaid}
+                      onPartialPaymentUpdate={onPartialPaymentUpdate}
+                      isLockedByOther={isLockedByOther}
+                      loading={false}
+                    />
+                  </div>
+                </>
+              )}
+              
+              {/* Remittance Section - Only for Paid/Partially Paid Invoices */}
+              {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY PAID') && (
+                <div className="mx-2 mt-3">
+                  <RemittanceSection
+                    invoice={currentInvoice}
+                    compact={true}
+                    onRemittanceSent={(invoiceId, email) => {
+                      onXeroUpdate({ remittance_sent: true, remittance_email: email });
+                      toast({
+                        title: 'Remittance Sent',
+                        description: `Remittance sent to ${email}`,
+                      });
+                    }}
+                  />
+                </div>
+              )}
+              </main>
+            </UpdateShimmer>
+          </div>
           
           {/* Edit Sheet */}
           <MobileEditSheet
