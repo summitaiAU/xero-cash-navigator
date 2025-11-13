@@ -292,10 +292,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         const gstIncluded = item.gstIncluded !== undefined ? item.gstIncluded : false;
         const gstExempt = item.gstExempt || false;
         
-        // For items with per-line GST data, determine taxType from the stored line_gst value
-        // If line_gst exists and is 0, but gst_included is true, this is old data that needs recalculation
-        const hasGstData = item.lineGst !== undefined || item.gstIncluded;
-        const taxType = hasGstData ? 'INPUT' : 'NONE';
+        // Priority-based GST detection:
+        // 1. If GST exempt, no GST calculation (taxType = NONE)
+        // 2. If gst_included is true, ALWAYS calculate GST (even if line_gst is 0 from bad data)
+        // 3. If line_gst > 0, calculate GST
+        // 4. Otherwise, no GST (taxType = NONE)
+        const shouldCalculateGst = !gstExempt && (
+          gstIncluded || 
+          (item.lineGst !== undefined && item.lineGst > 0)
+        );
+        const taxType = shouldCalculateGst ? 'INPUT' : 'NONE';
         
         return {
           id: `item_${Date.now()}_${index}`,
