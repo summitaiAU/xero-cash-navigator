@@ -98,6 +98,7 @@ export interface Invoice {
   invoice_date?: string;
   currency?: string;
   paid_date?: string;
+  last_edited_at?: string;
   
   // New timestamp fields for event tracking
   payment_made_at?: string;

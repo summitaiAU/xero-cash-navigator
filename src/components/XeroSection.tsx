@@ -589,7 +589,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       loadInvoiceData();
     }, 50);
     return () => clearTimeout(id);
-  }, [invoice?.id, invoice?.total_amount, invoice?.list_items?.length]);
+  }, [invoice?.id, invoice?.total_amount, invoice?.list_items?.length, invoice?.last_edited_at]);
 
   const isLoading = dataLoading || loading;
   const hasInvoiceData = !!invoiceData;
