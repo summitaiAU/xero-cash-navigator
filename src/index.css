@@ -183,8 +183,14 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html,
   body {
-    @apply bg-background text-foreground;
+    background-color: #ffffff;
+    min-height: 100%;
+  }
+
+  body {
+    @apply text-foreground;
     font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     line-height: 1.55;
   }
