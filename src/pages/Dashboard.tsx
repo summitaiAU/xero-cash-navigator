@@ -25,6 +25,7 @@ import {
   updateInvoiceRemittanceStatus,
   flagInvoice,
 } from "@/services/invoiceService";
+import { fetchReviewEmailList } from "@/services/emailReviewService";
 import { invoiceService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,9 +105,9 @@ export const Dashboard: React.FC = () => {
     allInvoices.filter(inv => inv.status === 'FLAGGED').length,
     [allInvoices]
   );
-  // Review count - invoices need to be manually processed/reviewed
-  // For now, we'll set this to 0 as review is handled on a separate page
-  const reviewCount = 0;
+  
+  // Review count - fetch from email queue
+  const [reviewCount, setReviewCount] = React.useState(0);
 
   const handleSignOut = async () => {
     try {
@@ -249,6 +250,23 @@ export const Dashboard: React.FC = () => {
   // Load all invoices for search on mount only
   useEffect(() => {
     loadAllInvoices();
+  }, []);
+
+  // Fetch review count on mount
+  useEffect(() => {
+    const fetchReviewCount = async () => {
+      try {
+        const { data: emails } = await fetchReviewEmailList();
+        if (emails) {
+          const unreviewed = emails.filter(e => !e.reviewed_at).length;
+          setReviewCount(unreviewed);
+        }
+      } catch (error) {
+        console.error("[Dashboard] Failed to fetch review count:", error);
+      }
+    };
+
+    fetchReviewCount();
   }, []);
 
   // Cleanup shimmer timeout on unmount
