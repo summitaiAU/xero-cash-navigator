@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, X, Send, CheckCircle, DollarSign, Undo, Loader2, AlertTriangle, Lock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, X, Send, CheckCircle, DollarSign, Undo, Loader2, AlertTriangle, Lock, Save } from 'lucide-react';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { PartialPaymentModal } from '@/components/PartialPaymentModal';
 import { useToast } from '@/hooks/use-toast';
@@ -31,10 +32,30 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
   const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false);
+  const [showAddEmail, setShowAddEmail] = useState(false);
+  const [newSupplierEmail, setNewSupplierEmail] = useState('');
+  const [savingEmail, setSavingEmail] = useState(false);
   const { toast } = useToast();
+
+  // Get all available emails
+  const getAvailableEmails = () => {
+    const emails: string[] = [];
+    
+    if (invoice.remittance_email) emails.push(invoice.remittance_email);
+    if (invoice.supplier_email_on_invoice) emails.push(invoice.supplier_email_on_invoice);
+    if (invoice.sender_email) emails.push(invoice.sender_email);
+    if (invoice.saved_emails) emails.push(...invoice.saved_emails);
+    
+    // Remove duplicates
+    return [...new Set(emails)];
+  };
+
+  const availableEmails = getAvailableEmails();
 
   useEffect(() => {
     setEmail(invoice.remittance_email || '');
+    setShowAddEmail(false);
+    setNewSupplierEmail('');
   }, [invoice.id]);
 
   // Paste functionality
@@ -73,6 +94,52 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
         setImageData(event.target?.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const saveSupplierEmail = async () => {
+    if (!newSupplierEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newSupplierEmail)) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSavingEmail(true);
+    
+    try {
+      const { addSavedEmail } = await import('@/services/invoiceService');
+      await addSavedEmail(invoice.id, newSupplierEmail);
+      
+      toast({
+        title: "Email saved",
+        description: `${newSupplierEmail} has been saved to this invoice`,
+      });
+      
+      setEmail(newSupplierEmail);
+      setNewSupplierEmail('');
+      setShowAddEmail(false);
+      
+    } catch (error: any) {
+      toast({
+        title: "Error saving email",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingEmail(false);
     }
   };
 
@@ -302,34 +369,72 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
           </div>
         </div>
 
-        {/* Step 2: Email Input */}
+        {/* Step 2: Email Selection */}
         <div className="mb-4 space-y-2">
           <Label htmlFor="supplier-email" className="text-sm font-medium">
             Supplier Email
           </Label>
-          <Input
-            id="supplier-email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="supplier@example.com"
-            className="h-11"
-          />
           
-          {/* Saved Emails (simplified for mobile) */}
-          {invoice.saved_emails && invoice.saved_emails.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {invoice.saved_emails.map((savedEmail, index) => (
+          {!showAddEmail ? (
+            <Select
+              value={email}
+              onValueChange={(value) => {
+                if (value === 'add_email') {
+                  setShowAddEmail(true);
+                  setTimeout(() => {
+                    document.getElementById('new-supplier-email-mobile')?.focus();
+                  }, 100);
+                } else {
+                  setEmail(value);
+                }
+              }}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Select email" />
+              </SelectTrigger>
+              <SelectContent className="z-50 bg-background">
+                {availableEmails.map((availableEmail, index) => (
+                  <SelectItem key={index} value={availableEmail}>
+                    {availableEmail}
+                  </SelectItem>
+                ))}
+                <SelectItem value="add_email">+ Add New Email</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
+                  id="new-supplier-email-mobile"
+                  type="email"
+                  value={newSupplierEmail}
+                  onChange={(e) => setNewSupplierEmail(e.target.value)}
+                  placeholder="Enter email..."
+                  className="flex-1 h-11"
+                  autoFocus
+                />
                 <Button
-                  key={index}
                   variant="outline"
                   size="sm"
-                  onClick={() => setEmail(savedEmail)}
-                  className="text-xs h-8"
+                  onClick={saveSupplierEmail}
+                  disabled={savingEmail || !newSupplierEmail}
+                  className="h-11"
                 >
-                  {savedEmail}
+                  <Save className="h-4 w-4 mr-1" />
+                  {savingEmail ? 'Saving...' : 'Save'}
                 </Button>
-              ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddEmail(false);
+                    setNewSupplierEmail('');
+                  }}
+                  className="h-11"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
