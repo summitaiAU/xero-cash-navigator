@@ -196,7 +196,7 @@ export const MobileDashboard = ({
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-transparent">
       <MobileHeader
         currentInvoice={currentInvoice}
         invoices={invoices}
