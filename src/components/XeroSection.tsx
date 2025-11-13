@@ -276,11 +276,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       currency: invoiceData.currency,
       gstIncluded: invoiceData.lineItems.some(item => item.gstIncluded),
       lineItems: invoiceData.lineItems.map((item, index) => {
-        // Determine if GST is included for this specific line item
-        const gstIncluded = item.taxRate === 'No Tax';
+        // Read gst_included directly from the item if available (new format)
+        // For old format without per-line GST, default to false (GST excluded - safe default)
+        const gstIncluded = item.gstIncluded !== undefined ? item.gstIncluded : false;
         
-        // For old-format line items, set taxType based on whether GST is included
-        const taxType = gstIncluded ? 'NONE' : 'INPUT2';
+        // Set taxType based on whether this line has GST
+        const taxType = item.taxRate === 'No Tax' ? 'NONE' : 'INPUT';
         
         return {
           id: `item_${Date.now()}_${index}`,
@@ -370,13 +371,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   };
 
   const calculateTaxAmount = (subtotal: number, taxType: string, gstIncluded: boolean = false) => {
-    // If gstIncluded is true, GST is excluded (no GST applies)
-    if (gstIncluded) return 0;
+    // If taxType is NONE, no GST applies
+    if (taxType === 'NONE') return 0;
     
     // If taxType is not INPUT, no GST
     if (taxType !== 'INPUT') return 0;
     
-    // GST is 10% of the subtotal
+    // If gstIncluded is true, GST is already in the price - extract it (1/11th of the total)
+    if (gstIncluded) {
+      return subtotal * (1 / 11);
+    }
+    
+    // If gstIncluded is false, GST needs to be added to the price (10% of subtotal)
     return subtotal * 0.1;
   };
 
@@ -450,10 +456,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       // Format line items for Supabase with per-line GST tracking
       const formattedLineItems = editableData.lineItems.map((item: any) => {
         const lineAmount = item.quantity * item.unitAmount;
-        const hasGst = !item.gstIncluded; // If gstIncluded is false (checkbox unchecked), GST applies
-        const lineGst = hasGst ? lineAmount * 0.1 : 0;
-        const lineTotalExGst = lineAmount;
-        const lineTotalIncGst = lineAmount + lineGst;
+        
+        let lineGst: number;
+        let lineTotalExGst: number;
+        let lineTotalIncGst: number;
+        
+        if (item.gstIncluded) {
+          // GST is included in the unit amount - extract it
+          lineTotalExGst = lineAmount / 1.1;
+          lineGst = lineAmount - lineTotalExGst;
+          lineTotalIncGst = lineAmount;
+        } else {
+          // GST is not included in the unit amount - add it
+          lineTotalExGst = lineAmount;
+          lineGst = lineAmount * 0.1;
+          lineTotalIncGst = lineAmount + lineGst;
+        }
         
         return {
           id: item.id || genLineItemId(),
