@@ -14,6 +14,8 @@ import {
   prefetchPaidInvoicesPage,
   PaidInvoicesFilters,
 } from "@/services/paidInvoicesService";
+import { fetchInvoices } from "@/services/invoiceService";
+import { fetchReviewEmailList } from "@/services/emailReviewService";
 import { paidInvoicesCacheService } from "@/services/paidInvoicesCache";
 import { useInvoiceLock } from "@/hooks/useInvoiceLock";
 import { 
@@ -50,6 +52,9 @@ export default function PaidInvoices() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestIdRef = useRef(0);
   const mountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [payableCount, setPayableCount] = useState(0);
+  const [flaggedCount, setFlaggedCount] = useState(0);
+  const [reviewCount, setReviewCount] = useState(0);
 
   // Parse URL params
   const page = parseInt(searchParams.get("page") || "0", 10);
@@ -76,9 +81,9 @@ export default function PaidInvoices() {
     priceMax: searchParams.get("priceMax")
       ? Number(searchParams.get("priceMax"))
       : undefined,
-    entities: searchParams.get("entities")?.split(",").filter(Boolean) || undefined,
-    statuses: searchParams.get("statuses")?.split(",").filter(Boolean) || ["PAID"],
-    suppliers: searchParams.get("suppliers")?.split(",").filter(Boolean) || undefined,
+    entities: searchParams.get("entities")?.split("|").filter(Boolean) || undefined,
+    statuses: searchParams.get("statuses")?.split("|").filter(Boolean) || ["PAID"],
+    suppliers: searchParams.get("suppliers")?.split("|").filter(Boolean) || undefined,
   }), [searchParams]);
 
   // Calculate active filters count
@@ -157,6 +162,37 @@ export default function PaidInvoices() {
         clearTimeout(mountTimeoutRef.current);
       }
     };
+  }, []);
+
+  // Fetch navigation counts for hamburger menu
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        // Fetch invoice counts from invoiceService
+        const invoices = await fetchInvoices();
+        if (invoices) {
+          const payable = invoices.filter(inv => 
+            inv.status !== 'PAID' && 
+            inv.status !== 'FLAGGED' && 
+            inv.status !== 'DELETED'
+          ).length;
+          const flagged = invoices.filter(inv => inv.status === 'FLAGGED').length;
+          setPayableCount(payable);
+          setFlaggedCount(flagged);
+        }
+
+        // Fetch review email count
+        const { data: emails } = await fetchReviewEmailList();
+        if (emails) {
+          const unreviewed = emails.filter(e => !e.reviewed_at).length;
+          setReviewCount(unreviewed);
+        }
+      } catch (error) {
+        console.error("[PaidInvoices] Failed to fetch navigation counts:", error);
+      }
+    };
+
+    fetchCounts();
   }, []);
 
   // Generate cache key
@@ -406,9 +442,9 @@ export default function PaidInvoices() {
         paidDateTo: newFilters.paidDateTo || null,
         priceMin: newFilters.priceMin?.toString() || null,
         priceMax: newFilters.priceMax?.toString() || null,
-        entities: newFilters.entities?.join(",") || null,
-        statuses: newFilters.statuses?.join(",") || null,
-        suppliers: newFilters.suppliers?.join(",") || null,
+        entities: newFilters.entities?.join("|") || null,
+        statuses: newFilters.statuses?.join("|") || null,
+        suppliers: newFilters.suppliers?.join("|") || null,
       };
       updateParams(updates);
       toast.success("Filters applied", {
@@ -462,7 +498,7 @@ export default function PaidInvoices() {
         const current = filters[key as keyof PaidInvoicesFilters];
         if (Array.isArray(current)) {
           const updated = current.filter((v) => v !== value);
-          updateParams({ [key]: updated.length > 0 ? updated.join(",") : null, page: "0" });
+          updateParams({ [key]: updated.length > 0 ? updated.join("|") : null, page: "0" });
         }
       }
     },
@@ -598,9 +634,9 @@ export default function PaidInvoices() {
             open={showMobileHamburger}
             onOpenChange={setShowMobileHamburger}
             viewState="paid"
-            payableCount={0}
-            flaggedCount={0}
-            reviewCount={0}
+            payableCount={payableCount}
+            flaggedCount={flaggedCount}
+            reviewCount={reviewCount}
             userName={user?.email || 'User'}
             onSignOut={handleSignOut}
           />
