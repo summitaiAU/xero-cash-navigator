@@ -23,7 +23,7 @@ export const MobileFloatingNav = ({
       {hasPrevious && (
         <Button
           onClick={onPrevious}
-          className="fixed bottom-24 left-4 h-14 w-14 rounded-full bg-primary/90 hover:bg-primary shadow-lg z-40 transition-all active:scale-95"
+          className="fixed bottom-4 left-4 h-14 w-14 rounded-full bg-primary/90 hover:bg-primary shadow-lg z-40 transition-all active:scale-95"
           size="icon"
         >
           <ChevronLeft className="h-6 w-6" />
@@ -34,7 +34,7 @@ export const MobileFloatingNav = ({
       {hasNext && (
         <Button
           onClick={onNext}
-          className="fixed bottom-24 right-4 h-14 w-14 rounded-full bg-primary/90 hover:bg-primary shadow-lg z-40 transition-all active:scale-95"
+          className="fixed bottom-4 right-4 h-14 w-14 rounded-full bg-primary/90 hover:bg-primary shadow-lg z-40 transition-all active:scale-95"
           size="icon"
         >
           <ChevronRight className="h-6 w-6" />
