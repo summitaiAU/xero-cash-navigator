@@ -448,6 +448,11 @@ export const Dashboard: React.FC = () => {
 
     setLoading(true);
     try {
+      // Release lock if one exists (user might have been editing)
+      const { invoiceLockService } = await import('@/services/invoiceLockService');
+      await invoiceLockService.releaseLock(currentInvoice.id);
+      console.log('[Dashboard] Lock released before marking as paid');
+
       // Update invoice status in Supabase - remittance sent only if email provided
       const remittanceSent = !!paymentData.email;
       await updateInvoicePaymentStatus(
