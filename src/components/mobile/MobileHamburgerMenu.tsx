@@ -1,5 +1,6 @@
 import { FileText, Flag, Mail, CheckCircle, LogOut, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -28,10 +29,19 @@ export const MobileHamburgerMenu = ({
 }: MobileHamburgerMenuProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const handleNavigation = (path: string) => {
-    navigate(path);
-    onOpenChange(false);
+    if (isNavigating) return; // Prevent multiple clicks
+    
+    setIsNavigating(true);
+    onOpenChange(false); // Start close animation
+    
+    // Wait for sheet animation to complete (300ms + buffer)
+    setTimeout(() => {
+      navigate(path);
+      setIsNavigating(false);
+    }, 350);
   };
 
   const NavButton = ({
@@ -40,17 +50,22 @@ export const MobileHamburgerMenu = ({
     count,
     active,
     onClick,
+    disabled,
   }: {
     icon: any;
     label: string;
     count?: number;
     active: boolean;
     onClick: () => void;
+    disabled?: boolean;
   }) => (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        'w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+        'w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-medium',
+        !disabled && 'transition-colors',
+        disabled && 'opacity-50 cursor-not-allowed',
         active
           ? 'bg-primary text-primary-foreground'
           : 'hover:bg-muted text-foreground'
@@ -89,6 +104,7 @@ export const MobileHamburgerMenu = ({
             count={payableCount}
             active={viewState === 'payable' && location.pathname === '/dashboard'}
             onClick={() => handleNavigation('/dashboard?view=payable')}
+            disabled={isNavigating}
           />
           <NavButton
             icon={Flag}
@@ -96,6 +112,7 @@ export const MobileHamburgerMenu = ({
             count={flaggedCount}
             active={viewState === 'flagged' && location.pathname === '/dashboard'}
             onClick={() => handleNavigation('/dashboard?view=flagged')}
+            disabled={isNavigating}
           />
           <NavButton
             icon={Mail}
@@ -103,6 +120,7 @@ export const MobileHamburgerMenu = ({
             count={reviewCount}
             active={location.pathname === '/review'}
             onClick={() => handleNavigation('/review')}
+            disabled={isNavigating}
           />
 
           <div className="pt-4 mt-4 border-t border-border">
@@ -111,6 +129,7 @@ export const MobileHamburgerMenu = ({
               label="All Invoices"
               active={location.pathname === '/invoices/paid'}
               onClick={() => handleNavigation('/invoices/paid')}
+              disabled={isNavigating}
             />
           </div>
         </div>
