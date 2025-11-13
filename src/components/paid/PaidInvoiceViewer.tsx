@@ -227,6 +227,7 @@ export function PaidInvoiceViewer({
                           }} 
                           onSync={() => {}}
                           disablePresence={true}
+                          isLockedByOther={isLockedByOther}
                         />
                       </div>
                     </ResizablePanel>

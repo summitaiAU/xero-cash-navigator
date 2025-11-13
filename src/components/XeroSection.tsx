@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   RefreshCw, 
   ExternalLink, 
@@ -18,7 +19,8 @@ import {
   Plus,
   Trash2,
   ThumbsUp,
-  Undo
+  Undo,
+  Lock
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
@@ -33,6 +35,7 @@ interface XeroSectionProps {
   loading?: boolean;
   disablePresence?: boolean; // Disable presence tracking in viewer mode
   onEditingChange?: (isEditing: boolean) => void; // Notify parent of editing state changes
+  isLockedByOther?: boolean; // Disable editing when locked by another user
 }
 
 // Generate unique ID for line items
@@ -168,7 +171,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   onSync,
   loading = false,
   disablePresence = false,
-  onEditingChange
+  onEditingChange,
+  isLockedByOther = false
 }) => {
   const [invoiceData, setInvoiceData] = useState<ProcessedXeroData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -1046,57 +1050,94 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4 pt-6 border-t border-border">
-            <div className="flex flex-wrap items-center gap-2">
-              {!isEditing ? (
-                <>
-                  <Button 
-                    onClick={startEditing}
-                    disabled={!hasInvoiceData}
-                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  
-                  {invoice.approved ? (
-                    <Button 
-                      onClick={handleUndoApproval}
-                      disabled={isApproving}
-                      variant="outline"
-                    >
-                      {isApproving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Undoing...
-                        </>
-                      ) : (
-                        <>
-                          <Undo className="h-4 w-4 mr-2" />
-                          Undo Approval
-                        </>
+            <TooltipProvider>
+              <div className="flex flex-wrap items-center gap-2">
+                {!isEditing ? (
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button 
+                            onClick={startEditing}
+                            disabled={!hasInvoiceData || isLockedByOther}
+                            className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
+                          >
+                            {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {isLockedByOther && (
+                        <TooltipContent>
+                          <p>Invoice is being edited by another user</p>
+                        </TooltipContent>
                       )}
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleApprove}
-                      disabled={isApproving}
-                      variant="success"
-                    >
-                      {isApproving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Approving...
-                        </>
-                      ) : (
-                        <>
-                          <ThumbsUp className="h-4 w-4 mr-2" />
-                          Approve
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </>
-              ) : (
+                    </Tooltip>
+                    
+                    {invoice.approved ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button 
+                              onClick={handleUndoApproval}
+                              disabled={isApproving || isLockedByOther}
+                              variant="outline"
+                            >
+                              {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                              {isApproving ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Undoing...
+                                </>
+                              ) : (
+                                <>
+                                  <Undo className="h-4 w-4 mr-2" />
+                                  Undo Approval
+                                </>
+                              )}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {isLockedByOther && (
+                          <TooltipContent>
+                            <p>Invoice is locked by another user</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button 
+                              onClick={handleApprove}
+                              disabled={isApproving || isLockedByOther}
+                              variant="success"
+                            >
+                              {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                              {isApproving ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Approving...
+                                </>
+                              ) : (
+                                <>
+                                  <ThumbsUp className="h-4 w-4 mr-2" />
+                                  Approve
+                                </>
+                              )}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {isLockedByOther && (
+                          <TooltipContent>
+                            <p>Invoice is locked by another user</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    )}
+                  </>
+                ) : (
                 <>
                   <Button 
                     onClick={saveInvoice}
@@ -1125,9 +1166,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            </TooltipProvider>
 
             {/* Error Messages */}
             {saveError && isEditing && (

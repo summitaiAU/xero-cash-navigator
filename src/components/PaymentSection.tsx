@@ -5,7 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle, DollarSign, Undo } from 'lucide-react';
+import { Upload, Camera, X, Send, Check, AlertTriangle, Plus, Save, CheckCircle, DollarSign, Undo, Lock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Invoice, PaymentData } from '@/types/invoice';
 import { paymentMethodOptions } from '@/data/mockData';
 import { FlagInvoiceButton } from './FlagInvoiceButton';
@@ -21,6 +22,7 @@ interface PaymentSectionProps {
   onFlag?: (invoiceId: string) => void;
   loading?: boolean;
   onPartialPaymentUpdate?: () => Promise<void>;
+  isLockedByOther?: boolean;
 }
 
 export const PaymentSection: React.FC<PaymentSectionProps> = ({
@@ -29,7 +31,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   onSkip,
   onFlag,
   loading = false,
-  onPartialPaymentUpdate
+  onPartialPaymentUpdate,
+  isLockedByOther = false
 }) => {
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -641,57 +644,95 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
 
         {/* Only show payment buttons if status is not PAID */}
         {invoice.status !== 'PAID' && (
-          <div className="space-y-3">
-            <Button
-              variant="default"
-              size="lg"
-              onClick={handleMarkAsPaidWithRemittance}
-              disabled={loading || !email}
-              className="w-full font-semibold"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleMarkAsPaidOnly}
-              disabled={loading}
-              className="w-full"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Mark as Fully Paid
-            </Button>
+          <TooltipProvider>
+            <div className="space-y-3">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block">
+                    <Button
+                      variant="default"
+                      size="lg"
+                      onClick={handleMarkAsPaidWithRemittance}
+                      disabled={loading || !email || isLockedByOther}
+                      className="w-full font-semibold"
+                    >
+                      {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                      <Send className="h-4 w-4 mr-2" />
+                      {loading ? 'Processing...' : 'Mark as Fully Paid & Send Remittance'}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isLockedByOther && (
+                  <TooltipContent>
+                    <p>Cannot process payment while invoice is being edited</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={handleMarkAsPaidOnly}
+                      disabled={loading || isLockedByOther}
+                      className="w-full"
+                    >
+                      {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                      <Check className="h-4 w-4 mr-2" />
+                      Mark as Fully Paid
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isLockedByOther && (
+                  <TooltipContent>
+                    <p>Cannot process payment while invoice is being edited</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
 
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={() => setShowPartialPaymentModal(true)}
-              disabled={loading}
-              className="w-full"
-            >
-              <DollarSign className="h-4 w-4 mr-2" />
-              Mark as Partially Paid
-            </Button>
-            
-            <Button
-              variant="ghost"
-              onClick={onSkip}
-              disabled={loading}
-              className="w-full"
-            >
-              Skip to Next Invoice
-            </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="block">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setShowPartialPaymentModal(true)}
+                      disabled={loading || isLockedByOther}
+                      className="w-full"
+                    >
+                      {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Mark as Partially Paid
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isLockedByOther && (
+                  <TooltipContent>
+                    <p>Cannot process payment while invoice is being edited</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+              
+              <Button
+                variant="ghost"
+                onClick={onSkip}
+                disabled={loading}
+                className="w-full"
+              >
+                Skip to Next Invoice
+              </Button>
 
-            {/* Flag Invoice Button */}
-            {onFlag && (
-              <FlagInvoiceButton
-                invoice={invoice}
-                onFlag={onFlag}
-              />
-            )}
-          </div>
+              {/* Flag Invoice Button */}
+              {onFlag && (
+                <FlagInvoiceButton
+                  invoice={invoice}
+                  onFlag={onFlag}
+                />
+              )}
+            </div>
+          </TooltipProvider>
         )}
 
         {/* Partial Payment Modal */}

@@ -15,6 +15,7 @@ import {
   PaidInvoicesFilters,
 } from "@/services/paidInvoicesService";
 import { paidInvoicesCacheService } from "@/services/paidInvoicesCache";
+import { useInvoiceLock } from "@/hooks/useInvoiceLock";
 import { 
   exportToCSV, 
   exportToExcel, 
@@ -493,11 +494,8 @@ export default function PaidInvoices() {
     ? invoices.find(inv => inv.id === selectedInvoiceId) || null
     : null;
 
-  // Check if selected invoice is locked by another user
-  const isLockedByOther = selectedInvoiceId ? isInvoiceBeingEdited(selectedInvoiceId) : false;
-  const lockedByUser = selectedInvoiceId 
-    ? activeUsers.find(u => u.current_invoice_id === selectedInvoiceId && u.status === 'editing')?.user_email 
-    : undefined;
+  // Check if selected invoice is locked by another user using the lock service
+  const { isLockedByOther, lockedByUser } = useInvoiceLock(selectedInvoiceId || undefined);
 
   return (
     <div className="h-full flex flex-col bg-background">

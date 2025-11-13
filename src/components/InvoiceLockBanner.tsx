@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { invoiceLockService, InvoiceLock } from '@/services/invoiceLockService';
+import { invoiceLockService } from '@/services/invoiceLockService';
 import { useAuth } from '@/hooks/useAuth';
+import { useInvoiceLock } from '@/hooks/useInvoiceLock';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   AlertDialog,
@@ -29,7 +30,7 @@ export const InvoiceLockBanner: React.FC<InvoiceLockBannerProps> = ({
   isCurrentUserEditing 
 }) => {
   const { user } = useAuth();
-  const [lock, setLock] = useState<InvoiceLock | null>(null);
+  const { lock, isLockedByOther } = useInvoiceLock(invoiceId);
   const [showForceDialog, setShowForceDialog] = useState(false);
   const [forceReason, setForceReason] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -48,38 +49,8 @@ export const InvoiceLockBanner: React.FC<InvoiceLockBannerProps> = ({
     checkAdmin();
   }, [user?.email]);
 
-  // Subscribe to lock changes
-  useEffect(() => {
-    // Don't subscribe until user is authenticated
-    if (!user?.id) {
-      console.log('[InvoiceLockBanner] Waiting for authentication...');
-      return;
-    }
-
-    console.log('[InvoiceLockBanner] Setting up lock subscription for invoice:', invoiceId);
-    
-    let unsubscribe: (() => void) | undefined;
-    
-    const setupSubscription = () => {
-      unsubscribe = invoiceLockService.subscribeLockChanges(invoiceId, (newLock) => {
-        setLock(newLock);
-      });
-    };
-
-    setupSubscription();
-
-    // Fetch initial lock
-    invoiceLockService.getLock(invoiceId).then(setLock);
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [invoiceId, user?.id]);
-
-  // Don't show banner if no lock or current user is the locker
-  if (!lock || lock.locked_by_user_id === user?.id) return null;
+  // Don't show banner if not locked by another user
+  if (!isLockedByOther || !lock) return null;
 
   const handleForceTake = async () => {
     if (!forceReason.trim()) {

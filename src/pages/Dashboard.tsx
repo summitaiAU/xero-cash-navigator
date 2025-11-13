@@ -27,6 +27,7 @@ import { invoiceService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserPresence } from "@/hooks/useUserPresence";
+import { useInvoiceLock } from "@/hooks/useInvoiceLock";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import SodhiLogo from "@/assets/sodhi-logo.svg";
@@ -75,6 +76,9 @@ export const Dashboard: React.FC = () => {
     currentInvoiceId: currentInvoice?.id,
     isEditing: isEditingXero,
   });
+
+  // Invoice lock tracking
+  const { isLockedByOther } = useInvoiceLock(currentInvoice?.id);
 
   // Desktop fixed layout measurements
   const headerRef = React.useRef<HTMLDivElement | null>(null);
@@ -764,6 +768,7 @@ export const Dashboard: React.FC = () => {
                   currentInvoice.xero_bill_id && loadXeroData(currentInvoice.id, currentInvoice.xero_bill_id)
                 }
                 loading={isXeroLoading}
+                isLockedByOther={isLockedByOther}
               />
 
                     {viewState === "paid" ? (
@@ -785,6 +790,7 @@ export const Dashboard: React.FC = () => {
                           const refreshedInvoices = await fetchInvoices(viewState);
                           setInvoices(refreshedInvoices);
                         }}
+                        isLockedByOther={isLockedByOther}
                       />
                     )}
 
