@@ -211,7 +211,7 @@ export const MobileDashboard = ({
 
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-full bg-background">
       <MobileHeader
         currentInvoice={currentInvoice}
         invoices={invoices}
@@ -246,7 +246,7 @@ export const MobileDashboard = ({
           
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="pb-[calc(env(safe-area-inset-bottom,0px)+8px)] overflow-y-auto bg-background" 
+              className="pb-[calc(env(safe-area-inset-bottom,0px)+120px)] overflow-y-auto overscroll-y-contain bg-background" 
               style={{ height: 'calc(var(--vh, 1vh) * 100 - 56px)', WebkitOverflowScrolling: 'touch' }}
             >
             <div id="mobile-pdf-section" className="scroll-mt-16">
