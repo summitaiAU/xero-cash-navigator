@@ -9,6 +9,7 @@ import { MobileActions } from './MobileActions';
 import { MobilePayment } from './MobilePayment';
 import { MobileEditSheet } from './MobileEditSheet';
 import { MobileFloatingNav } from './MobileFloatingNav';
+import { MobileFlaggedSection } from './MobileFlaggedSection';
 import { InvoiceLockBanner } from '@/components/InvoiceLockBanner';
 import { RemittanceSection } from '@/components/RemittanceSection';
 import { RealtimeNotifications } from '@/components/RealtimeNotifications';
@@ -268,31 +269,44 @@ export const MobileDashboard = ({
           />
         </div>
         
-        {/* Action Buttons */}
-        <div id="mobile-actions-section" className="scroll-mt-16">
-          <MobileActions
-            invoice={currentInvoice}
-            onStartEdit={handleStartEdit}
-            onApprove={handleApprove}
-            onUndoApprove={handleUndoApprove}
-            onFlagInvoice={onFlagInvoice || (() => {})}
-            isEditing={isEditingXero}
-            isApproving={isApproving}
-            isLockedByOther={isLockedByOther}
-            lockedByUser={lockedByUser}
-          />
-        </div>
-        
-        {/* Payment Confirmation */}
-        <div id="mobile-payment-section" className="scroll-mt-16">
-          <MobilePayment
-            invoice={currentInvoice}
-            onMarkAsPaid={onMarkAsPaid}
-            onPartialPaymentUpdate={onPartialPaymentUpdate}
-            isLockedByOther={isLockedByOther}
-            loading={false}
-          />
-        </div>
+        {/* Conditional Sections Based on View State */}
+        {viewState === 'flagged' ? (
+          /* Flagged Invoice Section */
+          <div id="mobile-flagged-section" className="scroll-mt-16">
+            <MobileFlaggedSection
+              invoice={currentInvoice}
+              onResolve={() => onXeroUpdate?.(currentInvoice)}
+            />
+          </div>
+        ) : (
+          <>
+            {/* Action Buttons */}
+            <div id="mobile-actions-section" className="scroll-mt-16">
+              <MobileActions
+                invoice={currentInvoice}
+                onStartEdit={handleStartEdit}
+                onApprove={handleApprove}
+                onUndoApprove={handleUndoApprove}
+                onFlagInvoice={onFlagInvoice || (() => {})}
+                isEditing={isEditingXero}
+                isApproving={isApproving}
+                isLockedByOther={isLockedByOther}
+                lockedByUser={lockedByUser}
+              />
+            </div>
+            
+            {/* Payment Confirmation */}
+            <div id="mobile-payment-section" className="scroll-mt-16">
+              <MobilePayment
+                invoice={currentInvoice}
+                onMarkAsPaid={onMarkAsPaid}
+                onPartialPaymentUpdate={onPartialPaymentUpdate}
+                isLockedByOther={isLockedByOther}
+                loading={false}
+              />
+            </div>
+          </>
+        )}
         
         {/* Remittance Section - Only for Paid/Partially Paid Invoices */}
         {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY PAID') && (
