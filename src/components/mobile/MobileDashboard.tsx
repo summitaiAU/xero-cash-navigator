@@ -211,7 +211,7 @@ export const MobileDashboard = ({
 
 
   return (
-    <div className="h-full bg-background">
+    <div className="h-screen flex flex-col overflow-hidden bg-background">
       <MobileHeader
         currentInvoice={currentInvoice}
         invoices={invoices}
@@ -236,7 +236,7 @@ export const MobileDashboard = ({
         <>
           {/* Lock Banner */}
           {isLockedByOther && (
-            <div className="sticky top-28 z-40 mx-2 mt-2">
+            <div className="sticky top-14 z-40 mx-2 mt-2">
               <InvoiceLockBanner
                 invoiceId={currentInvoice.id}
                 isCurrentUserEditing={isEditingXero}
@@ -246,8 +246,8 @@ export const MobileDashboard = ({
           
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
-              style={{ height: 'calc(var(--vh, 1vh) * 100 - 112px)', WebkitOverflowScrolling: 'touch' }}
+              className="flex-1 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
+              style={{ WebkitOverflowScrolling: 'touch' }}
             >
             <div id="mobile-pdf-section" className="scroll-mt-16">
               <MobilePDFViewer invoice={currentInvoice} />
