@@ -231,7 +231,7 @@ export const MobileDashboard = ({
           
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="pt-14 pb-6 overflow-y-auto" 
+              className="pb-6 overflow-y-auto" 
               style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
             >
             <div id="mobile-pdf-section" className="scroll-mt-16">
