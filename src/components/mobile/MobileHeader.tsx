@@ -1,4 +1,4 @@
-import { ChevronLeft, MoreVertical } from 'lucide-react';
+import { ChevronLeft, MoreVertical, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -26,6 +26,15 @@ export const MobileHeader = ({
 }: MobileHeaderProps) => {
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-background border-b border-border z-50 flex items-center px-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onOpenHamburgerMenu}
+        className="h-10 w-10"
+      >
+        <Menu className="h-5 w-5" />
+      </Button>
+
       <Button
         variant="ghost"
         size="icon"

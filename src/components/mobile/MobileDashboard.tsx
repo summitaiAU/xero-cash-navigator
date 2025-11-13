@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MobileHeader } from './MobileHeader';
+import { MobileHamburgerMenu } from './MobileHamburgerMenu';
 import { MobilePDFViewer } from './MobilePDFViewer';
 import { MobileInvoiceDetails } from './MobileInvoiceDetails';
 import { MobileLineItems } from './MobileLineItems';
@@ -17,8 +18,17 @@ interface MobileDashboardProps {
   invoices: Invoice[];
   currentIndex: number;
   onNavigateBack: () => void;
+  onNavigatePrevious: () => void;
+  onNavigateNext: () => void;
   onJumpToInvoice: (index: number) => void;
-  onOpenHamburgerMenu: () => void;
+  showHamburgerMenu: boolean;
+  onToggleHamburgerMenu: (open: boolean) => void;
+  viewState: 'payable' | 'paid' | 'flagged';
+  payableCount: number;
+  flaggedCount: number;
+  reviewCount: number;
+  userName?: string;
+  onSignOut?: () => void;
   onMarkAsPaid: (data: PaymentData) => Promise<void>;
   onXeroUpdate: (updates: any) => void;
   onXeroSync: () => void;
@@ -30,8 +40,17 @@ export const MobileDashboard = ({
   invoices,
   currentIndex,
   onNavigateBack,
+  onNavigatePrevious,
+  onNavigateNext,
   onJumpToInvoice,
-  onOpenHamburgerMenu,
+  showHamburgerMenu,
+  onToggleHamburgerMenu,
+  viewState,
+  payableCount,
+  flaggedCount,
+  reviewCount,
+  userName,
+  onSignOut,
   onMarkAsPaid,
   onXeroUpdate,
   onXeroSync,
@@ -43,6 +62,11 @@ export const MobileDashboard = ({
   
   // Get lock status for current invoice
   const { isLockedByOther, lockedByUser } = useInvoiceLock(currentInvoice?.id);
+
+  // Swipe gesture state
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+  const MIN_SWIPE_DISTANCE = 50;
   const handleStartEdit = () => {
     setIsEditingXero(true);
   };
@@ -93,6 +117,39 @@ export const MobileDashboard = ({
     }
   };
 
+  // Swipe gesture handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    
+    if (Math.abs(swipeDistance) < MIN_SWIPE_DISTANCE) {
+      return; // Not a swipe, ignore
+    }
+
+    if (swipeDistance > 0) {
+      // Swiped left - go to next invoice
+      if (currentIndex < invoices.length - 1) {
+        onNavigateNext();
+      }
+    } else {
+      // Swiped right - go to previous invoice
+      if (currentIndex > 0) {
+        onNavigatePrevious();
+      }
+    }
+
+    // Reset
+    touchStartX.current = 0;
+    touchEndX.current = 0;
+  };
+
   if (!currentInvoice) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -110,12 +167,26 @@ export const MobileDashboard = ({
         invoices={invoices}
         onNavigateBack={onNavigateBack}
         onJumpToInvoice={onJumpToInvoice}
-        onOpenHamburgerMenu={onOpenHamburgerMenu}
+        onOpenHamburgerMenu={() => onToggleHamburgerMenu(true)}
+      />
+
+      <MobileHamburgerMenu
+        open={showHamburgerMenu}
+        onOpenChange={onToggleHamburgerMenu}
+        viewState={viewState}
+        payableCount={payableCount}
+        flaggedCount={flaggedCount}
+        reviewCount={reviewCount}
+        userName={userName}
+        onSignOut={onSignOut}
       />
       
       <main 
         className="pt-14 pb-6 overflow-y-auto" 
         style={{ height: 'calc(100vh - 56px)', WebkitOverflowScrolling: 'touch' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <MobilePDFViewer invoice={currentInvoice} />
         

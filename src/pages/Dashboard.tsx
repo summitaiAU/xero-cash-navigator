@@ -103,6 +103,9 @@ export const Dashboard: React.FC = () => {
     allInvoices.filter(inv => inv.status === 'FLAGGED').length,
     [allInvoices]
   );
+  // Review count - invoices need to be manually processed/reviewed
+  // For now, we'll set this to 0 as review is handled on a separate page
+  const reviewCount = 0;
 
   const handleSignOut = async () => {
     try {
@@ -697,8 +700,17 @@ export const Dashboard: React.FC = () => {
         invoices={invoices}
         currentIndex={currentIndex}
         onNavigateBack={handlePrevious}
+        onNavigatePrevious={handlePrevious}
+        onNavigateNext={handleNext}
         onJumpToInvoice={handleJumpToInvoice}
-        onOpenHamburgerMenu={() => setShowHamburgerMenu(true)}
+        showHamburgerMenu={showHamburgerMenu}
+        onToggleHamburgerMenu={setShowHamburgerMenu}
+        viewState={viewState}
+        payableCount={payableCount}
+        flaggedCount={flaggedCount}
+        reviewCount={reviewCount}
+        userName={user?.email}
+        onSignOut={handleSignOut}
         onMarkAsPaid={handleMarkAsPaid}
         onXeroUpdate={handleXeroUpdate}
         onXeroSync={() => {}}
