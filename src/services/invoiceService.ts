@@ -74,6 +74,10 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     amount_paid: Number(invoice.amount_paid) || 0,
     invoice_date: invoice.invoice_date || '',
     currency: (invoice as any).currency || 'AUD',
+    paid_date: invoice.paid_date || undefined,
+    last_edited_at: invoice.last_edited_at || undefined,
+    last_edited_by_user_id: invoice.last_edited_by_user_id || undefined,
+    last_edited_by_email: invoice.last_edited_by_email || undefined,
     
     xero_data: {
       invoiceNumber: invoice.invoice_no || '',
