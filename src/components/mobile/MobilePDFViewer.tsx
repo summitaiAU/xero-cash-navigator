@@ -30,7 +30,7 @@ export const MobilePDFViewer = ({ invoice }: MobilePDFViewerProps) => {
   };
 
   return (
-    <div className="relative w-full" style={{ height: 'calc(100vh - 56px)' }}>
+    <div className="relative w-full" style={{ height: '450px' }}>
       <div className="absolute inset-0 px-2">
         {isLoading && !pdfError && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10 rounded-lg">

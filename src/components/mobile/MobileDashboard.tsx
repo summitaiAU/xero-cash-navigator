@@ -19,7 +19,6 @@ interface MobileDashboardProps {
   currentInvoice: Invoice | null;
   invoices: Invoice[];
   currentIndex: number;
-  onNavigateBack: () => void;
   onNavigatePrevious: () => void;
   onNavigateNext: () => void;
   onJumpToInvoice: (index: number) => void;
@@ -35,13 +34,13 @@ interface MobileDashboardProps {
   onXeroUpdate: (updates: any) => void;
   onXeroSync: () => void;
   onPartialPaymentUpdate?: () => Promise<void>;
+  onFlagInvoice?: (invoiceId: string) => void;
 }
 
 export const MobileDashboard = ({
   currentInvoice,
   invoices,
   currentIndex,
-  onNavigateBack,
   onNavigatePrevious,
   onNavigateNext,
   onJumpToInvoice,
@@ -57,6 +56,7 @@ export const MobileDashboard = ({
   onXeroUpdate,
   onXeroSync,
   onPartialPaymentUpdate,
+  onFlagInvoice,
 }: MobileDashboardProps) => {
   const [isEditingXero, setIsEditingXero] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -199,7 +199,6 @@ export const MobileDashboard = ({
       <MobileHeader
         currentInvoice={currentInvoice}
         invoices={invoices}
-        onNavigateBack={onNavigateBack}
         onJumpToInvoice={onJumpToInvoice}
         onOpenHamburgerMenu={() => onToggleHamburgerMenu(true)}
       />
@@ -270,6 +269,7 @@ export const MobileDashboard = ({
             onStartEdit={handleStartEdit}
             onApprove={handleApprove}
             onUndoApprove={handleUndoApprove}
+            onFlagInvoice={onFlagInvoice || (() => {})}
             isEditing={isEditingXero}
             isApproving={isApproving}
             isLockedByOther={isLockedByOther}

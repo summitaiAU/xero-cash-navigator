@@ -1,4 +1,5 @@
-import { ChevronLeft, MoreVertical, Menu } from 'lucide-react';
+import { useState } from 'react';
+import { MoreVertical, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -12,7 +13,6 @@ import { Invoice } from '@/types/invoice';
 interface MobileHeaderProps {
   currentInvoice: Invoice | null;
   invoices: Invoice[];
-  onNavigateBack: () => void;
   onJumpToInvoice: (index: number) => void;
   onOpenHamburgerMenu: () => void;
 }
@@ -20,10 +20,11 @@ interface MobileHeaderProps {
 export const MobileHeader = ({
   currentInvoice,
   invoices,
-  onNavigateBack,
   onJumpToInvoice,
   onOpenHamburgerMenu,
 }: MobileHeaderProps) => {
+  const [showJumpSheet, setShowJumpSheet] = useState(false);
+
   return (
     <header className="fixed top-0 left-0 right-0 h-14 bg-background border-b border-border z-50 flex items-center px-2">
       <Button
@@ -35,22 +36,13 @@ export const MobileHeader = ({
         <Menu className="h-5 w-5" />
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onNavigateBack}
-        className="h-10 w-10"
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </Button>
-
       <div className="flex-1 text-center px-2">
         <span className="font-semibold text-sm truncate">
           {currentInvoice?.invoice_number || 'No Invoice'}
         </span>
       </div>
 
-      <Sheet>
+      <Sheet open={showJumpSheet} onOpenChange={setShowJumpSheet}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="h-10 w-10">
             <MoreVertical className="h-5 w-5" />
@@ -64,7 +56,10 @@ export const MobileHeader = ({
             {invoices.map((invoice, index) => (
               <button
                 key={invoice.id}
-                onClick={() => onJumpToInvoice(index)}
+                onClick={() => {
+                  onJumpToInvoice(index);
+                  setShowJumpSheet(false);
+                }}
                 className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-start justify-between">

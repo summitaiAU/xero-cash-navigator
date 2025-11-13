@@ -1,4 +1,4 @@
-import { FileText, Flag, Mail, CheckCircle, LogOut, User, X } from 'lucide-react';
+import { FileText, Flag, Mail, CheckCircle, LogOut, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -79,17 +79,7 @@ export const MobileHamburgerMenu = ({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         <SheetHeader className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <img src={SodhiLogo} alt="Sodhi Logo" className="h-8 w-auto" />
         </SheetHeader>
 
         <div className="flex-1 p-4 space-y-2">

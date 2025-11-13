@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Edit, Undo, Lock, Loader2 } from 'lucide-react';
+import { CheckCircle, Edit, Undo, Lock, Loader2, Flag } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { FlagInvoiceModal } from '@/components/FlagInvoiceModal';
 
 interface MobileActionsProps {
   invoice: Invoice;
   onStartEdit: () => void;
   onApprove: () => Promise<void>;
   onUndoApprove: () => Promise<void>;
+  onFlagInvoice: (invoiceId: string) => void;
   isEditing: boolean;
   isApproving: boolean;
   isLockedByOther: boolean;
@@ -20,12 +22,14 @@ export const MobileActions: React.FC<MobileActionsProps> = ({
   onStartEdit,
   onApprove,
   onUndoApprove,
+  onFlagInvoice,
   isEditing,
   isApproving,
   isLockedByOther,
   lockedByUser,
 }) => {
   const { toast } = useToast();
+  const [showFlagModal, setShowFlagModal] = useState(false);
 
   const handleLockedAction = () => {
     toast({
@@ -111,6 +115,31 @@ export const MobileActions: React.FC<MobileActionsProps> = ({
           )}
         </Button>
       </div>
+
+      {/* Flag Invoice Button */}
+      <div className="mt-2">
+        <Button
+          onClick={() => setShowFlagModal(true)}
+          variant="outline"
+          className="w-full border-amber-200 text-amber-700 hover:bg-amber-50 h-11"
+        >
+          <Flag className="mr-2 h-4 w-4" />
+          Flag Invoice
+        </Button>
+      </div>
+
+      {/* Flag Invoice Modal */}
+      {showFlagModal && (
+        <FlagInvoiceModal
+          invoice={invoice}
+          isOpen={showFlagModal}
+          onClose={() => setShowFlagModal(false)}
+          onComplete={() => {
+            onFlagInvoice(invoice.id);
+            setShowFlagModal(false);
+          }}
+        />
+      )}
     </div>
   );
 };

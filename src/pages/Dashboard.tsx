@@ -699,7 +699,6 @@ export const Dashboard: React.FC = () => {
         currentInvoice={currentInvoice}
         invoices={invoices}
         currentIndex={currentIndex}
-        onNavigateBack={handlePrevious}
         onNavigatePrevious={handlePrevious}
         onNavigateNext={handleNext}
         onJumpToInvoice={handleJumpToInvoice}
@@ -718,6 +717,7 @@ export const Dashboard: React.FC = () => {
           await loadInvoices();
           await loadAllInvoices();
         }}
+        onFlagInvoice={handleFlagInvoice}
       />
     );
   }
