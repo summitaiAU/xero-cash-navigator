@@ -16,6 +16,8 @@ import { ActivityDrawer } from "@/components/ActivityDrawer";
 import { UpdateShimmer } from "@/components/UpdateShimmer";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { CompactCommandBar } from "@/components/CompactCommandBar";
+import { MobileDashboard } from "@/components/mobile/MobileDashboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
 import {
   fetchInvoices,
@@ -39,6 +41,7 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const initialView = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
+  const isMobile = useIsMobile();
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [allInvoices, setAllInvoices] = useState<Invoice[]>([]); // All invoices for search
@@ -57,6 +60,7 @@ export const Dashboard: React.FC = () => {
   const [showActivityDrawer, setShowActivityDrawer] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingXero, setIsEditingXero] = useState(false);
+  const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -682,6 +686,20 @@ export const Dashboard: React.FC = () => {
           <p className="text-muted-foreground">Fetching your invoices from the database...</p>
         </div>
       </div>
+    );
+  }
+
+  // Mobile view - render MobileDashboard component
+  if (isMobile) {
+    return (
+      <MobileDashboard
+        currentInvoice={currentInvoice}
+        invoices={invoices}
+        currentIndex={currentIndex}
+        onNavigateBack={handlePrevious}
+        onJumpToInvoice={handleJumpToInvoice}
+        onOpenHamburgerMenu={() => setShowHamburgerMenu(true)}
+      />
     );
   }
 
