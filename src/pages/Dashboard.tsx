@@ -718,6 +718,7 @@ export const Dashboard: React.FC = () => {
           await loadAllInvoices();
         }}
         onFlagInvoice={handleFlagInvoice}
+        onInvoiceSearch={handleInvoiceSelect}
       />
     );
   }

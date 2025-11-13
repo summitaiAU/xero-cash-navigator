@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MoreVertical, Menu } from 'lucide-react';
+import { MoreVertical, Menu, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -9,12 +9,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Invoice } from '@/types/invoice';
+import { InvoiceSearch } from '@/components/InvoiceSearch';
 
 interface MobileHeaderProps {
   currentInvoice: Invoice | null;
   invoices: Invoice[];
   onJumpToInvoice: (index: number) => void;
   onOpenHamburgerMenu: () => void;
+  onInvoiceSearch: (invoice: Invoice) => void;
 }
 
 export const MobileHeader = ({
@@ -22,64 +24,77 @@ export const MobileHeader = ({
   invoices,
   onJumpToInvoice,
   onOpenHamburgerMenu,
+  onInvoiceSearch,
 }: MobileHeaderProps) => {
   const [showJumpSheet, setShowJumpSheet] = useState(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-14 bg-background border-b border-border z-50 flex items-center px-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onOpenHamburgerMenu}
-        className="h-10 w-10"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
-
-      <div className="flex-1 text-center px-2">
-        <span className="font-semibold text-sm truncate">
-          {currentInvoice?.invoice_number || 'No Invoice'}
-        </span>
-      </div>
-
-      <Sheet open={showJumpSheet} onOpenChange={setShowJumpSheet}>
-        <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <MoreVertical className="h-5 w-5" />
+    <header className="fixed top-0 left-0 right-0 bg-background border-b border-border z-50">
+      {/* Row 1: Logo, Menu, Supplier Name, Search, 3-dots */}
+      <div className="h-14 flex items-center justify-between px-2 gap-1">
+        <div className="flex items-center gap-1">
+          <img src="/sodhi-logo.svg" alt="Sodhi" className="h-6 w-auto" />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenHamburgerMenu}
+            className="h-10 w-10"
+          >
+            <Menu className="h-5 w-5" />
           </Button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className="h-[80vh]">
-          <SheetHeader>
-            <SheetTitle>Jump to Invoice</SheetTitle>
-          </SheetHeader>
-          <div className="mt-4 space-y-2 overflow-y-auto max-h-[calc(80vh-80px)]">
-            {invoices.map((invoice, index) => (
-              <button
-                key={invoice.id}
-                onClick={() => {
-                  onJumpToInvoice(index);
-                  setShowJumpSheet(false);
-                }}
-                className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm truncate">
-                      {invoice.invoice_number}
+        </div>
+
+        <div className="flex-1 min-w-0 px-2">
+          <p className="text-xs font-medium text-muted-foreground truncate text-center">
+            {currentInvoice?.supplier || 'No Supplier'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1">
+          <InvoiceSearch 
+            invoices={invoices}
+            onInvoiceSelect={onInvoiceSearch}
+          />
+          <Sheet open={showJumpSheet} onOpenChange={setShowJumpSheet}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10">
+                <MoreVertical className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[80vh]">
+              <SheetHeader>
+                <SheetTitle>Jump to Invoice</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-2 overflow-y-auto max-h-[calc(80vh-80px)]">
+                {invoices.map((invoice, index) => (
+                  <button
+                    key={invoice.id}
+                    onClick={() => {
+                      onJumpToInvoice(index);
+                      setShowJumpSheet(false);
+                    }}
+                    className="w-full text-left p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">
+                          {invoice.invoice_number}
+                        </div>
+                        <div className="text-xs text-muted-foreground truncate mt-1">
+                          {invoice.supplier}
+                        </div>
+                      </div>
+                      <div className="ml-2 font-semibold text-sm tabular-nums">
+                        ${invoice.total_amount.toLocaleString()}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-1">
-                      {invoice.supplier}
-                    </div>
-                  </div>
-                  <div className="ml-2 font-semibold text-sm tabular-nums">
-                    ${invoice.total_amount.toLocaleString()}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
+                  </button>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      </div>
     </header>
   );
 };
