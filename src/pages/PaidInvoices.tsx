@@ -28,6 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MobilePaidInvoices } from "@/components/mobile/MobilePaidInvoices";
 import { MobileFilterSheet } from "@/components/mobile/MobileFilterSheet";
 import { MobileHamburgerMenu } from "@/components/mobile/MobileHamburgerMenu";
+import { MobilePaidInvoiceViewer } from "@/components/mobile/MobilePaidInvoiceViewer";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -634,29 +635,55 @@ export default function PaidInvoices() {
         </>
       )}
 
-      {/* Invoice Viewer - shared between mobile and desktop */}
-      <PaidInvoiceViewer
-        invoice={selectedInvoice}
-        open={viewerOpen}
-        onOpenChange={(open) => {
-          if (!open && !isViewerClosing) {
-            setViewerOpen(false);
-            handleCloseViewer();
-          }
-        }}
-        isLockedByOther={isLockedByOther}
-        lockedByUser={lockedByUser}
-        onSupplierClick={handleSupplierClick}
-        closing={isViewerClosing || !viewerOpen}
-        onInvoiceUpdated={(updatedInvoice) => {
-          console.log('[PaidInvoices] Invoice updated in viewer:', updatedInvoice.id);
-          paidInvoicesCacheService.invalidateAll();
-          loadInvoices(false);
-          toast.success('Invoice updated', {
-            description: 'Changes saved successfully',
-          });
-        }}
-      />
+      {/* Invoice Viewer - conditional mobile vs desktop */}
+      {isMobile ? (
+        // Mobile Viewer - full-screen vertical layout
+        selectedInvoiceId && selectedInvoice && (
+          <MobilePaidInvoiceViewer
+            invoice={selectedInvoice}
+            onBack={() => {
+              setSelectedInvoiceId(null);
+              setViewerOpen(false);
+            }}
+            onSupplierClick={handleSupplierClick}
+            onOpenSearch={() => {/* TODO: trigger search dialog */}}
+            isLockedByOther={isLockedByOther}
+            lockedByUser={lockedByUser}
+            onUpdate={(updatedInvoice) => {
+              console.log('[PaidInvoices] Invoice updated in mobile viewer:', updatedInvoice.id);
+              paidInvoicesCacheService.invalidateAll();
+              loadInvoices(false);
+              toast.success('Invoice updated', {
+                description: 'Changes saved successfully',
+              });
+            }}
+          />
+        )
+      ) : (
+        // Desktop Viewer - Dialog with resizable panels
+        <PaidInvoiceViewer
+          invoice={selectedInvoice}
+          open={viewerOpen}
+          onOpenChange={(open) => {
+            if (!open && !isViewerClosing) {
+              setViewerOpen(false);
+              handleCloseViewer();
+            }
+          }}
+          isLockedByOther={isLockedByOther}
+          lockedByUser={lockedByUser}
+          onSupplierClick={handleSupplierClick}
+          closing={isViewerClosing || !viewerOpen}
+          onInvoiceUpdated={(updatedInvoice) => {
+            console.log('[PaidInvoices] Invoice updated in viewer:', updatedInvoice.id);
+            paidInvoicesCacheService.invalidateAll();
+            loadInvoices(false);
+            toast.success('Invoice updated', {
+              description: 'Changes saved successfully',
+            });
+          }}
+        />
+      )}
 
       {/* Real-time notifications for invoice updates */}
       <RealtimeNotifications 
