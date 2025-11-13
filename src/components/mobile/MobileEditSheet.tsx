@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { XeroSection } from '@/components/XeroSection';
 import { Invoice } from '@/types/invoice';
+import { invoiceLockService } from '@/services/invoiceLockService';
 
 interface MobileEditSheetProps {
   open: boolean;
@@ -41,9 +42,13 @@ export const MobileEditSheet: React.FC<MobileEditSheetProps> = ({
     }
   };
 
-  const handleConfirmClose = () => {
+  const handleConfirmClose = async () => {
     setShowCloseConfirm(false);
     setHasUnsavedChanges(false);
+    
+    // Release the lock before closing
+    await invoiceLockService.releaseLock(invoice.id);
+    
     onOpenChange(false);
   };
 
