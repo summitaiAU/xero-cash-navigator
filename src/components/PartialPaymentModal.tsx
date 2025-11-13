@@ -113,6 +113,11 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
               required
               autoFocus
             />
+            {amount && parseFloat(amount) === remainingAmount && (
+              <p className="text-sm text-green-600 font-medium">
+                This will mark the invoice as fully paid
+              </p>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
@@ -127,6 +132,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
             <Button
               type="submit"
               disabled={isSubmitting || !amount}
+              className={parseFloat(amount || '0') === remainingAmount ? 'bg-green-600 hover:bg-green-700' : ''}
             >
               {isSubmitting ? (
                 <>
@@ -134,7 +140,7 @@ export const PartialPaymentModal: React.FC<PartialPaymentModalProps> = ({
                   Processing...
                 </>
               ) : (
-                'Mark as Partially Paid'
+                parseFloat(amount || '0') === remainingAmount ? 'Mark as Paid' : 'Mark as Partially Paid'
               )}
             </Button>
           </div>
