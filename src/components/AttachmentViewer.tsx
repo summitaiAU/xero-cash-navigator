@@ -66,6 +66,9 @@ const createBlobUrl = (base64url: string, mimeType: string): string => {
 };
 
 export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttachmentUpdated }: AttachmentViewerProps) => {
+  // Early return if no attachment selected - prevents render flash during navigation
+  if (!attachmentId) return null;
+  
   const isMobile = useIsMobile();
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
@@ -487,8 +490,6 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
 
   // Mobile: Render custom overlay without Dialog wrapper
   if (isMobile) {
-    if (!attachmentId) return null;
-
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm" onClick={onClose}>
         <div 
