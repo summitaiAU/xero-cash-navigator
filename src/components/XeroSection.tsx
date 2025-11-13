@@ -474,7 +474,15 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       const lineAmount = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
       const lineTax = calculateTaxAmount(lineAmount, item.taxType, item.gstIncluded, item.gstExempt);
       
-      subtotal += lineAmount;
+      // When GST is included in the line amount, we need to subtract the tax
+      // to get the true ex-GST subtotal
+      if (item.gstIncluded && lineTax > 0) {
+        subtotal += (lineAmount - lineTax);
+      } else {
+        // GST not included or exempt - lineAmount is already ex-GST
+        subtotal += lineAmount;
+      }
+      
       totalTax += lineTax;
     });
     
