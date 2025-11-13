@@ -490,11 +490,18 @@ export default function PaidInvoices() {
         suppliers: supplier, 
         page: "0" 
       });
+      
+      // Close the viewer on mobile
+      if (isMobile) {
+        setSelectedInvoiceId(null);
+        setViewerOpen(false);
+      }
+      
       toast.success("Filter applied", {
         description: `Showing invoices from ${supplier}`,
       });
     },
-    [searchParams]
+    [updateParams, isMobile]
   );
 
   const handleExport = useCallback(
