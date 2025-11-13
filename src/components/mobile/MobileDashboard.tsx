@@ -234,21 +234,20 @@ export const MobileDashboard = ({
       
       {currentInvoice ? (
         <>
-          {/* Lock Banner */}
-          {isLockedByOther && (
-            <div className="sticky top-14 z-40 mx-2 mt-2">
-              <InvoiceLockBanner
-                invoiceId={currentInvoice.id}
-                isCurrentUserEditing={isEditingXero}
-              />
-            </div>
-          )}
-          
           <UpdateShimmer show={isUpdating}>
             <main 
-              className="flex-1 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
+              className="flex-1 pt-14 pb-[calc(80px+env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-y-contain bg-background" 
               style={{ WebkitOverflowScrolling: 'touch' }}
             >
+            {/* Lock Banner */}
+            {isLockedByOther && (
+              <div className="sticky top-14 z-40 mx-2 mb-2">
+                <InvoiceLockBanner
+                  invoiceId={currentInvoice.id}
+                  isCurrentUserEditing={isEditingXero}
+                />
+              </div>
+            )}
             <div id="mobile-pdf-section" className="scroll-mt-16">
               <MobilePDFViewer invoice={currentInvoice} />
             </div>
