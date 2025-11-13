@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Select,
   SelectContent,
@@ -155,6 +156,7 @@ export const AddInvoiceWorkspace = ({
   onSaved,
   onWebhookResult,
 }: AddInvoiceWorkspaceProps) => {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draftInvoice, setDraftInvoice] = useState<DraftInvoice | null>(null);
@@ -735,9 +737,11 @@ export const AddInvoiceWorkspace = ({
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
         {/* Workspace Container */}
-        <div className="fixed inset-4 bg-card rounded-lg shadow-2xl flex flex-col overflow-hidden">
+        <div className={`fixed bg-card shadow-2xl flex flex-col overflow-hidden ${
+          isMobile ? 'inset-0 rounded-none' : 'inset-4 rounded-lg'
+        }`}>
           {/* Top Bar */}
-          <div className="flex-shrink-0 h-14 border-b bg-card px-6 flex items-center justify-between">
+          <div className="flex-shrink-0 h-14 border-b bg-card px-6 flex items-center justify-between sticky top-0 z-50">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium truncate">
@@ -765,9 +769,9 @@ export const AddInvoiceWorkspace = ({
           </div>
 
           {/* Two-Pane Content */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className={`flex-1 flex overflow-hidden ${isMobile ? 'flex-col' : ''}`}>
             {/* Left Pane - PDF Preview */}
-            <div className="w-[60%] border-r flex flex-col overflow-hidden">
+            <div className={`${isMobile ? 'w-full max-h-[400px]' : 'w-[60%]'} border-r flex flex-col overflow-hidden`}>
               {/* PDF Toolbar - Sticky */}
               <div className="flex-shrink-0 sticky top-0 z-10 bg-card border-b px-4 py-3 flex items-center justify-between">
                 <span className="text-sm font-medium">Attachment Preview</span>
@@ -800,14 +804,14 @@ export const AddInvoiceWorkspace = ({
             </div>
 
             {/* Right Pane - Invoice Form */}
-            <div className="w-[40%] flex flex-col overflow-hidden">
+            <div className={`${isMobile ? 'w-full flex-1' : 'w-[40%]'} flex flex-col overflow-hidden`}>
               {/* Form Header - Sticky */}
               <div className="flex-shrink-0 sticky top-0 z-10 bg-card border-b px-4 py-3">
                 <h2 className="text-lg font-semibold">Invoice Details</h2>
               </div>
 
               {/* Form Content - Scrollable */}
-              <div className="flex-1 overflow-y-auto overscroll-contain p-6">
+              <div className="flex-1 overflow-y-auto overscroll-contain p-6" style={isMobile ? { WebkitOverflowScrolling: 'touch' } : {}}>
                 {loading ? (
                   <div className="space-y-4">
                     <Skeleton className="h-12 w-full" />

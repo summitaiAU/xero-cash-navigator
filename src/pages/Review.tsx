@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -20,12 +21,14 @@ import { EmailConversationView } from "@/components/EmailConversationView";
 import { AttachmentsPanel } from "@/components/AttachmentsPanel";
 import { AttachmentViewer } from "@/components/AttachmentViewer";
 import { AddInvoiceWorkspace } from "@/components/AddInvoiceWorkspace";
+import { MobileReview } from "@/components/mobile/MobileReview";
 import { telemetry } from "@/services/telemetry";
 
 type View = "payable" | "paid" | "flagged";
 
 export const Review: React.FC = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
   const [emailContent, setEmailContent] = useState<EmailContent | null>(null);
   const [loadingContent, setLoadingContent] = useState(false);
@@ -167,6 +170,11 @@ export const Review: React.FC = () => {
       setSelectedAttachmentId(null); // Clear attachment selection on new email
     }, 150); // 150ms debounce
   }, []); // Empty deps - now stable across renders
+
+  // Render mobile view
+  if (isMobile) {
+    return <MobileReview />;
+  }
 
   return (
     <div className="h-full flex overflow-hidden">

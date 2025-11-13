@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { fetchAttachmentById, EmailAttachment } from "@/services/emailReviewService";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +66,7 @@ const createBlobUrl = (base64url: string, mimeType: string): string => {
 };
 
 export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttachmentUpdated }: AttachmentViewerProps) => {
+  const isMobile = useIsMobile();
   const [attachment, setAttachment] = useState<EmailAttachment | null>(null);
   const [loading, setLoading] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
@@ -487,8 +489,14 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
 
   return (
     <Dialog open={!!attachmentId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden flex flex-col bg-white">
-        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+      <DialogContent className={`
+        ${isMobile 
+          ? 'inset-0 m-0 h-screen w-screen max-w-none rounded-none' 
+          : 'max-w-5xl max-h-[95vh]'
+        } 
+        overflow-hidden flex flex-col bg-white
+      `}>
+        <DialogHeader className={`flex-shrink-0 ${isMobile ? 'sticky top-0 z-50 bg-white' : 'pb-4'} border-b`}>
           <div className="flex items-center justify-between gap-4 mb-3">
             <div className="flex-1 min-w-0 text-center">
               <DialogTitle className="text-base font-semibold truncate">
