@@ -14,6 +14,10 @@ import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 import { invoiceLockService } from '@/services/invoiceLockService';
 import { approveInvoice, undoApproveInvoice } from '@/services/invoiceService';
 import { useAuth } from '@/hooks/useAuth';
+import { useInvoiceLock } from '@/hooks/useInvoiceLock';
+import { useUserPresence } from '@/hooks/useUserPresence';
+import { ViewerPresenceChips } from '@/components/ViewerPresenceChips';
+import { LiveStatusBadge } from '@/components/LiveStatusBadge';
 import { toast } from 'sonner';
 
 interface MobilePaidInvoiceViewerProps {
@@ -21,8 +25,6 @@ interface MobilePaidInvoiceViewerProps {
   onBack: () => void;
   onSupplierClick?: (supplier: string) => void;
   onOpenSearch: () => void;
-  isLockedByOther?: boolean;
-  lockedByUser?: string;
   onUpdate: (updatedInvoice: Invoice) => void;
 }
 
@@ -31,13 +33,21 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
   onBack,
   onSupplierClick,
   onOpenSearch,
-  isLockedByOther = false,
-  lockedByUser,
   onUpdate,
 }) => {
   const { user } = useAuth();
   const [isEditingSheet, setIsEditingSheet] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Get lock status using hook
+  const { isLockedByOther, lockedByUser } = useInvoiceLock(invoice?.id);
+
+  // Track user presence
+  const { usersOnCurrentInvoice } = useUserPresence({
+    currentInvoiceId: invoice?.id,
+    isEditing: isEditingSheet,
+    disabled: false,
+  });
 
   // Process line items from invoice data
   const processedLineItems = React.useMemo(() => {
@@ -147,7 +157,7 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
 
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
-      {/* Header with back button */}
+      {/* Sticky Header */}
       <div className="sticky top-0 z-50 bg-background border-b border-border h-14 px-2 flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10">
           <ChevronLeft className="h-5 w-5" />
@@ -156,9 +166,21 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
           <div className="text-sm font-semibold truncate">{invoice.invoice_number}</div>
           <div className="text-xs text-muted-foreground truncate">{invoice.supplier}</div>
         </div>
-        <div className="text-sm font-semibold tabular-nums">
+        <div className="text-sm font-semibold tabular-nums mr-2">
           {formatCurrency(invoice.total_amount)}
         </div>
+        
+        {/* Live Status Badge */}
+        <LiveStatusBadge />
+        
+        {/* Presence Chips */}
+        {usersOnCurrentInvoice.length > 0 && (
+          <ViewerPresenceChips 
+            invoiceId={invoice.id} 
+            maxVisible={2}
+          />
+        )}
+        
         <Button variant="ghost" size="icon" onClick={onOpenSearch} className="h-10 w-10">
           <Search className="h-5 w-5" />
         </Button>
@@ -168,7 +190,7 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
       {isLockedByOther && (
         <InvoiceLockBanner
           invoiceId={invoice.id}
-          isCurrentUserEditing={false}
+          isCurrentUserEditing={isEditingSheet}
         />
       )}
 

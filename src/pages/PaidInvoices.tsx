@@ -575,7 +575,7 @@ export default function PaidInvoices() {
     ? invoices.find(inv => inv.id === selectedInvoiceId) || null
     : null;
 
-  // Check if selected invoice is locked by another user using the lock service
+  // Check if selected invoice is locked by another user (for desktop viewer only)
   const { isLockedByOther, lockedByUser } = useInvoiceLock(selectedInvoiceId || undefined);
 
   const handleSignOut = async () => {
@@ -722,8 +722,6 @@ export default function PaidInvoices() {
             }}
             onSupplierClick={handleSupplierClick}
             onOpenSearch={() => {/* TODO: trigger search dialog */}}
-            isLockedByOther={isLockedByOther}
-            lockedByUser={lockedByUser}
             onUpdate={(updatedInvoice) => {
               console.log('[PaidInvoices] Invoice updated in mobile viewer:', updatedInvoice.id);
               paidInvoicesCacheService.invalidateAll();
