@@ -625,40 +625,75 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
   const newAmountPaid = currentAmountPaid + amountPaid;
   const newAmountDue = totalAmount - newAmountPaid;
 
+  // Check if this payment completes the invoice (with small tolerance for floating point)
+  const isFullyPaid = Math.abs(newAmountPaid - totalAmount) < 0.01;
+  
+  const updateData: any = {
+    amount_paid: newAmountPaid,
+    amount_due: newAmountDue,
+    last_edited_at: new Date().toISOString()
+  };
+
+  if (isFullyPaid) {
+    // Mark as fully paid
+    updateData.status = 'PAID';
+    updateData.paid_date = new Date().toISOString();
+    updateData.payment_made_at = new Date().toISOString();
+    updateData.partially_paid = false;
+  } else {
+    // Mark as partially paid
+    updateData.status = 'PARTIALLY PAID';
+    updateData.partially_paid = true;
+    updateData.partial_payment_made_at = new Date().toISOString();
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      status: 'PARTIALLY PAID',
-      partially_paid: true,
-      amount_paid: newAmountPaid,
-      amount_due: newAmountDue,
-      partial_payment_made_at: new Date().toISOString(),
-      last_edited_at: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
-    throw new Error(`Failed to mark invoice as partially paid: ${error.message}`);
+    throw new Error(`Failed to mark invoice as ${isFullyPaid ? 'paid' : 'partially paid'}: ${error.message}`);
   }
 
   // Log to daily events
-  await dailyEventsService.logPartialPayment(
-    invoiceId,
-    invoice.invoice_no,
-    invoice.entity || 'Unknown',
-    amountPaid,
-    totalAmount
-  );
+  if (isFullyPaid) {
+    await dailyEventsService.logPaymentMade(
+      invoiceId,
+      invoice.invoice_no,
+      invoice.entity || 'Unknown',
+      totalAmount
+    );
+  } else {
+    await dailyEventsService.logPartialPayment(
+      invoiceId,
+      invoice.invoice_no,
+      invoice.entity || 'Unknown',
+      amountPaid,
+      totalAmount
+    );
+  }
 
   // Audit log
-  await auditService.logInvoicePartialPayment(invoiceId, {
-    invoice_number: invoice.invoice_no,
-    supplier_name: invoice.supplier_name,
-    amount: invoice.total_amount,
-    amount_paid: amountPaid,
-    status_from: invoice.status,
-    status_to: 'PARTIALLY PAID'
-  });
+  if (isFullyPaid) {
+    await auditService.logInvoiceMarkedPaid(invoiceId, {
+      invoice_number: invoice.invoice_no,
+      supplier_name: invoice.supplier_name,
+      amount: invoice.total_amount,
+      status_from: invoice.status,
+      status_to: 'PAID',
+      remittance_sent: false
+    });
+  } else {
+    await auditService.logInvoicePartialPayment(invoiceId, {
+      invoice_number: invoice.invoice_no,
+      supplier_name: invoice.supplier_name,
+      amount: invoice.total_amount,
+      amount_paid: amountPaid,
+      status_from: invoice.status,
+      status_to: 'PARTIALLY PAID'
+    });
+  }
 };
 
 // Email management functions

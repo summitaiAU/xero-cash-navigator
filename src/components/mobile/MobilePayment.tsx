@@ -188,11 +188,20 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
   const handlePartialPayment = async (amountPaid: number) => {
     try {
       const { markAsPartiallyPaid } = await import('@/services/invoiceService');
+      
+      // Calculate if this is a full payment
+      const currentAmountPaid = Number(invoice.amount_paid) || 0;
+      const totalAmount = Number(invoice.total_amount) || invoice.amount || 0;
+      const newTotalPaid = currentAmountPaid + amountPaid;
+      const isFullPayment = Math.abs(newTotalPaid - totalAmount) < 0.01;
+      
       await markAsPartiallyPaid(invoice.id, amountPaid);
       
       toast({
-        title: "Partial payment recorded",
-        description: `Payment of ${formatCurrency(amountPaid)} has been recorded.`,
+        title: isFullPayment ? "Invoice marked as paid" : "Partial payment recorded",
+        description: isFullPayment 
+          ? `Invoice has been marked as fully paid.`
+          : `Payment of ${formatCurrency(amountPaid)} has been recorded.`,
       });
       
       if (onPartialPaymentUpdate) {
