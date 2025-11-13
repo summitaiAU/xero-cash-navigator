@@ -27,7 +27,9 @@ export const MobileLineItems = ({ lineItems }: MobileLineItemsProps) => {
           const isLastItem = index === lineItems.length - 1;
           const gstAmount = item.lineGst !== undefined ? item.lineGst : 
                            (item.gstExempt ? 0 : 
-                           (item.taxRate === 'GST (10%)' ? (item.amount || 0) * 0.1 : 0));
+                           (item.taxRate === 'GST (10%)' ? (item.lineTotalExGst || item.amount || 0) * 0.1 : 0));
+          
+          const lineTotal = item.lineTotalExGst || item.amount || (item.quantity * item.unitAmount) || 0;
           
           return (
             <div 
@@ -73,7 +75,7 @@ export const MobileLineItems = ({ lineItems }: MobileLineItemsProps) => {
                   )}
                 </div>
                 <div className="text-sm font-semibold tabular-nums">
-                  {formatCurrency(item.amount || 0)}
+                  {formatCurrency(lineTotal)}
                 </div>
               </div>
             </div>
