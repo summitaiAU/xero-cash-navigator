@@ -11,9 +11,6 @@ let disabledForSession = false;
 let reconnectTimestamps: number[] = [];
 let handlersAttached = false;
 
-// Detect Safari browser once at module scope
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
 interface UserPresence {
   user_email: string;
   user_id: string;
@@ -58,8 +55,8 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const currentUserId = user?.id;
   
-  // Disable presence for Safari to prevent infinite loops
-  const presenceEnabled = enabled && !isSafari;
+  // Presence enabled by default
+  const presenceEnabled = enabled;
 
   // Refs for stable subscription lifecycle
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -75,9 +72,6 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
   // Stable presence channel subscription (singleton pattern)
   useEffect(() => {
     if (!presenceEnabled || !user?.id) {
-      if (isSafari && user?.id) {
-        console.warn('[presence] Disabled for Safari to prevent connection loops');
-      }
       return;
     }
 
@@ -214,24 +208,41 @@ export const RealtimeProvider: React.FC<RealtimeProviderProps> = ({
 
   const getUsersOnInvoice = React.useCallback((invoiceId: string) => {
     const now = new Date().getTime();
-    const FIVE_MINUTES = 5 * 60 * 1000;
+    const TEN_MINUTES = 10 * 60 * 1000; // Increased from 5 to 10 minutes
     
-    return activeUsers.filter(u => {
+    const filtered = activeUsers.filter(u => {
       // Must have matching invoice ID
-      if (u.current_invoice_id !== invoiceId) return false;
+      if (u.current_invoice_id !== invoiceId) {
+        return false;
+      }
       
       // Must not be the current user
-      if (u.user_id === currentUserId) return false;
+      if (u.user_id === currentUserId) {
+        return false;
+      }
       
       // Must be actively viewing or editing (not idle)
-      if (u.status === 'idle') return false;
+      if (u.status === 'idle') {
+        return false;
+      }
       
-      // Must have recent activity (within last 5 minutes)
+      // Must have recent activity (within last 10 minutes)
       const lastActivity = new Date(u.last_activity).getTime();
-      if (now - lastActivity > FIVE_MINUTES) return false;
+      if (now - lastActivity > TEN_MINUTES) {
+        return false;
+      }
       
       return true;
     });
+    
+    console.log('[presence] getUsersOnInvoice:', { 
+      invoiceId, 
+      totalActive: activeUsers.length, 
+      filtered: filtered.length,
+      users: filtered.map(u => ({ email: u.user_email, status: u.status }))
+    });
+    
+    return filtered;
   }, [activeUsers, currentUserId]);
 
   const isInvoiceBeingEdited = React.useCallback((invoiceId: string) => {
