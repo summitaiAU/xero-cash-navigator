@@ -9,11 +9,12 @@ import { CheckCircle, Calendar, DollarSign, Building, Send, Upload, X, Check, Sa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { formatDateSydney } from '@/lib/dateUtils';
 
 interface PaidInvoiceSectionProps {
   invoice: Invoice;
   onReprocess?: () => void;
-  onRemittanceSent?: (invoiceId: string) => void;
+  onRemittanceSent?: (invoiceId: string, email: string) => void;
 }
 
 const formatCurrency = (amount: number) => {
@@ -25,12 +26,7 @@ const formatCurrency = (amount: number) => {
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  return formatDateSydney(dateString, 'dd/MM/yyyy');
 };
 
 export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
@@ -130,9 +126,9 @@ export const PaidInvoiceSection: React.FC<PaidInvoiceSectionProps> = ({
               description: "Successfully uploaded and forwarded remittance",
             });
             
-            // Update invoice remittance status
+            // Update invoice remittance status with email
             if (onRemittanceSent) {
-              onRemittanceSent(invoice.id);
+              onRemittanceSent(invoice.id, email);
             }
             
             setShowRemittanceSection(false);

@@ -55,6 +55,7 @@ export interface ProcessedXeroData {
     taxRate: string;
     amount: number;
     gstIncluded?: boolean;
+    gstExempt?: boolean;
     lineGst?: number;
     lineTotalExGst?: number;
     lineTotalIncGst?: number;
@@ -70,7 +71,7 @@ export interface Invoice {
   supplier: string;
   amount: number;
   due_date: string;
-  status: 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY PAID' | 'DELETED';
+  status: 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY_PAID' | 'DELETED';
   xero_bill_id: string;
   drive_embed_url: string;
   drive_view_url: string;
@@ -79,6 +80,7 @@ export interface Invoice {
   supplier_email_on_invoice?: string;
   sender_email?: string;
   remittance_sent?: boolean;
+  remittance_embed_link?: string;
   project?: string;
   approved?: boolean;
   partially_paid?: boolean;
@@ -97,6 +99,16 @@ export interface Invoice {
   amount_paid?: number;
   invoice_date?: string;
   currency?: string;
+  paid_date?: string;
+  last_edited_at?: string;
+  last_edited_by_user_id?: string;
+  last_edited_by_email?: string;
+  
+  // New timestamp fields for event tracking
+  payment_made_at?: string;
+  partial_payment_made_at?: string;
+  remittance_sent_at?: string;
+  flag_email_sent_at?: string;
 }
 
 export interface ProcessingStatus {

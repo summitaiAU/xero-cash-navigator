@@ -47,7 +47,7 @@ export type Database = {
           entity_type: string
           id: string
           invoice_number: string | null
-          ip_address: unknown | null
+          ip_address: unknown
           session_id: string | null
           user_agent: string | null
           user_email: string
@@ -61,7 +61,7 @@ export type Database = {
           entity_type: string
           id?: string
           invoice_number?: string | null
-          ip_address?: unknown | null
+          ip_address?: unknown
           session_id?: string | null
           user_agent?: string | null
           user_email: string
@@ -75,7 +75,7 @@ export type Database = {
           entity_type?: string
           id?: string
           invoice_number?: string | null
-          ip_address?: unknown | null
+          ip_address?: unknown
           session_id?: string | null
           user_agent?: string | null
           user_email?: string
@@ -83,79 +83,329 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          details: Json | null
+          email_address: string | null
+          entity: string | null
+          event_type: string
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          details?: Json | null
+          email_address?: string | null
+          entity?: string | null
+          event_type: string
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          details?: Json | null
+          email_address?: string | null
+          entity?: string | null
+          event_type?: string
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_attachments: {
+        Row: {
+          added_invoice_id: string | null
+          attachment_added_at: string | null
+          attachment_data_raw: Json | null
+          created_at: string | null
+          data_base64url: string | null
+          email_id: string
+          eml_headers: Json | null
+          error_code: string | null
+          error_message: string | null
+          filename: string | null
+          gmail_attachment_id: string | null
+          gmail_message_id: string
+          gmail_part_id: string | null
+          gmail_thread_id: string
+          hash_sha256: string | null
+          id: string
+          idx: number
+          joinKey: string
+          mime_detected: string | null
+          mime_type: string | null
+          previewable: boolean | null
+          processed_at: string | null
+          review_added: boolean | null
+          review_enriched: boolean | null
+          review_status_processed: boolean | null
+          role: string | null
+          safe_html: string | null
+          size_bytes: number | null
+          status: string
+          text_excerpt: string | null
+          unsupported_reason: string | null
+          updated_at: string | null
+          viewer_kind: string | null
+        }
+        Insert: {
+          added_invoice_id?: string | null
+          attachment_added_at?: string | null
+          attachment_data_raw?: Json | null
+          created_at?: string | null
+          data_base64url?: string | null
+          email_id: string
+          eml_headers?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          filename?: string | null
+          gmail_attachment_id?: string | null
+          gmail_message_id: string
+          gmail_part_id?: string | null
+          gmail_thread_id: string
+          hash_sha256?: string | null
+          id?: string
+          idx: number
+          joinKey: string
+          mime_detected?: string | null
+          mime_type?: string | null
+          previewable?: boolean | null
+          processed_at?: string | null
+          review_added?: boolean | null
+          review_enriched?: boolean | null
+          review_status_processed?: boolean | null
+          role?: string | null
+          safe_html?: string | null
+          size_bytes?: number | null
+          status: string
+          text_excerpt?: string | null
+          unsupported_reason?: string | null
+          updated_at?: string | null
+          viewer_kind?: string | null
+        }
+        Update: {
+          added_invoice_id?: string | null
+          attachment_added_at?: string | null
+          attachment_data_raw?: Json | null
+          created_at?: string | null
+          data_base64url?: string | null
+          email_id?: string
+          eml_headers?: Json | null
+          error_code?: string | null
+          error_message?: string | null
+          filename?: string | null
+          gmail_attachment_id?: string | null
+          gmail_message_id?: string
+          gmail_part_id?: string | null
+          gmail_thread_id?: string
+          hash_sha256?: string | null
+          id?: string
+          idx?: number
+          joinKey?: string
+          mime_detected?: string | null
+          mime_type?: string | null
+          previewable?: boolean | null
+          processed_at?: string | null
+          review_added?: boolean | null
+          review_enriched?: boolean | null
+          review_status_processed?: boolean | null
+          role?: string | null
+          safe_html?: string | null
+          size_bytes?: number | null
+          status?: string
+          text_excerpt?: string | null
+          unsupported_reason?: string | null
+          updated_at?: string | null
+          viewer_kind?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_attachments_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "email_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_queue: {
         Row: {
           attempt_count: number
+          body_html_safe: string | null
+          body_text_fallback: string | null
+          cc_list: string[] | null
           completed_at: string | null
           created_at: string
+          date_received: string | null
+          display_date_local: string | null
+          email_data_raw: Json | null
+          email_reference_for_invoice: string | null
           error_details: Json | null
           error_message: string | null
+          from_avatar_initials: string | null
+          from_email: string | null
+          from_name: string | null
+          has_inline_images: boolean | null
+          headers_slim: Json | null
           history_id: number | null
           id: string
+          inline_image_count: number | null
+          label_ids: string | null
           locked_by: string | null
           locked_until: string | null
           max_attempts: number
           message_id: string
+          no_of_attachments: number | null
+          parsing_errors: string | null
+          parsing_source: string | null
           priority: number
+          raw_headers_json: Json | null
+          reply_to: string | null
+          review_status_processed: boolean | null
+          reviewed_at: string | null
+          sender_email: string | null
+          snippet_text: string | null
           started_at: string | null
           status: string
+          subject: string | null
+          thread_id: string | null
+          to_list: string[] | null
         }
         Insert: {
           attempt_count?: number
+          body_html_safe?: string | null
+          body_text_fallback?: string | null
+          cc_list?: string[] | null
           completed_at?: string | null
           created_at?: string
+          date_received?: string | null
+          display_date_local?: string | null
+          email_data_raw?: Json | null
+          email_reference_for_invoice?: string | null
           error_details?: Json | null
           error_message?: string | null
+          from_avatar_initials?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          has_inline_images?: boolean | null
+          headers_slim?: Json | null
           history_id?: number | null
           id?: string
+          inline_image_count?: number | null
+          label_ids?: string | null
           locked_by?: string | null
           locked_until?: string | null
           max_attempts?: number
           message_id: string
+          no_of_attachments?: number | null
+          parsing_errors?: string | null
+          parsing_source?: string | null
           priority?: number
+          raw_headers_json?: Json | null
+          reply_to?: string | null
+          review_status_processed?: boolean | null
+          reviewed_at?: string | null
+          sender_email?: string | null
+          snippet_text?: string | null
           started_at?: string | null
           status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_list?: string[] | null
         }
         Update: {
           attempt_count?: number
+          body_html_safe?: string | null
+          body_text_fallback?: string | null
+          cc_list?: string[] | null
           completed_at?: string | null
           created_at?: string
+          date_received?: string | null
+          display_date_local?: string | null
+          email_data_raw?: Json | null
+          email_reference_for_invoice?: string | null
           error_details?: Json | null
           error_message?: string | null
+          from_avatar_initials?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          has_inline_images?: boolean | null
+          headers_slim?: Json | null
           history_id?: number | null
           id?: string
+          inline_image_count?: number | null
+          label_ids?: string | null
           locked_by?: string | null
           locked_until?: string | null
           max_attempts?: number
           message_id?: string
+          no_of_attachments?: number | null
+          parsing_errors?: string | null
+          parsing_source?: string | null
           priority?: number
+          raw_headers_json?: Json | null
+          reply_to?: string | null
+          review_status_processed?: boolean | null
+          reviewed_at?: string | null
+          sender_email?: string | null
+          snippet_text?: string | null
           started_at?: string | null
           status?: string
+          subject?: string | null
+          thread_id?: string | null
+          to_list?: string[] | null
         }
         Relationships: []
       }
       gmail_history_log: {
         Row: {
           date_for: string
+          date_for_sydney: string | null
           email_address: string | null
           history_id: number
           id: number
+          message_id: string | null
           received_at: string
           source: string
         }
         Insert: {
           date_for?: string
+          date_for_sydney?: string | null
           email_address?: string | null
           history_id: number
           id?: number
+          message_id?: string | null
           received_at?: string
           source?: string
         }
         Update: {
           date_for?: string
+          date_for_sydney?: string | null
           email_address?: string | null
           history_id?: number
           id?: number
+          message_id?: string | null
           received_at?: string
           source?: string
         }
@@ -203,6 +453,47 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_locks: {
+        Row: {
+          force_reason: string | null
+          force_taken: boolean | null
+          id: string
+          invoice_id: string
+          lock_expires_at: string
+          locked_at: string
+          locked_by_email: string
+          locked_by_user_id: string
+        }
+        Insert: {
+          force_reason?: string | null
+          force_taken?: boolean | null
+          id?: string
+          invoice_id: string
+          lock_expires_at?: string
+          locked_at?: string
+          locked_by_email: string
+          locked_by_user_id: string
+        }
+        Update: {
+          force_reason?: string | null
+          force_taken?: boolean | null
+          id?: string
+          invoice_id?: string
+          lock_expires_at?: string
+          locked_at?: string
+          locked_by_email?: string
+          locked_by_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_locks_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: true
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount_due: number | null
@@ -215,6 +506,7 @@ export type Database = {
           entity: string | null
           flag_email_address: string | null
           flag_email_body: string | null
+          flag_email_sent_at: string | null
           flag_email_subject: string | null
           flag_type: string | null
           google_drive_embed_link: string | null
@@ -224,10 +516,15 @@ export type Database = {
           id: string
           invoice_date: string | null
           invoice_no: string | null
+          last_edited_at: string | null
+          last_edited_by_email: string | null
+          last_edited_by_user_id: string | null
           link_to_invoice: string | null
           list_items: Json[] | null
           paid_date: string | null
+          partial_payment_made_at: string | null
           partially_paid: boolean | null
+          payment_made_at: string | null
           payment_ref: string | null
           processing_completed_at: string | null
           processing_error: string | null
@@ -235,7 +532,9 @@ export type Database = {
           processing_status: string | null
           project: string | null
           remittance_email: string | null
+          remittance_embed_link: string | null
           remittance_sent: boolean | null
+          remittance_sent_at: string | null
           saved_emails: string[] | null
           sender_email: string | null
           status: string | null
@@ -247,6 +546,8 @@ export type Database = {
           supplier_name: string | null
           total_amount: number | null
           upload_tracking_id: string | null
+          uploaded_to_xero: boolean | null
+          uploaded_to_xero_at: string | null
           xero_contact_id: string | null
           xero_invoice_id: string | null
           xero_invoice_link: string | null
@@ -262,6 +563,7 @@ export type Database = {
           entity?: string | null
           flag_email_address?: string | null
           flag_email_body?: string | null
+          flag_email_sent_at?: string | null
           flag_email_subject?: string | null
           flag_type?: string | null
           google_drive_embed_link?: string | null
@@ -271,10 +573,15 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_no?: string | null
+          last_edited_at?: string | null
+          last_edited_by_email?: string | null
+          last_edited_by_user_id?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
+          partial_payment_made_at?: string | null
           partially_paid?: boolean | null
+          payment_made_at?: string | null
           payment_ref?: string | null
           processing_completed_at?: string | null
           processing_error?: string | null
@@ -282,7 +589,9 @@ export type Database = {
           processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
+          remittance_embed_link?: string | null
           remittance_sent?: boolean | null
+          remittance_sent_at?: string | null
           saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
@@ -294,6 +603,8 @@ export type Database = {
           supplier_name?: string | null
           total_amount?: number | null
           upload_tracking_id?: string | null
+          uploaded_to_xero?: boolean | null
+          uploaded_to_xero_at?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
@@ -309,6 +620,7 @@ export type Database = {
           entity?: string | null
           flag_email_address?: string | null
           flag_email_body?: string | null
+          flag_email_sent_at?: string | null
           flag_email_subject?: string | null
           flag_type?: string | null
           google_drive_embed_link?: string | null
@@ -318,10 +630,15 @@ export type Database = {
           id?: string
           invoice_date?: string | null
           invoice_no?: string | null
+          last_edited_at?: string | null
+          last_edited_by_email?: string | null
+          last_edited_by_user_id?: string | null
           link_to_invoice?: string | null
           list_items?: Json[] | null
           paid_date?: string | null
+          partial_payment_made_at?: string | null
           partially_paid?: boolean | null
+          payment_made_at?: string | null
           payment_ref?: string | null
           processing_completed_at?: string | null
           processing_error?: string | null
@@ -329,7 +646,9 @@ export type Database = {
           processing_status?: string | null
           project?: string | null
           remittance_email?: string | null
+          remittance_embed_link?: string | null
           remittance_sent?: boolean | null
+          remittance_sent_at?: string | null
           saved_emails?: string[] | null
           sender_email?: string | null
           status?: string | null
@@ -341,6 +660,8 @@ export type Database = {
           supplier_name?: string | null
           total_amount?: number | null
           upload_tracking_id?: string | null
+          uploaded_to_xero?: boolean | null
+          uploaded_to_xero_at?: string | null
           xero_contact_id?: string | null
           xero_invoice_id?: string | null
           xero_invoice_link?: string | null
@@ -395,15 +716,52 @@ export type Database = {
         }
         Relationships: []
       }
+      settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      weekly_google_drive: {
+        Row: {
+          "Google Drive Name": string | null
+          id: number
+          ID: string | null
+          updated_at: string
+        }
+        Insert: {
+          "Google Drive Name"?: string | null
+          id?: number
+          ID?: string | null
+          updated_at?: string
+        }
+        Update: {
+          "Google Drive Name"?: string | null
+          id?: number
+          ID?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      is_user_allowed: {
-        Args: { user_email: string }
-        Returns: boolean
-      }
+      cleanup_expired_locks: { Args: never; Returns: undefined }
+      is_user_allowed: { Args: { user_email: string }; Returns: boolean }
       log_api_error: {
         Args: {
           api_endpoint: string
@@ -415,10 +773,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      test_pgnet_webhook: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      test_pgnet_webhook: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never

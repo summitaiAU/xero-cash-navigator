@@ -1,69 +1,126 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, AlertTriangle, ExternalLink } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 
 interface PDFViewerProps {
   invoice: Invoice;
 }
 
-export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
-  const [pdfError, setPdfError] = useState(false);
-  const [zoom, setZoom] = useState(100);
+export interface PDFViewerHandle {
+  abort: () => void;
+}
 
-  // Reset zoom when invoice changes
+export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice }, ref) => {
+  const [pdfError, setPdfError] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [shouldMount, setShouldMount] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const loadStartRef = useRef<number>(0);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+
+  // Expose abort() handle to parent
+  useImperativeHandle(ref, () => ({
+    abort() {
+      try {
+        console.info('[PDFViewer] Abort called - unloading iframe');
+        if (iframeRef.current) {
+          iframeRef.current.src = 'about:blank';
+        }
+      } finally {
+        setShouldMount(false);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      }
+    },
+  }));
+
+  // Reset state when invoice changes and delay mounting
   useEffect(() => {
-    setZoom(100);
     setPdfError(false);
+    setIsLoading(true);
+    setShouldMount(false);
+    loadStartRef.current = performance.now();
+    
+    // Delay mounting by 100ms to ensure previous iframe is cleaned up
+    const timer = setTimeout(() => setShouldMount(true), 100);
+    return () => {
+      clearTimeout(timer);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [invoice.id]);
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 25, 200));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 25, 50));
+  // Setup 5s timeout watchdog when iframe mounts
+  useEffect(() => {
+    if (!shouldMount || pdfError) return;
+
+    timeoutRef.current = setTimeout(() => {
+      if (isLoading) {
+        console.error('[PDFViewer] Iframe failed to load within 5s timeout', invoice.id);
+        setPdfError(true);
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [shouldMount, isLoading, pdfError, invoice.id]);
+
+  // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
+  useEffect(() => {
+    const prevFrame = iframeRef.current;
+    return () => {
+      try {
+        if (prevFrame) {
+          prevFrame.src = 'about:blank';
+        }
+      } catch {}
+    };
+  }, [invoice.id]);
+
+  const handleLoad = () => {
+    const elapsed = performance.now() - loadStartRef.current;
+    console.info('[PDFViewer] Iframe loaded', { invoiceId: invoice.id, elapsed });
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setIsLoading(false);
+  };
+
+  const handleError = () => {
+    console.error('[PDFViewer] Iframe error', invoice.id);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setPdfError(true);
+    setIsLoading(false);
+  };
 
   return (
-    <div className="dashboard-card p-4 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="section-header mb-0">Invoice PDF</h3>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomOut}
-            disabled={zoom <= 50}
-          >
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <span className="text-sm text-muted-foreground min-w-[3rem] text-center">
-            {zoom}%
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleZoomIn}
-            disabled={zoom >= 200}
-          >
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="dashboard-card p-3 flex flex-col h-full">
+      <div className="flex items-center justify-between mb-3 pb-3 border-b border-border/50 text-sm text-muted-foreground">
+        <span>Invoice: {invoice.invoice_number}</span>
+        <span>{invoice.supplier}</span>
       </div>
 
       <div className="flex-1 relative bg-pdf-bg rounded-lg border border-border overflow-hidden">
-        {!pdfError ? (
+        {isLoading && !pdfError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Loading PDF...</p>
+            </div>
+          </div>
+        )}
+        {!pdfError && shouldMount ? (
           <iframe
+            key={invoice.id}
+            ref={iframeRef}
             src={invoice.drive_embed_url}
-            className="w-full h-full"
-            style={{ 
-              transform: `scale(${zoom / 100})`,
-              transformOrigin: 'top left',
-              width: `${100 / (zoom / 100)}%`,
-              height: `${100 / (zoom / 100)}%`
-            }}
+            className="w-full h-full border border-gray-200 rounded-xl shadow-md bg-white"
             frameBorder="0"
             loading="lazy"
-            onError={() => setPdfError(true)}
+            onLoad={handleLoad}
+            onError={handleError}
             title={`Invoice ${invoice.invoice_number}`}
           />
-        ) : (
+        ) : pdfError ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
             <AlertTriangle className="h-12 w-12 text-warning mb-4" />
             <h4 className="text-lg font-medium mb-2">Unable to display PDF</h4>
@@ -75,15 +132,8 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({ invoice }) => {
               Open PDF in New Tab
             </Button>
           </div>
-        )}
-      </div>
-
-      <div className="mt-4 text-sm text-muted-foreground">
-        <div className="flex justify-between">
-          <span>Invoice: {invoice.invoice_number}</span>
-          <span>{invoice.supplier}</span>
-        </div>
+        ) : null}
       </div>
     </div>
   );
-};
+});

@@ -4,23 +4,28 @@ import { useRealtime } from '@/contexts/RealtimeContext';
 interface UseUserPresenceProps {
   currentInvoiceId?: string;
   isEditing?: boolean;
+  disabled?: boolean;
 }
 
-export const useUserPresence = ({ currentInvoiceId, isEditing = false }: UseUserPresenceProps) => {
+export const useUserPresence = ({ currentInvoiceId, isEditing = false, disabled = false }: UseUserPresenceProps) => {
   const { updatePresence, getUsersOnInvoice, isInvoiceBeingEdited } = useRealtime();
 
   // Update presence when invoice or editing status changes
   useEffect(() => {
+    if (disabled) return;
+    
     if (currentInvoiceId) {
       const status = isEditing ? 'editing' : 'viewing';
       updatePresence(currentInvoiceId, status);
     } else {
       updatePresence(undefined, 'idle');
     }
-  }, [currentInvoiceId, isEditing, updatePresence]);
+  }, [currentInvoiceId, isEditing, updatePresence, disabled]);
 
   // Update presence on page visibility change
   useEffect(() => {
+    if (disabled) return;
+    
     const handleVisibilityChange = () => {
       if (document.hidden) {
         updatePresence(undefined, 'idle');
@@ -34,10 +39,12 @@ export const useUserPresence = ({ currentInvoiceId, isEditing = false }: UseUser
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [currentInvoiceId, isEditing, updatePresence]);
+  }, [currentInvoiceId, isEditing, updatePresence, disabled]);
 
   // Update presence on window unload
   useEffect(() => {
+    if (disabled) return;
+    
     const handleBeforeUnload = () => {
       updatePresence(undefined, 'idle');
     };
@@ -46,10 +53,22 @@ export const useUserPresence = ({ currentInvoiceId, isEditing = false }: UseUser
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [updatePresence]);
+  }, [updatePresence, disabled]);
+
+  // Heartbeat to keep presence fresh
+  useEffect(() => {
+    if (disabled || !currentInvoiceId) return;
+    
+    const heartbeat = setInterval(() => {
+      const status = isEditing ? 'editing' : 'viewing';
+      updatePresence(currentInvoiceId, status);
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(heartbeat);
+  }, [currentInvoiceId, isEditing, updatePresence, disabled]);
 
   return {
-    usersOnCurrentInvoice: currentInvoiceId ? getUsersOnInvoice(currentInvoiceId) : [],
-    isCurrentInvoiceBeingEdited: currentInvoiceId ? isInvoiceBeingEdited(currentInvoiceId) : false
+    usersOnCurrentInvoice: disabled || !currentInvoiceId ? [] : getUsersOnInvoice(currentInvoiceId),
+    isCurrentInvoiceBeingEdited: disabled || !currentInvoiceId ? false : isInvoiceBeingEdited(currentInvoiceId)
   };
 };

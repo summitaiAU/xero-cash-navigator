@@ -26,8 +26,9 @@ export class ApiErrorLogger {
   }) {
     const errorDetails = {
       api_endpoint: `${method} ${endpoint}`,
-      error_message: error?.message || 'Unknown API error',
+      error_message: error?.message || error?.toString() || String(error) || 'Unknown error',
       error_details: {
+        ...requestData, // Preserve ALL incoming context (route, filename, viewerState, memory)
         user_context: userContext,
         error_type: error?.name,
         error_stack: error?.stack,

@@ -1,0 +1,289 @@
+import { supabase } from '@/integrations/supabase/client';
+import { auditService } from './auditService';
+
+export interface InvoiceLock {
+  id: string;
+  invoice_id: string;
+  locked_by_user_id: string;
+  locked_by_email: string;
+  locked_at: string;
+  lock_expires_at: string;
+  force_taken: boolean;
+  force_reason?: string;
+}
+
+class InvoiceLockService {
+  // Acquire lock (hard lock)
+  async acquireLock(invoiceId: string): Promise<{ success: boolean; lock?: InvoiceLock; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false, error: 'Not authenticated' };
+
+      // Cleanup expired locks first
+      console.log('[invoiceLockService] Running cleanup before lock acquisition');
+      const { error: cleanupErr } = await supabase.rpc('cleanup_expired_locks');
+      if (cleanupErr) {
+        console.warn('[invoiceLockService] Cleanup failed:', cleanupErr);
+      }
+
+      // Try to insert lock
+      const { data, error } = await supabase
+        .from('invoice_locks')
+        .insert({
+          invoice_id: invoiceId,
+          locked_by_user_id: user.id,
+          locked_by_email: user.email || 'unknown',
+          lock_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(), // 15 min
+        })
+        .select()
+        .single();
+
+      if (error) {
+        // Check if lock already exists
+        const { data: existingLock, error: existingErr } = await supabase
+          .from('invoice_locks')
+          .select('*')
+          .eq('invoice_id', invoiceId)
+          .maybeSingle();
+
+        if (existingErr) {
+          console.warn('[invoiceLockService] lookup existing lock error:', existingErr);
+        }
+        
+        if (existingLock) {
+          // CRITICAL FIX: Check if the existing lock is owned by the SAME user
+          if (existingLock.locked_by_user_id === user.id) {
+            console.log('[invoiceLockService] User already owns this lock, extending it');
+            
+            // Extend the existing lock
+            const { error: updateErr } = await supabase
+              .from('invoice_locks')
+              .update({ lock_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString() })
+              .eq('id', existingLock.id);
+              
+            if (updateErr) {
+              console.error('[invoiceLockService] Failed to extend own lock:', updateErr);
+            }
+            
+            // Return success with the existing lock
+            return { success: true, lock: existingLock as InvoiceLock };
+          }
+          
+          // Different user owns the lock
+          return { 
+            success: false, 
+            error: `Invoice is locked by ${existingLock.locked_by_email}`,
+            lock: existingLock as InvoiceLock
+          };
+        }
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, lock: data as InvoiceLock };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Release lock
+  async releaseLock(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.warn('[invoiceLockService] releaseLock: Not authenticated');
+        return { success: false, error: 'Not authenticated' };
+      }
+
+      console.log('[invoiceLockService] Attempting to release lock for invoice:', invoiceId);
+
+      const { data, error } = await supabase
+        .from('invoice_locks')
+        .delete()
+        .eq('invoice_id', invoiceId)
+        .eq('locked_by_user_id', user.id)
+        .select();
+
+      if (error) {
+        console.error('[invoiceLockService] releaseLock error:', error);
+        return { success: false, error: error.message };
+      }
+      
+      // Check if anything was actually deleted
+      if (!data || data.length === 0) {
+        console.warn('[invoiceLockService] releaseLock: No lock found to delete (may have already expired)');
+        // This is not necessarily an error - the lock may have been cleaned up by the cron job
+        return { success: true }; // Return success anyway since lock is gone
+      }
+      
+      console.log('[invoiceLockService] Lock successfully released:', data);
+      return { success: true };
+    } catch (err: any) {
+      console.error('[invoiceLockService] releaseLock exception:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Extend lock (heartbeat every 5 minutes)
+  async extendLock(invoiceId: string): Promise<{ success: boolean }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false };
+
+      const { error } = await supabase
+        .from('invoice_locks')
+        .update({
+          lock_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        })
+        .eq('invoice_id', invoiceId)
+        .eq('locked_by_user_id', user.id);
+
+      return { success: !error };
+    } catch {
+      return { success: false };
+    }
+  }
+
+  // Force release user's own lock (for recovery scenarios)
+  async releaseOwnLock(invoiceId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false, error: 'Not authenticated' };
+
+      console.log('[invoiceLockService] Force releasing own lock for invoice:', invoiceId);
+
+      const { error } = await supabase
+        .from('invoice_locks')
+        .delete()
+        .eq('invoice_id', invoiceId)
+        .eq('locked_by_user_id', user.id);
+
+      if (error) {
+        console.error('[invoiceLockService] Force release failed:', error);
+        return { success: false, error: error.message };
+      }
+
+      console.log('[invoiceLockService] Own lock force-released');
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Force take lock (admin only)
+  async forceTakeLock(invoiceId: string, reason: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { success: false, error: 'Not authenticated' };
+
+      // Delete existing lock and create new one
+      await supabase
+        .from('invoice_locks')
+        .delete()
+        .eq('invoice_id', invoiceId);
+
+      const { data, error } = await supabase
+        .from('invoice_locks')
+        .insert({
+          invoice_id: invoiceId,
+          locked_by_user_id: user.id,
+          locked_by_email: user.email || 'unknown',
+          force_taken: true,
+          force_reason: reason,
+          lock_expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+
+      // Log force takeover in audit
+      await auditService.log({
+        action_type: 'FORCE_TAKE_LOCK',
+        entity_type: 'INVOICE',
+        entity_id: invoiceId,
+        details: { reason, force_taken: true }
+      });
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  // Get lock for invoice
+  async getLock(invoiceId: string): Promise<InvoiceLock | null> {
+    try {
+      const { data, error } = await supabase
+        .from('invoice_locks')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('[invoiceLockService] getLock error:', error);
+        return null;
+      }
+
+      return (data as InvoiceLock) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Subscribe to lock changes for an invoice
+  subscribeLockChanges(invoiceId: string, callback: (lock: InvoiceLock | null) => void) {
+    const channelName = `invoice-lock-${invoiceId}`;
+    console.log(`[invoiceLockService] Creating realtime subscription for invoice: ${invoiceId}, channel: ${channelName}`);
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoice_locks',
+          filter: `invoice_id=eq.${invoiceId}`
+        },
+        (payload) => {
+          console.log(`[invoiceLockService] Received realtime event:`, {
+            eventType: payload.eventType,
+            hasNew: !!payload.new,
+            hasOld: !!payload.old,
+            newKeys: payload.new ? Object.keys(payload.new) : [],
+            oldKeys: payload.old ? Object.keys(payload.old) : []
+          });
+          
+          if (!payload) {
+            console.warn('[invoiceLockService] Received undefined payload');
+            return;
+          }
+          
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            console.log('[invoiceLockService] Lock INSERT/UPDATE:', payload.new);
+            callback(payload.new as InvoiceLock);
+          } else if (payload.eventType === 'DELETE') {
+            console.log('[invoiceLockService] Lock DELETE');
+            callback(null);
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[invoiceLockService] Subscription status for ${channelName}:`, status);
+        if (status === 'SUBSCRIBED') {
+          console.log(`[invoiceLockService] ✅ Successfully subscribed to lock changes for invoice ${invoiceId}`);
+        } else if (status === 'CLOSED') {
+          console.log(`[invoiceLockService] ⚠️ Channel closed for invoice ${invoiceId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`[invoiceLockService] ❌ Channel error for invoice ${invoiceId} - check RLS policies and auth state`);
+        }
+      });
+
+    return () => {
+      console.log(`[invoiceLockService] Unsubscribing from ${channelName}`);
+      supabase.removeChannel(channel);
+    };
+  }
+}
+
+export const invoiceLockService = new InvoiceLockService();

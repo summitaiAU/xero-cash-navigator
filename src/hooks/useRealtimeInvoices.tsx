@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Invoice } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 interface RealtimeInvoiceUpdate {
@@ -17,11 +18,33 @@ interface UseRealtimeInvoicesProps {
 
 export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeInvoicesProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const toastRef = useRef(toast);
+  const onUpdateRef = useRef(onInvoiceUpdate);
   const [realtimeUpdates, setRealtimeUpdates] = useState<RealtimeInvoiceUpdate[]>([]);
 
+  // Keep toast ref updated
   useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
+
+  // Keep onInvoiceUpdate ref updated
+  useEffect(() => {
+    onUpdateRef.current = onInvoiceUpdate;
+  }, [onInvoiceUpdate]);
+
+  useEffect(() => {
+    // Don't subscribe until user is authenticated
+    if (!user?.id) {
+      console.log('[useRealtimeInvoices] Waiting for authentication...');
+      return;
+    }
+
+    console.log('[useRealtimeInvoices] Setting up channel for viewState:', viewState, 'user:', user.email);
+    
+    const channelName = `invoice-changes-${viewState}-${Date.now()}`;
     const channel = supabase
-      .channel('invoice-changes')
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -30,32 +53,39 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           table: 'invoices'
         },
         async (payload: RealtimePostgresChangesPayload<any>) => {
-          console.log('Invoice change detected:', payload);
+          const newData = payload.new as any;
+          const oldData = payload.old as any;
+          
+          console.log('[useRealtimeInvoices] ✅ INVOICE CHANGE DETECTED:', {
+            eventType: payload.eventType,
+            invoiceId: newData?.id || oldData?.id,
+            invoiceNumber: newData?.invoice_no || oldData?.invoice_no,
+            timestamp: new Date().toISOString()
+          });
           
           let invoice: Invoice;
           
           if (payload.eventType === 'DELETE') {
             // For deletes, we need to construct invoice from old data
             invoice = {
-              id: payload.old.id,
-              invoice_number: payload.old.invoice_no || '',
-              supplier: payload.old.supplier_name || '',
-              amount: Number(payload.old.total_amount) || 0,
-              due_date: payload.old.due_date || '',
-              status: payload.old.status as any,
-              xero_bill_id: payload.old.xero_invoice_id || '',
-              drive_embed_url: payload.old.google_drive_embed_link || '',
-              drive_view_url: payload.old.link_to_invoice || '',
+              id: oldData.id,
+              invoice_number: oldData.invoice_no || '',
+              supplier: oldData.supplier_name || '',
+              amount: Number(oldData.total_amount) || 0,
+              due_date: oldData.due_date || '',
+              status: oldData.status as any,
+              xero_bill_id: oldData.xero_invoice_id || '',
+              drive_embed_url: oldData.google_drive_embed_link || '',
+              drive_view_url: oldData.link_to_invoice || '',
               supplier_email: '',
-              remittance_sent: payload.old.remittance_sent || false,
-              project: payload.old.project || '',
-              approved: payload.old.approved || false,
-              partially_paid: payload.old.partially_paid || false,
+              remittance_sent: oldData.remittance_sent || false,
+              project: oldData.project || '',
+              approved: oldData.approved || false,
+              partially_paid: oldData.partially_paid || false,
               // ... other required fields
             } as Invoice;
           } else {
             // For inserts and updates, use new data
-            const newData = payload.new;
             invoice = {
               id: newData.id,
               invoice_number: newData.invoice_no || '',
@@ -81,22 +111,21 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           };
 
           // Show toast notification for changes made by other users
-          // Note: In a real implementation, you'd want to track who made the change
-          // This could be done through the audit logs or additional metadata
+          // Use toastRef to avoid dependency issues
           if (payload.eventType === 'UPDATE') {
-            toast({
+            toastRef.current({
               title: "Invoice Updated",
               description: `Invoice ${invoice.invoice_number} was updated by another user`,
               duration: 3000,
             });
           } else if (payload.eventType === 'INSERT') {
-            toast({
+            toastRef.current({
               title: "New Invoice Added",
               description: `Invoice ${invoice.invoice_number} was added by another user`,
               duration: 3000,
             });
           } else if (payload.eventType === 'DELETE') {
-            toast({
+            toastRef.current({
               title: "Invoice Deleted",
               description: `Invoice ${invoice.invoice_number} was deleted by another user`,
               duration: 3000,
@@ -104,15 +133,25 @@ export const useRealtimeInvoices = ({ viewState, onInvoiceUpdate }: UseRealtimeI
           }
 
           setRealtimeUpdates(prev => [...prev, update]);
-          onInvoiceUpdate?.(update);
+          onUpdateRef.current?.(update);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[useRealtimeInvoices] 📡 Subscription status:', status, 'Channel:', channelName);
+        if (status === 'SUBSCRIBED') {
+          console.log('[useRealtimeInvoices] ✅ Successfully subscribed to invoice changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[useRealtimeInvoices] ❌ Channel error - check RLS policies and auth state');
+        } else if (status === 'TIMED_OUT') {
+          console.error('[useRealtimeInvoices] ⏱️ Subscription timed out');
+        }
+      });
 
     return () => {
+      console.log('[useRealtimeInvoices] Cleaning up channel for viewState:', viewState);
       supabase.removeChannel(channel);
     };
-  }, [viewState, onInvoiceUpdate, toast]);
+  }, [viewState, user?.id]);
 
   return { realtimeUpdates };
 };

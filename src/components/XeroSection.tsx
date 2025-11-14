@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   RefreshCw, 
   ExternalLink, 
@@ -18,35 +19,83 @@ import {
   Plus,
   Trash2,
   ThumbsUp,
-  Undo
+  Undo,
+  Lock
 } from 'lucide-react';
 import { Invoice, XeroWebhookInvoice, ProcessedXeroData } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { useUserPresence } from '@/hooks/useUserPresence';
 import { ConflictWarning } from '@/components/ConflictWarning';
+import { InvoiceEditInfo } from '@/components/InvoiceEditInfo';
+import { formatDateSydney } from '@/lib/dateUtils';
 
 interface XeroSectionProps {
   invoice: Invoice;
   onUpdate: (updates: any) => void;
   onSync: () => void;
   loading?: boolean;
+  disablePresence?: boolean; // Disable presence tracking in viewer mode
+  onEditingChange?: (isEditing: boolean) => void; // Notify parent of editing state changes
+  isLockedByOther?: boolean; // Disable editing when locked by another user
+  autoStartEdit?: boolean; // Automatically start in edit mode (for mobile)
+  onCancelEdit?: () => void; // Callback when edit is cancelled
+  onDataChange?: (hasChanges: boolean) => void; // Notify parent when data changes
 }
+
+// Generate unique ID for line items
+const genLineItemId = () => {
+  try {
+    if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
+      return (crypto as any).randomUUID();
+    }
+  } catch {}
+  return `li_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+};
 
 // Process Supabase data for display
 const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
-  // Parse list_items if it's a string
+  // Parse line items - prefer list_items over xero_data
   let parsedItems: any[] = [];
-  if (invoice.xero_data?.lineItems) {
-    parsedItems = invoice.xero_data.lineItems;
-  } else if (typeof invoice.list_items === 'string') {
+  let dataSource = 'none';
+  
+  const rawList = invoice.list_items;
+  if (Array.isArray(rawList)) {
+    parsedItems = rawList;
+    dataSource = 'list_items (array)';
+  } else if (typeof rawList === 'string') {
     try {
-      parsedItems = JSON.parse(invoice.list_items);
-    } catch (error) {
-      parsedItems = [];
+      parsedItems = JSON.parse(rawList);
+      dataSource = 'list_items (parsed)';
+    } catch (e) {
+      console.error('Failed to parse list_items:', e);
     }
-  } else if (Array.isArray(invoice.list_items)) {
-    parsedItems = invoice.list_items;
+  } else if (invoice.xero_data?.lineItems) {
+    parsedItems = invoice.xero_data.lineItems;
+    dataSource = 'xero_data (fallback)';
   }
+
+  // Safeguard: if using xero_data but it lacks per-line GST fields, fall back to list_items
+  if (parsedItems === invoice.xero_data?.lineItems) {
+    const hasPerLineKeys = parsedItems.some((it: any) =>
+      'gst_included' in it || 'gst_exempt' in it || 'line_gst' in it || 'line_total_ex_gst' in it || 'line_total_inc_gst' in it
+    );
+    if (!hasPerLineKeys && Array.isArray(rawList)) {
+      parsedItems = rawList;
+      dataSource = 'list_items (safeguard)';
+    }
+  }
+
+  console.log('[XeroSection] processSupabaseData using:', dataSource);
+
+  // Step 1: Check if ANY line item has per-line GST data (new format)
+  const hasPerLineGstData = parsedItems.some(item => 
+    'gst_included' in item || 'line_gst' in item || 'line_total_ex_gst' in item
+  );
+  
+  // Step 2: For old format, check if invoice-level GST exists
+  const invoiceLevelGst = Number(invoice.gst) || 0;
+  const oldFormatHasGst = !hasPerLineGstData && invoiceLevelGst > 0;
 
   return {
     // Header fields
@@ -64,8 +113,32 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
     
     // Line items - support both old and new formats
     lineItems: parsedItems.map((item: any, index: number) => {
-      // Check if this is the new format with per-line GST
-      const hasPerLineGst = 'gst_included' in item || 'line_gst' in item;
+      let displayAmount: number;
+      let taxRate: string;
+      let lineGstValue: number | undefined = undefined;
+      let gstIncludedValue = false;
+      
+      let gstExemptValue = false;
+      
+      if (hasPerLineGstData) {
+        // NEW FORMAT: Has per-line GST data
+        displayAmount = item?.line_total_ex_gst || item?.total || 0;
+        lineGstValue = item?.line_gst !== undefined ? Number(item.line_gst) : undefined;
+        gstIncludedValue = item?.gst_included || false;
+        gstExemptValue = item?.gst_exempt || false;
+        
+        // Set taxRate - check exempt first
+        if (gstExemptValue) {
+          taxRate = 'No Tax';
+        } else {
+          taxRate = (gstIncludedValue || (lineGstValue !== undefined && lineGstValue > 0)) ? 'GST (10%)' : 'No Tax';
+        }
+      } else {
+        // OLD FORMAT: Use invoice-level GST
+        displayAmount = item?.total || item?.amount || 0;
+        taxRate = oldFormatHasGst ? 'GST (10%)' : 'No Tax';
+        // Don't set lineGstValue - will be calculated in display logic
+      }
       
       return {
         itemNumber: index + 1,
@@ -73,15 +146,14 @@ const processSupabaseData = (invoice: Invoice): ProcessedXeroData => {
         quantity: item?.quantity || 1,
         unitAmount: item?.unit_price || item?.unitAmount || 0,
         account: `${item?.account_code || '429'} - Expenses`,
-        taxRate: hasPerLineGst 
-          ? (item.line_gst > 0 ? 'GST (10%)' : 'No Tax')
-          : 'GST (10%)',
-        amount: item?.total || item?.amount || 0,
+        taxRate,
+        amount: displayAmount,
         // New fields for per-line GST tracking
-        gstIncluded: item?.gst_included || false,
-        lineGst: item?.line_gst || 0,
-        lineTotalExGst: item?.line_total_ex_gst || item?.total || item?.amount || 0,
-        lineTotalIncGst: item?.line_total_inc_gst || (item?.total || item?.amount || 0)
+        gstIncluded: gstIncludedValue,
+        gstExempt: gstExemptValue,
+        lineGst: lineGstValue,
+        lineTotalExGst: item?.line_total_ex_gst || displayAmount,
+        lineTotalIncGst: item?.line_total_inc_gst || displayAmount
       };
     }),
     
@@ -115,12 +187,7 @@ const parseBankAccountDetails = (bankDetails?: string) => {
 
 const formatDate = (dateString?: string) => {
   if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-AU', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric'
-  });
+  return formatDateSydney(dateString, 'dd/MM/yyyy');
 };
 
 const formatCurrency = (amount: number) => {
@@ -136,7 +203,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   invoice, 
   onUpdate, 
   onSync,
-  loading = false 
+  loading = false,
+  disablePresence = false,
+  onEditingChange,
+  isLockedByOther = false,
+  autoStartEdit = false,
+  onCancelEdit,
+  onDataChange
 }) => {
   const [invoiceData, setInvoiceData] = useState<ProcessedXeroData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -144,51 +217,192 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   // Edit mode state management
   const [isEditing, setIsEditing] = useState(false);
   const [editableData, setEditableData] = useState<any>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [isAddingNewEntity, setIsAddingNewEntity] = useState(false);
+  const [originalEntity, setOriginalEntity] = useState<string>('');
   
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  // Multi-user presence and conflict detection
+  // Multi-user presence and conflict detection (disabled in viewer mode)
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
     currentInvoiceId: invoice.id,
-    isEditing: isEditing
+    isEditing: isEditing,
+    disabled: disablePresence
   });
 
+  // Release lock if component unmounts while editing
+  useEffect(() => {
+    return () => {
+      if (isEditing && invoice.id) {
+        import('@/services/invoiceLockService').then(({ invoiceLockService }) => {
+          invoiceLockService.releaseLock(invoice.id);
+          console.log('[XeroSection] Lock released (unmount cleanup)');
+        });
+      }
+    };
+  }, [isEditing, invoice.id]);
+
+  // Lock heartbeat to keep lock alive while editing (disabled in viewer mode)
+  useEffect(() => {
+    if (disablePresence || !isEditing || !invoice.id) return;
+    
+    const heartbeat = setInterval(async () => {
+      const { invoiceLockService } = await import('@/services/invoiceLockService');
+      await invoiceLockService.extendLock(invoice.id);
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
+    return () => clearInterval(heartbeat);
+  }, [disablePresence, isEditing, invoice.id]);
+
+  // Auto-start edit mode when autoStartEdit is true (for mobile)
+  useEffect(() => {
+    if (autoStartEdit && !isEditing && !dataLoading && invoiceData) {
+      startEditing();
+    }
+  }, [autoStartEdit, isEditing, dataLoading, invoiceData]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (isEditing && editableData) {
+      setHasUnsavedChanges(true);
+      onDataChange?.(true);
+    } else {
+      setHasUnsavedChanges(false);
+      onDataChange?.(false);
+    }
+  }, [isEditing, editableData, onDataChange]);
+
   // Edit mode functions
-  const startEditing = () => {
+  const startEditing = async () => {
     if (!invoiceData) {
       console.error('No data available for editing');
       return;
     }
     
+    // Try to acquire lock BEFORE entering edit mode
+    const { invoiceLockService } = await import('@/services/invoiceLockService');
+    const lockResult = await invoiceLockService.acquireLock(invoice.id);
+    
+    if (!lockResult.success) {
+      // Check if the lock is owned by the current user
+      if (lockResult.lock?.locked_by_user_id === user?.id) {
+        // User's own stale lock - shouldn't happen with fixes, but handle gracefully
+        toast({
+          title: 'Session Recovery',
+          description: 'Your previous lock was found. Attempting to recover...',
+        });
+        
+        // Try to force-release own lock and retry
+        await invoiceLockService.releaseOwnLock(invoice.id);
+        
+        // Retry acquisition
+        const retryResult = await invoiceLockService.acquireLock(invoice.id);
+        if (!retryResult.success) {
+          toast({
+            title: 'Lock Recovery Failed',
+            description: 'Please refresh the page and try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        // If retry successful, continue with edit mode below
+      } else {
+        // Different user's lock
+        toast({
+          title: 'Invoice Locked',
+          description: lockResult.error || 'Another user is currently editing this invoice',
+          variant: 'destructive'
+        });
+        return; // Don't enter edit mode
+      }
+    }
+    
+    console.log('[XeroSection] Lock acquired, entering edit mode');
+    
+    setOriginalEntity(invoice.entity || '');
+    setIsAddingNewEntity(false);
+    
     setEditableData({
-      entity: invoice.entity || '',
-      project: invoice.project || '',
-      supplierName: invoice.supplier_name || invoice.supplier || '',
-      invoiceNumber: invoice.invoice_no || invoice.invoice_number || '',
-      invoiceDate: invoice.invoice_date || '',
-      dueDate: invoice.due_date || '',
-      currency: invoice.currency || 'AUD',
-      lineItems: invoiceData.lineItems.map((item, index) => ({
-        id: `item_${Date.now()}_${index}`,
-        description: item.description || '',
-        quantity: item.quantity || 1,
-        unitAmount: item.unitAmount || 0,
-        accountCode: item.account?.split(' -')[0] || '429',
-        taxType: item.lineGst > 0 ? 'INPUT' : 'NONE',
-        gstIncluded: item.gstIncluded || false
-      }))
+      entity: invoice.entity,
+      project: invoice.project || invoiceData.reference,
+      supplierName: invoice.supplier_name || invoiceData.contactName,
+      invoiceNumber: invoiceData.invoiceNumber,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      currency: invoiceData.currency,
+      gstIncluded: invoiceData.lineItems.some(item => item.gstIncluded),
+      lineItems: invoiceData.lineItems.map((item, index) => {
+        // Read gst_included directly from the item if available (new format)
+        // For old format without per-line GST, default to false (GST excluded - safe default)
+        const gstIncluded = item.gstIncluded !== undefined ? item.gstIncluded : false;
+        const gstExempt = item.gstExempt || false;
+        
+        // Priority-based GST detection:
+        // 1. If GST exempt, no GST calculation (taxType = NONE)
+        // 2. If gst_included is true, ALWAYS calculate GST (even if line_gst is 0 from bad data)
+        // 3. If line_gst > 0, calculate GST
+        // 4. Otherwise, no GST (taxType = NONE)
+        const shouldCalculateGst = !gstExempt && (
+          gstIncluded || 
+          (item.lineGst !== undefined && item.lineGst > 0)
+        );
+        const taxType = shouldCalculateGst ? 'INPUT' : 'NONE';
+        
+        console.log(`[XeroSection] Line ${index + 1} startEditing:`, {
+          lineGst: item.lineGst,
+          gstIncluded,
+          gstExempt,
+          shouldCalculateGst,
+          taxType,
+          quantity: item.quantity,
+          unitAmount: item.unitAmount
+        });
+        
+        return {
+          id: `item_${Date.now()}_${index}`,
+          description: item.description || '',
+          quantity: item.quantity || 1,
+          unitAmount: item.unitAmount || 0,
+          accountCode: item.account?.split(' -')[0] || '429',
+          taxType,
+          gstIncluded,
+          gstExempt
+        };
+      })
     });
     setIsEditing(true);
+    onEditingChange?.(true);
     setSaveError(null);
   };
 
-  const cancelEditing = () => {
+  const cancelEditing = async () => {
+    // Release lock before exiting edit mode
+    const { invoiceLockService } = await import('@/services/invoiceLockService');
+    const result = await invoiceLockService.releaseLock(invoice.id);
+    
+    if (!result.success) {
+      console.error('[XeroSection] Failed to release lock on cancel:', result.error);
+      toast({
+        title: 'Lock Release Failed',
+        description: 'The invoice lock may still be active. Please refresh the page.',
+        variant: 'destructive'
+      });
+    } else {
+      console.log('[XeroSection] Lock released (cancel)');
+    }
+    
     setIsEditing(false);
+    onEditingChange?.(false);
     setEditableData(null);
     setSaveError(null);
+    setHasUnsavedChanges(false);
+    setIsAddingNewEntity(false);
+    setOriginalEntity('');
+    onCancelEdit?.(); // Notify parent that edit was cancelled
   };
 
   // Approval functions
@@ -240,15 +454,22 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     return baseAmount;
   };
 
-  const calculateTaxAmount = (subtotal: number, taxType: string, gstIncluded: boolean = false) => {
+  const calculateTaxAmount = (subtotal: number, taxType: string, gstIncluded: boolean = false, gstExempt: boolean = false) => {
+    // Priority 1: GST Exempt - no GST applies
+    if (gstExempt) return 0;
+    
+    // Priority 2: If taxType is NONE, no GST applies
+    if (taxType === 'NONE') return 0;
+    
+    // Priority 3: If taxType is not INPUT, no GST
     if (taxType !== 'INPUT') return 0;
     
-    // If GST is included in the price, extract it from the subtotal
+    // Priority 4: If gstIncluded is true, GST is already in the price - extract it (1/11th of the total)
     if (gstIncluded) {
-      return subtotal * (10 / 110); // Extract GST from inclusive amount
+      return subtotal * (1 / 11);
     }
     
-    // If GST is not included, add it on top
+    // Priority 5: Default - GST is not included, add 10%
     return subtotal * 0.1;
   };
 
@@ -258,17 +479,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     
     lineItems.forEach(item => {
       const lineAmount = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-      const lineTax = calculateTaxAmount(lineAmount, item.taxType, item.gstIncluded);
+      const lineTax = calculateTaxAmount(lineAmount, item.taxType, item.gstIncluded, item.gstExempt);
       
-      if (item.gstIncluded) {
-        // If GST is included, the subtotal is the amount minus GST
-        subtotal += lineAmount - lineTax;
-        totalTax += lineTax;
+      // When GST is included in the line amount, we need to subtract the tax
+      // to get the true ex-GST subtotal
+      if (item.gstIncluded && lineTax > 0) {
+        subtotal += (lineAmount - lineTax);
       } else {
-        // If GST is not included, the subtotal is the full amount
+        // GST not included or exempt - lineAmount is already ex-GST
         subtotal += lineAmount;
-        totalTax += lineTax;
       }
+      
+      totalTax += lineTax;
     });
     
     return { subtotal, totalTax, total: subtotal + totalTax };
@@ -277,10 +499,29 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
   const updateLineItem = (index: number, field: string, value: any) => {
     if (!editableData) return;
     const updatedLineItems = [...editableData.lineItems];
-    updatedLineItems[index] = {
-      ...updatedLineItems[index],
-      [field]: field === 'quantity' || field === 'unitAmount' ? parseFloat(value) || 0 : value
-    };
+    const item = { ...updatedLineItems[index] };
+    
+    if (field === 'gstIncluded') {
+      item.taxType = 'INPUT';
+      item.gstIncluded = value;
+      // If checking GST Included, uncheck GST Exempt
+      if (value) {
+        item.gstExempt = false;
+      }
+    } else if (field === 'gstExempt') {
+      item.gstExempt = value;
+      // If checking GST Exempt, uncheck GST Included and set taxType to NONE
+      if (value) {
+        item.gstIncluded = false;
+        item.taxType = 'NONE';
+      } else {
+        item.taxType = 'INPUT';
+      }
+    } else {
+      item[field] = field === 'quantity' || field === 'unitAmount' ? parseFloat(value) || 0 : value;
+    }
+    
+    updatedLineItems[index] = item;
     setEditableData({ ...editableData, lineItems: updatedLineItems });
   };
 
@@ -295,7 +536,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         unitAmount: 0,
         accountCode: '429', 
         taxType: 'INPUT',
-        gstIncluded: false
+        gstIncluded: false,
+        gstExempt: false
       }]
     });
   };
@@ -322,35 +564,42 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       // Format line items for Supabase with per-line GST tracking
       const formattedLineItems = editableData.lineItems.map((item: any) => {
         const lineAmount = item.quantity * item.unitAmount;
-        const hasGst = item.taxType === 'INPUT';
-        let lineGst = 0;
-        let lineTotalExGst = lineAmount;
-        let lineTotalIncGst = lineAmount;
         
-        if (hasGst) {
-          if (item.gstIncluded) {
-            // GST is included in the price
-            lineGst = lineAmount * (10 / 110);
-            lineTotalExGst = lineAmount - lineGst;
-            lineTotalIncGst = lineAmount;
-          } else {
-            // GST is added on top
-            lineGst = lineAmount * 0.1;
-            lineTotalExGst = lineAmount;
-            lineTotalIncGst = lineAmount + lineGst;
-          }
+        let lineGst: number;
+        let lineTotalExGst: number;
+        let lineTotalIncGst: number;
+        
+        // Priority 1: GST Exempt
+        if (item.gstExempt) {
+          lineTotalExGst = lineAmount;
+          lineGst = 0;
+          lineTotalIncGst = lineAmount;
+        }
+        // Priority 2: GST Included in price
+        else if (item.gstIncluded) {
+          lineTotalExGst = lineAmount / 1.1;
+          lineGst = lineAmount - lineTotalExGst;
+          lineTotalIncGst = lineAmount;
+        }
+        // Priority 3: GST not included in price
+        else {
+          lineTotalExGst = lineAmount;
+          lineGst = lineAmount * 0.1;
+          lineTotalIncGst = lineAmount + lineGst;
         }
         
         return {
+          id: item.id || genLineItemId(),
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unitAmount,
           account_code: item.accountCode,
           total: lineAmount,
           gst_included: item.gstIncluded || false,
-          line_gst: lineGst,
-          line_total_ex_gst: lineTotalExGst,
-          line_total_inc_gst: lineTotalIncGst
+          gst_exempt: item.gstExempt || false,
+          line_gst: Math.round(lineGst * 100) / 100,
+          line_total_ex_gst: Math.round(lineTotalExGst * 100) / 100,
+          line_total_inc_gst: Math.round(lineTotalIncGst * 100) / 100
         };
       });
 
@@ -362,13 +611,16 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         project: editableData.project,
         supplier_name: editableData.supplierName,
         invoice_no: editableData.invoiceNumber,
-        invoice_date: editableData.invoiceDate,
-        due_date: editableData.dueDate,
+        invoice_date: editableData.invoiceDate || null,
+        due_date: editableData.dueDate || null,
         currency: editableData.currency,
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
-        total_amount: totals.total
+        total_amount: totals.total,
+        last_edited_at: new Date().toISOString(),
+        last_edited_by_user_id: user?.id,
+        last_edited_by_email: user?.email
       });
 
       // Update local state
@@ -376,6 +628,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         ...invoice,
         entity: editableData.entity,
         project: editableData.project,
+        supplier: editableData.supplierName,
         supplier_name: editableData.supplierName,
         invoice_no: editableData.invoiceNumber,
         invoice_date: editableData.invoiceDate,
@@ -384,11 +637,30 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
-        total_amount: totals.total
+        total_amount: totals.total,
+        last_edited_at: new Date().toISOString(),
+        last_edited_by_user_id: user?.id,
+        last_edited_by_email: user?.email
       };
+
+      // Release lock after successful save
+      const { invoiceLockService } = await import('@/services/invoiceLockService');
+      const lockReleaseResult = await invoiceLockService.releaseLock(invoice.id);
+
+      if (!lockReleaseResult.success) {
+        console.error('[XeroSection] Failed to release lock after save:', lockReleaseResult.error);
+        toast({
+          title: 'Warning',
+          description: 'Invoice saved but lock may still be active. Please refresh.',
+          variant: 'destructive'
+        });
+      } else {
+        console.log('[XeroSection] Lock released (save)');
+      }
 
       setInvoiceData(processSupabaseData(updatedInvoice));
       setIsEditing(false);
+      onEditingChange?.(false);
       setEditableData(null);
       onUpdate(updatedInvoice);
       toast({ title: 'Invoice Saved', description: 'Invoice changes saved successfully.' });
@@ -407,6 +679,13 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   // Load data from Supabase
   const loadInvoiceData = () => {
+    if (!invoice) {
+      console.error('Cannot load invoice data: invoice is null');
+      setInvoiceData(null);
+      setDataLoading(false);
+      return;
+    }
+    
     try {
       setDataLoading(true);
       const processed = processSupabaseData(invoice);
@@ -418,6 +697,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         description: error.message || 'Unknown error', 
         variant: 'destructive' 
       });
+      setInvoiceData(null);
     } finally {
       setDataLoading(false);
     }
@@ -425,8 +705,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
 
   useEffect(() => {
-    loadInvoiceData();
-  }, [invoice?.id]);
+    if (!invoice?.id) return;
+    const id = setTimeout(() => {
+      loadInvoiceData();
+    }, 50);
+    return () => clearTimeout(id);
+  }, [invoice?.id, invoice?.total_amount, invoice?.list_items?.length, invoice?.last_edited_at]);
 
   const isLoading = dataLoading || loading;
   const hasInvoiceData = !!invoiceData;
@@ -448,6 +732,12 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           </Button>
         </div>
       </div>
+
+      <InvoiceEditInfo 
+        lastEditedAt={invoice.last_edited_at}
+        lastEditedByEmail={invoice.last_edited_by_email}
+        className="mb-3 pb-3 border-b border-border/50"
+      />
 
       {isLoading ? (
         <div className="space-y-6">
@@ -485,19 +775,53 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             <div className="space-y-2">
               <Label className="text-sm font-medium text-muted-foreground">Entity</Label>
               {isEditing ? (
-                <select
-                  value={editableData?.entity || ''}
-                  onChange={(e) => setEditableData({...editableData, entity: e.target.value})}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 z-10"
-                >
-                  <option value="Sodhi Property Developers Pty Ltd">Sodhi Property Developers Pty Ltd</option>
-                  <option value="NALA Properties Pty Ltd">NALA Properties Pty Ltd</option>
-                  {invoice.entity && 
-                   invoice.entity !== 'Sodhi Property Developers Pty Ltd' && 
-                   invoice.entity !== 'NALA Properties Pty Ltd' && (
-                    <option value={invoice.entity}>{invoice.entity}</option>
-                  )}
-                </select>
+                isAddingNewEntity ? (
+                  // Text input mode with X button
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={editableData?.entity || ''}
+                      onChange={(e) => setEditableData({...editableData, entity: e.target.value})}
+                      placeholder="Enter new entity name"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setIsAddingNewEntity(false);
+                        setEditableData({...editableData, entity: originalEntity});
+                      }}
+                      className="shrink-0 h-10 w-10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  // Dropdown mode
+                  <select
+                    value={editableData?.entity || ''}
+                    onChange={(e) => {
+                      if (e.target.value === '__ADD_NEW__') {
+                        setIsAddingNewEntity(true);
+                        setEditableData({...editableData, entity: ''});
+                      } else {
+                        setEditableData({...editableData, entity: e.target.value});
+                      }
+                    }}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 z-10"
+                  >
+                    <option value="Sodhi Property Developers Pty Ltd">Sodhi Property Developers Pty Ltd</option>
+                    <option value="NALA Properties Pty Ltd">NALA Properties Pty Ltd</option>
+                    {invoice.entity && 
+                     invoice.entity !== 'Sodhi Property Developers Pty Ltd' && 
+                     invoice.entity !== 'NALA Properties Pty Ltd' && (
+                      <option value={invoice.entity}>{invoice.entity}</option>
+                    )}
+                    <option value="__ADD_NEW__">Add New...</option>
+                  </select>
+                )
               ) : (
                 <div className="font-medium text-sm md:text-base break-words">{invoice.entity || 'Not specified'}</div>
               )}
@@ -588,8 +912,8 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
                       <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">Account</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Tax</th>
-                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST Incl.</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[90px]">GST INCL</th>
+                      <th className="px-2 py-3 text-center text-xs font-medium text-muted-foreground uppercase min-w-[90px]">GST EXMT</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
                       <th className="px-2 py-3 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
                       <th className="px-2 py-3 w-16">Actions</th>
@@ -598,7 +922,18 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <tbody className="bg-background divide-y divide-border">
                     {editableData?.lineItems?.map((item: any, index: number) => {
                       const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-                      const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded);
+                      const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded, item.gstExempt);
+                      
+                      console.log(`[XeroSection] Rendering line ${index + 1}:`, {
+                        quantity: item.quantity,
+                        unitAmount: item.unitAmount,
+                        gstIncluded: item.gstIncluded,
+                        gstExempt: item.gstExempt,
+                        taxType: item.taxType,
+                        subtotal,
+                        gstAmount
+                      });
+                      
                       return (
                         <tr key={item.id} className="hover:bg-muted/20">
                           <td className="px-2 py-4 text-sm text-center font-medium">{index + 1}</td>
@@ -638,27 +973,29 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                               className="text-sm text-center"
                             />
                           </td>
-                          <td className="px-2 py-4 relative">
-                            <select
-                              value={item.taxType}
-                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                              className="w-full px-3 py-2 text-sm border border-input bg-background rounded-md focus:ring-2 focus:ring-ring focus:border-ring"
-                            >
-                              <option value="INPUT">INPUT</option>
-                              <option value="NONE">NONE</option>
-                            </select>
-                          </td>
                           <td className="px-2 py-4 text-center">
                             <input
                               type="checkbox"
                               checked={item.gstIncluded || false}
+                              disabled={item.gstExempt}
                               onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
-                              disabled={item.taxType === 'NONE'}
                               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
                             />
                           </td>
+                          <td className="px-2 py-4 text-center">
+                            <input
+                              type="checkbox"
+                              checked={item.gstExempt || false}
+                              onChange={(e) => updateLineItem(index, 'gstExempt', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                          </td>
                           <td className="px-2 py-4 text-sm text-right text-muted-foreground">
-                            {item.taxType === 'INPUT' ? formatCurrency(gstAmount) : '-'}
+                            {item.gstExempt ? (
+                              <span className="text-amber-600 font-medium">Exempt</span>
+                            ) : (
+                              formatCurrency(gstAmount)
+                            )}
                           </td>
                           <td className="px-2 py-4 text-sm font-medium text-right">{formatCurrency(subtotal)}</td>
                           <td className="px-2 py-4 text-center">
@@ -692,62 +1029,69 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                 </table>
               </div>
             ) : (
-              <div className="hidden lg:block border border-border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[auto_1fr_80px_120px_120px_100px_80px_100px_120px] gap-0 bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
-                  <div className="p-4 text-center">Item</div>
-                  <div className="p-4 border-l border-border">Description</div>
-                  <div className="p-4 border-l border-border text-center">Qty.</div>
-                  <div className="p-4 border-l border-border text-center">Unit Price</div>
-                  <div className="p-4 border-l border-border text-center">Account</div>
-                  <div className="p-4 border-l border-border text-center">Tax</div>
-                  <div className="p-4 border-l border-border text-center">GST Incl.</div>
-                  <div className="p-4 border-l border-border text-center">GST</div>
-                  <div className="p-4 border-l border-border text-center">Amount</div>
-                </div>
-
-                {invoiceData.lineItems.map((item, index) => (
-                  <div key={index} className="grid grid-cols-[auto_1fr_80px_120px_120px_100px_80px_100px_120px] gap-0 border-b border-border last:border-b-0 hover:bg-muted/20">
-                    <div className="p-4 flex items-center justify-center">
-                      <div className="text-sm">{item.itemNumber}</div>
-                    </div>
-                    
-                   <div className="p-4 border-l border-border">
-                      <div className="text-sm break-words pr-2 leading-relaxed">{item.description || 'No description'}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-sm">{item.quantity}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-sm break-words">{formatCurrency(item.unitAmount)}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border">
-                      <div className="text-xs break-words leading-relaxed">{item.account}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-xs break-words">{item.taxRate}</div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-center">
-                      <div className="text-xs">
-                        {item.lineGst !== undefined ? (item.gstIncluded ? 'Yes' : 'No') : '-'}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-right">
-                      <div className="text-sm text-muted-foreground">
-                        {item.lineGst !== undefined ? formatCurrency(item.lineGst) : '-'}
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 border-l border-border text-right">
-                      <div className="text-sm font-medium break-words">{formatCurrency(item.amount)}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="hidden lg:block border border-border rounded-lg overflow-x-auto">
+                <table className="min-w-full table-auto">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase w-16">Item</th>
+                      <th className="px-3 py-4 text-left text-xs font-medium text-muted-foreground uppercase min-w-[280px]">Description</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[80px]">Qty.</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Unit Price</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Account</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[90px]">GST INCL</th>
+                      <th className="px-3 py-4 text-center text-xs font-medium text-muted-foreground uppercase min-w-[90px]">GST EXMT</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[100px]">GST</th>
+                      <th className="px-3 py-4 text-right text-xs font-medium text-muted-foreground uppercase min-w-[120px]">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-background divide-y divide-border">
+                    {invoiceData.lineItems.map((item, index) => (
+                      <tr key={index} className="hover:bg-muted/20">
+                        <td className="px-3 py-4 text-sm text-center font-medium">{item.itemNumber}</td>
+                        <td className="px-3 py-4 text-sm break-words leading-relaxed">{item.description || 'No description'}</td>
+                        <td className="px-3 py-4 text-sm text-center">{item.quantity}</td>
+                        <td className="px-3 py-4 text-sm text-right">{formatCurrency(item.unitAmount)}</td>
+                        <td className="px-3 py-4 text-xs text-center break-words">{item.account}</td>
+                        <td className="px-3 py-4 text-center">
+                          {item.lineGst !== undefined ? (
+                            item.gstIncluded ? (
+                              <div className="flex justify-center">
+                                <Check className="h-5 w-5 text-green-600" />
+                              </div>
+                            ) : (
+                              <span className="text-xs">-</span>
+                            )
+                          ) : (
+                            item.taxRate === 'GST (10%)' ? <span className="text-xs">-</span> : (
+                              <div className="flex justify-center">
+                                <Check className="h-5 w-5 text-green-600" />
+                              </div>
+                            )
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-center">
+                          {item.gstExempt ? (
+                            <div className="flex justify-center">
+                              <Check className="h-5 w-5 text-amber-600" />
+                            </div>
+                          ) : (
+                            <span className="text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-sm text-right text-muted-foreground">
+                          {item.gstExempt ? (
+                            <span className="text-amber-600 font-medium">Exempt</span>
+                          ) : (
+                            item.lineGst !== undefined 
+                              ? formatCurrency(item.lineGst)
+                              : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')
+                          )}
+                        </td>
+                        <td className="px-3 py-4 text-sm font-medium text-right">{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
@@ -756,7 +1100,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
               {isEditing ? (
                 editableData?.lineItems?.map((item: any, index: number) => {
                   const subtotal = calculateLineItemSubtotal(item.quantity, item.unitAmount, item.gstIncluded);
-                  const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded);
+                  const gstAmount = calculateTaxAmount(subtotal, item.taxType, item.gstIncluded, item.gstExempt);
                   return (
                     <div key={item.id} className="border border-border rounded-lg p-4 space-y-3">
                       <div className="flex items-center justify-between">
@@ -809,46 +1153,53 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Account</Label>
-                            <Input
-                              type="text"
-                              value={item.accountCode}
-                              onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
-                              className="mt-1"
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Account</Label>
+                          <Input
+                            type="text"
+                            value={item.accountCode}
+                            onChange={(e) => updateLineItem(index, 'accountCode', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={item.gstIncluded || false}
+                              disabled={item.gstExempt}
+                              onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
                             />
+                            <Label className="text-xs cursor-pointer">
+                              GST INCL
+                            </Label>
                           </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Tax Rate</Label>
-                            <select
-                              value={item.taxType}
-                              onChange={(e) => updateLineItem(index, 'taxType', e.target.value)}
-                              className="mt-1 relative z-10 flex h-10 w-full min-w-[140px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                            >
-                              <option value="INPUT">INPUT</option>
-                              <option value="NONE">NONE</option>
-                            </select>
+
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={item.gstExempt || false}
+                              onChange={(e) => updateLineItem(index, 'gstExempt', e.target.checked)}
+                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            />
+                            <Label className="text-xs cursor-pointer">
+                              GST EXMT
+                            </Label>
                           </div>
                         </div>
                         
-                        {item.taxType === 'INPUT' && (
-                          <div className="space-y-2 p-3 bg-muted/30 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <Label className="text-xs text-muted-foreground">GST Included in Price</Label>
-                              <input
-                                type="checkbox"
-                                checked={item.gstIncluded || false}
-                                onChange={(e) => updateLineItem(index, 'gstIncluded', e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                              />
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">GST Amount:</span>
+                        <div className="p-3 bg-muted/30 rounded-lg">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">GST Amount:</span>
+                            {item.gstExempt ? (
+                              <span className="text-amber-600 font-medium">Exempt</span>
+                            ) : (
                               <span className="font-medium">{formatCurrency(gstAmount)}</span>
-                            </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -889,16 +1240,44 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         </div>
                       </div>
                       
-                      {item.lineGst !== undefined && (
+                      {(item.lineGst !== undefined || item.taxRate === 'GST (10%)') && (
                         <div className="pt-2 border-t border-border">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <Label className="text-xs text-muted-foreground">GST Included</Label>
-                              <div className="text-xs">{item.gstIncluded ? 'Yes' : 'No'}</div>
+                              <div className="text-xs">
+                                {item.lineGst !== undefined ? (
+                                  item.gstIncluded ? (
+                                    <Check className="h-5 w-5 text-green-600 inline-block" />
+                                  ) : (
+                                    <span>-</span>
+                                  )
+                                ) : (
+                                  item.taxRate === 'GST (10%)' ? <span>-</span> : (
+                                    <Check className="h-5 w-5 text-green-600 inline-block" />
+                                  )
+                                )}
+                              </div>
                             </div>
                             <div>
-                              <Label className="text-xs text-muted-foreground">GST Amount</Label>
-                              <div className="text-xs font-medium">{formatCurrency(item.lineGst)}</div>
+                              <Label className="text-xs text-muted-foreground">GST Exempt</Label>
+                              <div className="text-xs">
+                                {item.gstExempt ? (
+                                  <Check className="h-5 w-5 text-amber-600 inline-block" />
+                                ) : (
+                                  <span>-</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2">
+                            <Label className="text-xs text-muted-foreground">GST Amount</Label>
+                            <div className="text-xs font-medium">
+                              {item.gstExempt ? (
+                                <span className="text-amber-600">Exempt</span>
+                              ) : (
+                                item.lineGst !== undefined ? formatCurrency(item.lineGst) : (item.taxRate === 'GST (10%)' ? formatCurrency(item.amount * 0.1) : '-')
+                              )}
                             </div>
                           </div>
                         </div>
@@ -921,9 +1300,27 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             </div>
           </div>
 
-          {/* Totals - Responsive */}
-          <div className="flex justify-end">
-            <div className="w-full max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
+          {/* Currency and Totals Section */}
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+            {/* Currency Field */}
+            <div className="space-y-2 w-full md:w-auto">
+              <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
+              {isEditing ? (
+                <select
+                  value={editableData?.currency || 'AUD'}
+                  onChange={(e) => setEditableData({...editableData, currency: e.target.value})}
+                  className="flex h-10 w-full md:w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="AUD">AUD</option>
+                  <option value="USD">USD</option>
+                </select>
+              ) : (
+                <div className="font-medium text-sm md:text-base">{invoiceData?.currency || 'AUD'}</div>
+              )}
+            </div>
+
+            {/* Totals */}
+            <div className="w-full md:w-auto md:max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
               {(() => {
                 const totals = isEditing && editableData 
                   ? calculateInvoiceTotals(editableData.lineItems)
@@ -963,57 +1360,94 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-start items-start sm:items-center gap-4 pt-6 border-t border-border">
-            <div className="flex flex-wrap items-center gap-2">
-              {!isEditing ? (
-                <>
-                  <Button 
-                    onClick={startEditing}
-                    disabled={!hasInvoiceData}
-                    className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  
-                  {invoice.approved ? (
-                    <Button 
-                      onClick={handleUndoApproval}
-                      disabled={isApproving}
-                      variant="outline"
-                    >
-                      {isApproving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Undoing...
-                        </>
-                      ) : (
-                        <>
-                          <Undo className="h-4 w-4 mr-2" />
-                          Undo Approval
-                        </>
+            <TooltipProvider>
+              <div className="flex flex-wrap items-center gap-2">
+                {!isEditing ? (
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block">
+                          <Button 
+                            onClick={startEditing}
+                            disabled={!hasInvoiceData || isLockedByOther}
+                            className="bg-blue-600 hover:bg-blue-700 text-white disabled:bg-blue-400 disabled:cursor-not-allowed"
+                          >
+                            {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      {isLockedByOther && (
+                        <TooltipContent>
+                          <p>Invoice is being edited by another user</p>
+                        </TooltipContent>
                       )}
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={handleApprove}
-                      disabled={isApproving}
-                      variant="success"
-                    >
-                      {isApproving ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Approving...
-                        </>
-                      ) : (
-                        <>
-                          <ThumbsUp className="h-4 w-4 mr-2" />
-                          Approve
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </>
-              ) : (
+                    </Tooltip>
+                    
+                    {invoice.approved ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button 
+                              onClick={handleUndoApproval}
+                              disabled={isApproving || isLockedByOther}
+                              variant="outline"
+                            >
+                              {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                              {isApproving ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Undoing...
+                                </>
+                              ) : (
+                                <>
+                                  <Undo className="h-4 w-4 mr-2" />
+                                  Undo Approval
+                                </>
+                              )}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {isLockedByOther && (
+                          <TooltipContent>
+                            <p>Invoice is locked by another user</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-block">
+                            <Button 
+                              onClick={handleApprove}
+                              disabled={isApproving || isLockedByOther}
+                              variant="success"
+                            >
+                              {isLockedByOther && <Lock className="h-4 w-4 mr-2" />}
+                              {isApproving ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Approving...
+                                </>
+                              ) : (
+                                <>
+                                  <ThumbsUp className="h-4 w-4 mr-2" />
+                                  Approve
+                                </>
+                              )}
+                            </Button>
+                          </span>
+                        </TooltipTrigger>
+                        {isLockedByOther && (
+                          <TooltipContent>
+                            <p>Invoice is locked by another user</p>
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    )}
+                  </>
+                ) : (
                 <>
                   <Button 
                     onClick={saveInvoice}
@@ -1042,9 +1476,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                     <X className="h-4 w-4 mr-2" />
                     Cancel
                   </Button>
-                </>
-              )}
-            </div>
+                  </>
+                )}
+              </div>
+            </TooltipProvider>
 
             {/* Error Messages */}
             {saveError && isEditing && (

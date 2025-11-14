@@ -48,7 +48,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     supplier: invoice.supplier_name || '',
     amount: Number(invoice.total_amount) || 0,
     due_date: invoice.due_date || '',
-    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY PAID') || 'READY',
+    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY_PAID') || 'READY',
     xero_bill_id: invoice.xero_invoice_id || '',
     drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
@@ -74,6 +74,10 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     amount_paid: Number(invoice.amount_paid) || 0,
     invoice_date: invoice.invoice_date || '',
     currency: (invoice as any).currency || 'AUD',
+    paid_date: invoice.paid_date || undefined,
+    last_edited_at: invoice.last_edited_at || undefined,
+    last_edited_by_user_id: invoice.last_edited_by_user_id || undefined,
+    last_edited_by_email: invoice.last_edited_by_email || undefined,
     
     xero_data: {
       invoiceNumber: invoice.invoice_no || '',
@@ -130,7 +134,13 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
   });
 };
 
-export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSent: boolean) => {
+export const updateInvoicePaymentStatus = async (
+  invoiceId: string, 
+  remittanceSent: boolean,
+  remittanceEmail?: string
+) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
     .from('invoices')
@@ -147,13 +157,26 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
     throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
   }
 
+  const updateData: any = { 
+    status: 'PAID',
+    remittance_sent: remittanceSent,
+    paid_date: new Date().toISOString(),
+    payment_made_at: new Date().toISOString(),
+    amount_paid: currentInvoice.total_amount,
+    last_edited_at: new Date().toISOString()
+  };
+
+  if (remittanceEmail) {
+    updateData.remittance_email = remittanceEmail;
+  }
+
+  if (remittanceSent) {
+    updateData.remittance_sent_at = new Date().toISOString();
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      status: 'PAID',
-      remittance_sent: remittanceSent,
-      paid_date: new Date().toISOString()
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
@@ -164,6 +187,23 @@ export const updateInvoicePaymentStatus = async (invoiceId: string, remittanceSe
       userContext: 'Mark invoice as paid'
     });
     throw new Error(`Failed to update invoice: ${error.message}`);
+  }
+
+  // Log to daily events
+  await dailyEventsService.logPaymentMade(
+    invoiceId,
+    currentInvoice.invoice_no,
+    currentInvoice.entity || 'Unknown',
+    currentInvoice.total_amount
+  );
+
+  if (remittanceSent && remittanceEmail) {
+    await dailyEventsService.logRemittanceSent(
+      invoiceId,
+      currentInvoice.invoice_no,
+      remittanceEmail,
+      currentInvoice.entity
+    );
   }
 
   // Audit log
@@ -194,12 +234,28 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
     .update({ 
       status: 'READY',
       remittance_sent: false,
-      paid_date: null
+      paid_date: null,
+      payment_made_at: null,
+      remittance_sent_at: null,
+      amount_paid: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to unmark invoice as paid: ${error.message}`);
+  }
+
+  // Delete related daily_events entries
+  const { error: deleteError } = await supabase
+    .from('daily_events')
+    .delete()
+    .eq('invoice_id', invoiceId)
+    .in('event_type', ['PAYMENT_MADE', 'REMITTANCE_SENT']);
+
+  if (deleteError) {
+    console.error('Failed to delete daily events:', deleteError);
+    // Don't throw - we want the unmark to succeed even if event cleanup fails
   }
 
   // Audit log
@@ -212,7 +268,12 @@ export const unmarkInvoiceAsPaid = async (invoiceId: string) => {
   });
 };
 
-export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
+export const updateInvoiceRemittanceStatus = async (
+  invoiceId: string,
+  remittanceEmail?: string
+) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
     .from('invoices')
@@ -224,15 +285,33 @@ export const updateInvoiceRemittanceStatus = async (invoiceId: string) => {
     throw new Error(`Failed to fetch invoice for audit: ${fetchError.message}`);
   }
 
+  const updateData: any = { 
+    remittance_sent: true,
+    remittance_sent_at: new Date().toISOString(),
+    last_edited_at: new Date().toISOString()
+  };
+
+  if (remittanceEmail) {
+    updateData.remittance_email = remittanceEmail;
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      remittance_sent: true
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to update invoice remittance status: ${error.message}`);
+  }
+
+  // Log to daily events
+  if (remittanceEmail) {
+    await dailyEventsService.logRemittanceSent(
+      invoiceId,
+      currentInvoice.invoice_no,
+      remittanceEmail,
+      currentInvoice.entity
+    );
   }
 
   // Audit log
@@ -252,6 +331,8 @@ export interface FlagInvoiceData {
 }
 
 export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get the invoice details to extract necessary fields for webhook and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
@@ -266,11 +347,13 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
   // Update invoice with flag information
   const updateData: any = {
     status: 'FLAGGED',
-    flag_type: flagData.flagType
+    flag_type: flagData.flagType,
+    last_edited_at: new Date().toISOString()
   };
 
   if (flagData.emailAddress) {
     updateData.flag_email_address = flagData.emailAddress;
+    updateData.flag_email_sent_at = new Date().toISOString();
   }
   if (flagData.subject) {
     updateData.flag_email_subject = flagData.subject;
@@ -300,6 +383,14 @@ export const flagInvoice = async (invoiceId: string, flagData: FlagInvoiceData) 
         google_drive_id: invoice.google_drive_id || '',
         invoice_no: invoice.invoice_no || ''
       });
+
+      // Log to daily events
+      await dailyEventsService.logFlagEmailSent(
+        invoiceId,
+        invoice.invoice_no,
+        flagData.emailAddress,
+        flagData.subject
+      );
     } catch (webhookError) {
       console.error('Webhook failed but invoice was flagged:', webhookError);
       // Don't throw here - we want the flagging to succeed even if webhook fails
@@ -339,7 +430,8 @@ export const resolveFlag = async (invoiceId: string) => {
       flag_type: null,
       flag_email_address: null,
       flag_email_subject: null,
-      flag_email_body: null
+      flag_email_body: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
@@ -370,7 +462,10 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   subtotal?: number,
   gst?: number,
   total_amount?: number,
-  approved?: boolean
+  approved?: boolean,
+  last_edited_at?: string,
+  last_edited_by_user_id?: string,
+  last_edited_by_email?: string
 }) => {
   // First get the current invoice to capture audit details
   const { data: currentInvoice, error: fetchError } = await supabase
@@ -457,7 +552,10 @@ export const approveInvoice = async (invoiceId: string) => {
 
   const { error } = await supabase
     .from('invoices')
-    .update({ approved: true } as any)
+    .update({ 
+      approved: true,
+      last_edited_at: new Date().toISOString()
+    } as any)
     .eq('id', invoiceId);
 
   if (error) {
@@ -488,7 +586,10 @@ export const undoApproveInvoice = async (invoiceId: string) => {
 
   const { error } = await supabase
     .from('invoices')
-    .update({ approved: false } as any)
+    .update({ 
+      approved: false,
+      last_edited_at: new Date().toISOString()
+    } as any)
     .eq('id', invoiceId);
 
   if (error) {
@@ -506,6 +607,8 @@ export const undoApproveInvoice = async (invoiceId: string) => {
 };
 
 export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number) => {
+  const { dailyEventsService } = await import('./dailyEventsService');
+  
   // First get current invoice data to calculate new amounts and audit
   const { data: invoice, error: fetchError } = await supabase
     .from('invoices')
@@ -522,29 +625,75 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
   const newAmountPaid = currentAmountPaid + amountPaid;
   const newAmountDue = totalAmount - newAmountPaid;
 
+  // Check if this payment completes the invoice (with small tolerance for floating point)
+  const isFullyPaid = Math.abs(newAmountPaid - totalAmount) < 0.01;
+  
+  const updateData: any = {
+    amount_paid: newAmountPaid,
+    amount_due: newAmountDue,
+    last_edited_at: new Date().toISOString()
+  };
+
+  if (isFullyPaid) {
+    // Mark as fully paid
+    updateData.status = 'PAID';
+    updateData.paid_date = new Date().toISOString();
+    updateData.payment_made_at = new Date().toISOString();
+    updateData.partially_paid = false;
+  } else {
+    // Mark as partially paid
+    updateData.status = 'PARTIALLY_PAID';
+    updateData.partially_paid = true;
+    updateData.partial_payment_made_at = new Date().toISOString();
+  }
+
   const { error } = await supabase
     .from('invoices')
-    .update({ 
-      status: 'PARTIALLY PAID',
-      partially_paid: true,
-      amount_paid: newAmountPaid,
-      amount_due: newAmountDue
-    })
+    .update(updateData)
     .eq('id', invoiceId);
 
   if (error) {
-    throw new Error(`Failed to mark invoice as partially paid: ${error.message}`);
+    throw new Error(`Failed to mark invoice as ${isFullyPaid ? 'paid' : 'partially paid'}: ${error.message}`);
+  }
+
+  // Log to daily events
+  if (isFullyPaid) {
+    await dailyEventsService.logPaymentMade(
+      invoiceId,
+      invoice.invoice_no,
+      invoice.entity || 'Unknown',
+      totalAmount
+    );
+  } else {
+    await dailyEventsService.logPartialPayment(
+      invoiceId,
+      invoice.invoice_no,
+      invoice.entity || 'Unknown',
+      amountPaid,
+      totalAmount
+    );
   }
 
   // Audit log
-  await auditService.logInvoicePartialPayment(invoiceId, {
-    invoice_number: invoice.invoice_no,
-    supplier_name: invoice.supplier_name,
-    amount: invoice.total_amount,
-    amount_paid: amountPaid,
-    status_from: invoice.status,
-    status_to: 'PARTIALLY PAID'
-  });
+  if (isFullyPaid) {
+    await auditService.logInvoiceMarkedPaid(invoiceId, {
+      invoice_number: invoice.invoice_no,
+      supplier_name: invoice.supplier_name,
+      amount: invoice.total_amount,
+      status_from: invoice.status,
+      status_to: 'PAID',
+      remittance_sent: false
+    });
+  } else {
+    await auditService.logInvoicePartialPayment(invoiceId, {
+      invoice_number: invoice.invoice_no,
+      supplier_name: invoice.supplier_name,
+      amount: invoice.total_amount,
+      amount_paid: amountPaid,
+      status_from: invoice.status,
+      status_to: 'PARTIALLY_PAID'
+    });
+  }
 };
 
 // Email management functions
@@ -646,12 +795,26 @@ export const unmarkPartialPayment = async (invoiceId: string) => {
       status: 'READY',
       partially_paid: false,
       amount_paid: 0,
-      amount_due: null
+      amount_due: null,
+      partial_payment_made_at: null,
+      last_edited_at: new Date().toISOString()
     })
     .eq('id', invoiceId);
 
   if (error) {
     throw new Error(`Failed to unmark partial payment: ${error.message}`);
+  }
+
+  // Delete related daily_events entries for partial payments
+  const { error: deleteError } = await supabase
+    .from('daily_events')
+    .delete()
+    .eq('invoice_id', invoiceId)
+    .eq('event_type', 'PARTIAL_PAYMENT');
+
+  if (deleteError) {
+    console.error('Failed to delete daily events:', deleteError);
+    // Don't throw - we want the unmark to succeed even if event cleanup fails
   }
 
   // Audit log
