@@ -34,7 +34,7 @@ const formatCurrency = (amount: number) => {
 const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: boolean, lockedByUser?: string) => {
   const statusConfig: Record<string, { bg: string; border: string; text: string }> = {
     PAID: { bg: "bg-green-50", border: "border-green-200", text: "text-green-700" },
-    "PARTIALLY PAID": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
+    "PARTIALLY_PAID": { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-700" },
     FLAGGED: { bg: "bg-red-50", border: "border-red-200", text: "text-red-700" },
     READY: { bg: "bg-primary/10", border: "border-primary/20", text: "text-primary" },
   };
@@ -45,7 +45,7 @@ const getStatusBadge = (status: string, invoice: Invoice, isLockedByOther?: bool
     if (status === "PAID") {
       return `Paid ${formatCurrency(invoice.amount_paid || invoice.total_amount)} on ${formatDateSydney(invoice.paid_date)}`;
     }
-    if (status === "PARTIALLY PAID") {
+    if (status === "PARTIALLY_PAID") {
       return `Partially paid ${formatCurrency(invoice.amount_paid || 0)} on ${formatDateSydney(invoice.paid_date)}`;
     }
     return status;
@@ -242,7 +242,7 @@ export function PaidInvoiceViewer({
                         />
                         
                         {/* Remittance Section - only show for paid invoices */}
-                        {(invoice.status === 'PAID' || invoice.status === 'PARTIALLY PAID') && (
+                        {(invoice.status === 'PAID' || invoice.status === 'PARTIALLY_PAID') && (
                           <RemittanceSection 
                             invoice={invoice}
                             onRemittanceSent={(invoiceId, email) => {

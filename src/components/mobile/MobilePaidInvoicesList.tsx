@@ -29,7 +29,7 @@ const formatDateShort = (dateString?: string): string => {
 const getStatusStyles = (status: string): string => {
   const styles: Record<string, string> = {
     'PAID': 'bg-green-50 border-green-200 text-green-700',
-    'PARTIALLY PAID': 'bg-amber-50 border-amber-200 text-amber-700',
+    'PARTIALLY_PAID': 'bg-amber-50 border-amber-200 text-amber-700',
     'FLAGGED': 'bg-red-50 border-red-200 text-red-700',
     'READY': 'bg-primary/10 border-primary/20 text-primary',
   };

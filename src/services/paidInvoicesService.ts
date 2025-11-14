@@ -155,7 +155,7 @@ export async function fetchPaidInvoices({
           | "FLAGGED"
           | "PAID"
           | "APPROVED"
-          | "PARTIALLY PAID") || "PAID",
+          | "PARTIALLY_PAID") || "PAID",
       xero_bill_id: invoice.xero_invoice_id || "",
       drive_embed_url:
         (invoice as any).google_drive_embed_link ||
@@ -353,7 +353,7 @@ export async function fetchInvoiceById(
       amount: Number(data.total_amount) || 0,
       due_date: data.due_date || "",
       status:
-        (data.status as "READY" | "FLAGGED" | "PAID" | "APPROVED" | "PARTIALLY PAID") ||
+        (data.status as "READY" | "FLAGGED" | "PAID" | "APPROVED" | "PARTIALLY_PAID") ||
         "PAID",
       xero_bill_id: data.xero_invoice_id || "",
       drive_embed_url:

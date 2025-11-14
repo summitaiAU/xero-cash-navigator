@@ -48,7 +48,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     supplier: invoice.supplier_name || '',
     amount: Number(invoice.total_amount) || 0,
     due_date: invoice.due_date || '',
-    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY PAID') || 'READY',
+    status: (invoice.status as 'READY' | 'FLAGGED' | 'PAID' | 'APPROVED' | 'PARTIALLY_PAID') || 'READY',
     xero_bill_id: invoice.xero_invoice_id || '',
     drive_embed_url: (invoice as any).google_drive_embed_link || invoice.google_drive_link || '',
     drive_view_url: invoice.link_to_invoice || '',
@@ -642,7 +642,7 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
     updateData.partially_paid = false;
   } else {
     // Mark as partially paid
-    updateData.status = 'PARTIALLY PAID';
+    updateData.status = 'PARTIALLY_PAID';
     updateData.partially_paid = true;
     updateData.partial_payment_made_at = new Date().toISOString();
   }
@@ -691,7 +691,7 @@ export const markAsPartiallyPaid = async (invoiceId: string, amountPaid: number)
       amount: invoice.total_amount,
       amount_paid: amountPaid,
       status_from: invoice.status,
-      status_to: 'PARTIALLY PAID'
+      status_to: 'PARTIALLY_PAID'
     });
   }
 };

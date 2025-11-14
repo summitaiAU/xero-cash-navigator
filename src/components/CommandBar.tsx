@@ -58,7 +58,7 @@ export const CommandBar: React.FC<CommandBarProps> = ({
           label: 'Ready',
           className: 'bg-primary/10 text-primary border-primary/20'
         };
-      case 'PARTIALLY PAID':
+      case 'PARTIALLY_PAID':
         return {
           label: 'Partial',
           className: 'bg-warning/10 text-warning border-warning/20'
