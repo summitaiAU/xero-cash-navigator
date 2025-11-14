@@ -535,7 +535,7 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
         </div>
 
         {/* Partial Payment Status */}
-        {invoice.status === 'PARTIALLY PAID' && (
+        {invoice.status === 'PARTIALLY_PAID' && (
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">

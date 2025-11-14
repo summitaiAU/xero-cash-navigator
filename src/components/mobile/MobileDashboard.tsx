@@ -306,7 +306,7 @@ export const MobileDashboard = ({
             )}
             
             {/* Remittance Section - Only for Paid/Partially Paid Invoices */}
-            {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY PAID') && (
+            {(currentInvoice.status === 'PAID' || currentInvoice.status === 'PARTIALLY_PAID') && (
               <div className="mx-2 mt-3">
                 <RemittanceSection
                   invoice={currentInvoice}

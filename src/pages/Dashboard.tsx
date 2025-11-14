@@ -628,7 +628,7 @@ export const Dashboard: React.FC = () => {
     } else if (selectedInvoice.status === "FLAGGED") {
       targetView = "flagged";
     } else {
-      // For all other statuses (READY, APPROVED, PARTIALLY PAID), use payable view
+      // For all other statuses (READY, APPROVED, PARTIALLY_PAID), use payable view
       targetView = "payable";
     }
 

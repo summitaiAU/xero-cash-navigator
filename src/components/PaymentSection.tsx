@@ -621,7 +621,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
             </div>
         )}
 
-        {invoice.status === 'PARTIALLY PAID' && (
+        {invoice.status === 'PARTIALLY_PAID' && (
             <div className="p-5 bg-warning/10 border border-warning/30 rounded-[var(--radius-lg)]">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

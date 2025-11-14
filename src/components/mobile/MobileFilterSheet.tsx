@@ -26,7 +26,7 @@ interface MobileFilterSheetProps {
 
 const STATUS_OPTIONS = [
   { value: 'PAID', label: 'Paid' },
-  { value: 'PARTIALLY PAID', label: 'Partially Paid' },
+  { value: 'PARTIALLY_PAID', label: 'Partially Paid' },
   { value: 'FLAGGED', label: 'Flagged' },
   { value: 'READY', label: 'Ready' },
 ];
