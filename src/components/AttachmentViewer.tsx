@@ -74,6 +74,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
   const [loading, setLoading] = useState(false);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [blobError, setBlobError] = useState(false);
+  const [messageId, setMessageId] = useState<string | null>(null);
 
   const loadAttachment = async () => {
     if (!attachmentId) return;
@@ -143,6 +144,26 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
       });
     }
   }, [attachment?.id, attachment?.data_base64url]);
+
+  // Fetch message_id for EML files to enable Gmail link
+  useEffect(() => {
+    async function fetchMessageId() {
+      if (attachment?.mime_type === 'message/rfc822' && attachment.email_id) {
+        const { data } = await supabase
+          .from('email_queue')
+          .select('message_id')
+          .eq('id', attachment.email_id)
+          .maybeSingle();
+        
+        if (data) {
+          setMessageId(data.message_id);
+        }
+      } else {
+        setMessageId(null);
+      }
+    }
+    fetchMessageId();
+  }, [attachment?.id, attachment?.mime_type, attachment?.email_id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -250,10 +271,41 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
     }
   };
 
+  const handleViewInGmail = () => {
+    if (messageId) {
+      const gmailUrl = `https://mail.google.com/mail/u/0/#inbox/${messageId}`;
+      window.open(gmailUrl, '_blank');
+    }
+  };
+
   const renderViewer = () => {
     if (!attachment) return null;
 
     const kind = getViewerKind();
+
+    // EML files that can't be previewed - show special message
+    if (kind === "eml" && attachment.previewable === false) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4 bg-muted/20 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-muted-foreground">Preview not available for this file type</h3>
+          <p className="text-sm text-muted-foreground max-w-md text-center leading-relaxed">
+            EML files cannot be viewed in the dashboard. Open the attachment while logged into info.sodhipg@gmail.com.
+            <br /><br />
+            If an invoice is found, add the invoice manually. Once added, this attachment can be ignored.
+          </p>
+          <div className="text-xs text-muted-foreground space-y-1 text-center">
+            <div>{attachment.filename}</div>
+            <div>{attachment.mime_type} • {formatFileSize(attachment.size_bytes)}</div>
+          </div>
+          {messageId && (
+            <Button onClick={handleViewInGmail} className="mt-2">
+              <ExternalLink className="w-4 h-4 mr-2" />
+              View Email in Browser
+            </Button>
+          )}
+        </div>
+      );
+    }
 
     // Handle unsupported file types
     if (kind === "unsupported" || attachment.previewable === false) {
@@ -529,15 +581,30 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
             {!loading && attachment && (
               <div className="px-4 py-3 bg-white border-b border-slate-200">
                 {/* Primary Action */}
-                {attachment.status === "review" && onAddInvoice ? (
-                  <Button 
-                    onClick={() => onAddInvoice(attachment)}
-                    className="w-full h-11 mb-2 bg-orange-500 hover:bg-orange-600 text-white"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add as Invoice
-                  </Button>
-                ) : attachment.data_base64url ? (
+                {attachment.status === "review" && (
+                  getViewerKind() === "eml" ? (
+                    messageId && (
+                      <Button 
+                        onClick={handleViewInGmail}
+                        className="w-full h-11 mb-2 bg-primary hover:bg-primary/90 text-white"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View Email in Browser
+                      </Button>
+                    )
+                  ) : (
+                    onAddInvoice && (
+                      <Button 
+                        onClick={() => onAddInvoice(attachment)}
+                        className="w-full h-11 mb-2 bg-orange-500 hover:bg-orange-600 text-white"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add as Invoice
+                      </Button>
+                    )
+                  )
+                )}
+                {attachment.status !== "review" && attachment.data_base64url && (
                   <Button 
                     onClick={handleDownload}
                     variant="outline"
@@ -546,7 +613,7 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                     <Download className="w-4 h-4 mr-2" />
                     Download
                   </Button>
-                ) : null}
+                )}
 
                 {/* Secondary Actions */}
                 <div className="flex items-center justify-center gap-2">
@@ -680,11 +747,21 @@ export const AttachmentViewer = ({ attachmentId, onClose, onAddInvoice, onAttach
                   <X className="w-3 h-3 mr-1" />
                   <span className="text-xs">Ignore</span>
                 </Button>
-                {onAddInvoice && (
-                  <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
-                    <Plus className="w-3 h-3 mr-1" />
-                    <span className="text-xs">Add Invoice</span>
-                  </Button>
+                {/* Show "View Email in Browser" for EML files, "Add Invoice" for others */}
+                {getViewerKind() === "eml" ? (
+                  messageId && (
+                    <Button variant="default" size="sm" onClick={handleViewInGmail}>
+                      <ExternalLink className="w-3 h-3 mr-1" />
+                      <span className="text-xs">View Email in Browser</span>
+                    </Button>
+                  )
+                ) : (
+                  onAddInvoice && (
+                    <Button variant="default" size="sm" onClick={() => onAddInvoice(attachment)}>
+                      <Plus className="w-3 h-3 mr-1" />
+                      <span className="text-xs">Add Invoice</span>
+                    </Button>
+                  )
                 )}
               </>
             )}
