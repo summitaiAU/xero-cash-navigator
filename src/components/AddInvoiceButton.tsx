@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Upload, Plus, Camera, X, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { auditService } from '@/services/auditService';
+ import { ManualInvoiceModal } from './ManualInvoiceModal';
 
 interface AddInvoiceButtonProps {
   isMobile?: boolean;
@@ -16,6 +17,7 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
   const [fileData, setFileData] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+   const [manualEntryOpen, setManualEntryOpen] = useState(false);
   const { toast } = useToast();
 
   const handleDrop = (e: React.DragEvent) => {
@@ -241,7 +243,8 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+     <>
+     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {isMobile ? (
           <Button variant="outline" size="sm" className="h-8 w-8 p-0" disabled={isProcessing}>
@@ -364,8 +367,32 @@ export const AddInvoiceButton: React.FC<AddInvoiceButtonProps> = ({ isMobile = f
               Submit Invoice
             </Button>
           </div>
+
+           {/* Enter Manually Option */}
+           <div className="text-center pt-2">
+             <button
+               type="button"
+               onClick={() => {
+                 setOpen(false);
+                 setFileData(null);
+                 setFileName('');
+                 setManualEntryOpen(true);
+               }}
+               className="text-sm text-muted-foreground hover:text-primary underline transition-colors"
+             >
+               Enter invoice manually
+             </button>
+           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-};
+
+     {/* Manual Entry Modal */}
+     <ManualInvoiceModal
+       open={manualEntryOpen}
+       onClose={() => setManualEntryOpen(false)}
+       onSuccess={onSuccess}
+     />
+     </>
+   );
+ };
