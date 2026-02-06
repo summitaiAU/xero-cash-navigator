@@ -46,18 +46,19 @@
    onSuccess?: () => void;
  }
  
- interface LineItem {
-   id: string;
-   description: string;
-   quantity: number;
-   unit_price: number;
-   gst_included: boolean;
-   gst_exempt: boolean;
-   account_code: string;
-   line_total_ex_gst: number;
-   line_gst: number;
-   line_total_inc_gst: number;
- }
+interface LineItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  gst_included: boolean;
+  gst_exempt: boolean;
+  account_code: string;
+  line_total_ex_gst: number;
+  line_gst: number;
+  line_total_inc_gst: number;
+  total: number;
+}
  
  interface DraftInvoice {
    supplier_name: string;
@@ -114,19 +115,22 @@
      line_total_inc_gst = line_total_ex_gst + line_gst;
    }
  
-   return {
-     id: item.id || genLineItemId(),
-     description: item.description || "",
-     quantity,
-     unit_price: unitPrice,
-     gst_included: gstIncluded,
-     gst_exempt: gstExempt,
-     account_code: item.account_code || "",
-     line_total_ex_gst: Math.round(line_total_ex_gst * 100) / 100,
-     line_gst: Math.round(line_gst * 100) / 100,
-     line_total_inc_gst: Math.round(line_total_inc_gst * 100) / 100,
-   };
- };
+  const total = quantity * unitPrice;
+
+  return {
+    id: item.id || genLineItemId(),
+    description: item.description || "",
+    quantity,
+    unit_price: unitPrice,
+    gst_included: gstIncluded,
+    gst_exempt: gstExempt,
+    account_code: item.account_code || "",
+    total,
+    line_total_ex_gst: Math.round(line_total_ex_gst * 100) / 100,
+    line_gst: Math.round(line_gst * 100) / 100,
+    line_total_inc_gst: Math.round(line_total_inc_gst * 100) / 100,
+  };
+};
  
  const createEmptyDraft = (): DraftInvoice => ({
    supplier_name: "",
@@ -218,12 +222,29 @@
      setDraftInvoice({ ...draftInvoice, [field]: value });
    };
  
-   const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
-     const items = [...draftInvoice.list_items];
-     const item = { ...items[index], [field]: value };
-     items[index] = calculateLineItem(item);
-     setDraftInvoice({ ...draftInvoice, list_items: items });
-   };
+  const updateLineItem = (index: number, field: keyof LineItem, value: any) => {
+    const items = [...draftInvoice.list_items];
+    const item = { ...items[index], [field]: value };
+    items[index] = calculateLineItem(item);
+    setDraftInvoice({ ...draftInvoice, list_items: items });
+  };
+
+  // Atomic GST update to handle mutual exclusivity properly
+  const updateLineItemGst = (index: number, field: 'gst_included' | 'gst_exempt', value: boolean) => {
+    const items = [...draftInvoice.list_items];
+    const item = { ...items[index] };
+    
+    if (field === 'gst_included') {
+      item.gst_included = value;
+      if (value) item.gst_exempt = false;
+    } else if (field === 'gst_exempt') {
+      item.gst_exempt = value;
+      if (value) item.gst_included = false;
+    }
+    
+    items[index] = calculateLineItem(item);
+    setDraftInvoice({ ...draftInvoice, list_items: items });
+  };
  
    const addLineItem = () => {
      const newItem = calculateLineItem({
@@ -692,40 +713,40 @@
                              onChange={(e) => updateLineItem(index, "quantity", parseFloat(e.target.value) || 0)}
                            />
                          </div>
-                         <div className="space-y-2">
-                           <Label>Unit Price</Label>
-                           <Input
-                             type="number"
-                             step="0.01"
-                             value={item.unit_price}
-                             onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-                           />
-                         </div>
-                       </div>
-                       <div className="flex items-center gap-4">
-                         <div className="flex items-center gap-2">
-                           <Checkbox
-                             id={`gst_incl_${index}`}
-                             checked={item.gst_included}
-                             onCheckedChange={(checked) => {
-                               updateLineItem(index, "gst_included", !!checked);
-                               if (checked) updateLineItem(index, "gst_exempt", false);
-                             }}
-                           />
-                           <Label htmlFor={`gst_incl_${index}`} className="text-xs">GST INCL</Label>
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <Checkbox
-                             id={`gst_exempt_${index}`}
-                             checked={item.gst_exempt}
-                             onCheckedChange={(checked) => {
-                               updateLineItem(index, "gst_exempt", !!checked);
-                               if (checked) updateLineItem(index, "gst_included", false);
-                             }}
-                           />
-                           <Label htmlFor={`gst_exempt_${index}`} className="text-xs">GST EXMT</Label>
-                         </div>
-                       </div>
+                          <div className="space-y-2">
+                            <Label>Unit Price</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={item.unit_price || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const numValue = val === '' ? 0 : parseFloat(val);
+                                if (!isNaN(numValue)) {
+                                  updateLineItem(index, "unit_price", numValue);
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`gst_incl_${index}`}
+                              checked={item.gst_included}
+                              onCheckedChange={(checked) => updateLineItemGst(index, 'gst_included', !!checked)}
+                            />
+                            <Label htmlFor={`gst_incl_${index}`} className="text-xs">GST INCL</Label>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`gst_exempt_${index}`}
+                              checked={item.gst_exempt}
+                              onCheckedChange={(checked) => updateLineItemGst(index, 'gst_exempt', !!checked)}
+                            />
+                            <Label htmlFor={`gst_exempt_${index}`} className="text-xs">GST EXMT</Label>
+                          </div>
+                        </div>
                        <div className="flex justify-between text-sm pt-2 border-t">
                          <span>Line Total</span>
                          <span className="font-medium">${item.line_total_inc_gst.toFixed(2)}</span>
@@ -777,33 +798,33 @@
                                className="h-8 w-16"
                              />
                            </TableCell>
-                           <TableCell>
-                             <Input
-                               type="number"
-                               step="0.01"
-                               value={item.unit_price}
-                               onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-                               className="h-8"
-                             />
-                           </TableCell>
-                           <TableCell className="text-center">
-                             <Checkbox
-                               checked={item.gst_included}
-                               onCheckedChange={(checked) => {
-                                 updateLineItem(index, "gst_included", !!checked);
-                                 if (checked) updateLineItem(index, "gst_exempt", false);
-                               }}
-                             />
-                           </TableCell>
-                           <TableCell className="text-center">
-                             <Checkbox
-                               checked={item.gst_exempt}
-                               onCheckedChange={(checked) => {
-                                 updateLineItem(index, "gst_exempt", !!checked);
-                                 if (checked) updateLineItem(index, "gst_included", false);
-                               }}
-                             />
-                           </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={item.unit_price || ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  const numValue = val === '' ? 0 : parseFloat(val);
+                                  if (!isNaN(numValue)) {
+                                    updateLineItem(index, "unit_price", numValue);
+                                  }
+                                }}
+                                className="h-8"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                checked={item.gst_included}
+                                onCheckedChange={(checked) => updateLineItemGst(index, 'gst_included', !!checked)}
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Checkbox
+                                checked={item.gst_exempt}
+                                onCheckedChange={(checked) => updateLineItemGst(index, 'gst_exempt', !!checked)}
+                              />
+                            </TableCell>
                            <TableCell className="text-right">
                              {item.gst_exempt ? (
                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
