@@ -1,186 +1,167 @@
 
-# Plan: Fix ManualInvoiceModal Issues
+# Plan: Improve Webhook Response Handling in ManualInvoiceModal
 
-## Issues Identified
+## Current Behavior
 
-### Issue 1: GST Checkboxes Not Working Correctly
-**Root Cause**: When changing GST INCL or GST EXMT, the code calls `updateLineItem` twice in sequence:
-```tsx
-onCheckedChange={(checked) => {
-  updateLineItem(index, "gst_included", !!checked);
-  if (checked) updateLineItem(index, "gst_exempt", false);
-}}
-```
+The current implementation (lines 445-464) has these issues:
 
-The problem is that the second `updateLineItem` call reads stale state from `draftInvoice.list_items` because React hasn't re-rendered yet. Both calls use `[...draftInvoice.list_items]` which refers to the same original array.
+1. **No timeout**: Uses browser default (could hang indefinitely)
+2. **No response status checking**: Doesn't check `response.ok` or specific status codes
+3. **Silent failure**: Webhook errors are caught but swallowed with just a console log
+4. **Immediate success notification**: Toast shows right after Supabase save, before confirming webhook success
 
-**Solution**: Modify `updateLineItem` to handle both fields atomically in a single update, OR use a callback pattern that passes both field values at once.
+## Proposed Solution
 
-### Issue 2: Unit Price Field Can't Be Cleared
-**Root Cause**: The current handler:
-```tsx
-onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-```
-
-When user backspaces to empty, `parseFloat("")` returns `NaN`, so `|| 0` kicks in and immediately sets value back to 0.
-
-**Solution**: Allow empty string in the input, only convert to 0 when saving or calculating. Use controlled input that preserves the raw string value.
-
-### Issue 3: Missing "total" Field in Line Items
-**Root Cause**: `XeroSection.tsx` saves line items with a `total` field (line 597):
-```tsx
-return {
-  ...
-  total: lineAmount,  // <-- ManualInvoiceModal doesn't have this
-  ...
-}
-```
-
-But `ManualInvoiceModal` and `AddInvoiceWorkspace` don't include this field in their `calculateLineItem` function or saved data.
-
-**Solution**: Add `total` field to the `LineItem` interface and `calculateLineItem` function.
+Match the robust pattern from `AddInvoiceButton.tsx`:
+- Add 5-minute timeout using `AbortSignal.timeout(300000)`
+- Check response status codes (200, 415, 406, 409, etc.)
+- Show appropriate error messages based on webhook response
+- Only show success toast after both Supabase save AND webhook succeed
 
 ---
 
 ## Technical Changes
 
-### 1. Fix GST Checkbox Logic (ManualInvoiceModal.tsx)
+### File: `src/components/ManualInvoiceModal.tsx`
 
-**Current problematic code (lines 707-727):**
+**Current Code (lines 441-464):**
 ```tsx
-<Checkbox
-  checked={item.gst_included}
-  onCheckedChange={(checked) => {
-    updateLineItem(index, "gst_included", !!checked);
-    if (checked) updateLineItem(index, "gst_exempt", false);
-  }}
-/>
+// Trigger webhook with file data
+const base64Data = fileData!.split(',')[1];
+const contentType = fileData!.split(',')[0].split(':')[1].split(';')[0];
+
+try {
+  await fetch('https://sodhipg.app.n8n.cloud/webhook/d142073d-c96d-4386-b029-e9e26c145e85', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: invoiceId,
+      file_name: fileName,
+      file_data: base64Data,
+      content_type: contentType,
+    }),
+  });
+} catch (webhookError) {
+  console.error("Webhook error:", webhookError);
+  // Don't fail the save if webhook fails
+}
+
+toast({
+  title: "Invoice Saved",
+  description: "Invoice has been created successfully.",
+});
 ```
 
-**New approach - create a dedicated handler that updates both fields atomically:**
+**New Code:**
 ```tsx
-const updateLineItemGst = (index: number, field: 'gst_included' | 'gst_exempt', value: boolean) => {
-  const items = [...draftInvoice.list_items];
-  const item = { ...items[index] };
-  
-  if (field === 'gst_included') {
-    item.gst_included = value;
-    if (value) item.gst_exempt = false; // Mutually exclusive
-  } else if (field === 'gst_exempt') {
-    item.gst_exempt = value;
-    if (value) item.gst_included = false; // Mutually exclusive
+// Trigger webhook with file data
+const base64Data = fileData!.split(',')[1];
+const contentType = fileData!.split(',')[0].split(':')[1].split(';')[0];
+
+console.log('Sending to webhook with 5-minute timeout...');
+
+const response = await fetch(
+  'https://sodhipg.app.n8n.cloud/webhook/d142073d-c96d-4386-b029-e9e26c145e85',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      id: invoiceId,
+      file_name: fileName,
+      file_data: base64Data,
+      content_type: contentType,
+    }),
+    signal: AbortSignal.timeout(300000) // 5 minute timeout
   }
+);
+
+console.log('Webhook response status:', response.status);
+
+// Handle success (200)
+if (response.status === 200) {
+  toast({
+    title: "Invoice Saved",
+    description: "Invoice has been created and file uploaded successfully.",
+  });
+  onClose();
+  onSuccess?.();
+  return;
+}
+
+// Handle OCR issues (415)
+if (response.status === 415) {
+  toast({
+    title: "OCR Issue",
+    description: "Invoice saved, but there was an issue processing the document. Please check the invoice format.",
+    variant: "destructive",
+  });
+  onClose();
+  onSuccess?.();
+  return;
+}
+
+// Handle validation fails (406)
+if (response.status === 406) {
+  toast({
+    title: "Validation Issue",
+    description: "Invoice saved, but document validation failed. Please verify the file.",
+    variant: "destructive",
+  });
+  onClose();
+  onSuccess?.();
+  return;
+}
+
+// Handle any other non-success status
+throw new Error(`Webhook returned status ${response.status}`);
+```
+
+**Updated Catch Block:**
+```tsx
+} catch (error: any) {
+  console.error("Save failed:", error);
   
-  items[index] = calculateLineItem(item);
-  setDraftInvoice({ ...draftInvoice, list_items: items });
-};
-```
-
-**Updated checkbox usage:**
-```tsx
-<Checkbox
-  checked={item.gst_included}
-  onCheckedChange={(checked) => updateLineItemGst(index, 'gst_included', !!checked)}
-/>
-// ...
-<Checkbox
-  checked={item.gst_exempt}
-  onCheckedChange={(checked) => updateLineItemGst(index, 'gst_exempt', !!checked)}
-/>
-```
-
-### 2. Fix Unit Price Field Input (ManualInvoiceModal.tsx)
-
-**Current problematic code:**
-```tsx
-<Input
-  type="number"
-  value={item.unit_price}
-  onChange={(e) => updateLineItem(index, "unit_price", parseFloat(e.target.value) || 0)}
-/>
-```
-
-**Solution - allow empty input and handle parsing in updateLineItem:**
-```tsx
-<Input
-  type="number"
-  step="0.01"
-  value={item.unit_price === 0 ? '' : item.unit_price}
-  onChange={(e) => {
-    const val = e.target.value;
-    updateLineItem(index, "unit_price", val === '' ? 0 : parseFloat(val) || 0);
-  }}
-  onBlur={(e) => {
-    // Ensure a valid number on blur
-    if (e.target.value === '') {
-      updateLineItem(index, "unit_price", 0);
-    }
-  }}
-/>
-```
-
-**Alternative cleaner approach** - use a raw string state for active editing:
-Since the field is `type="number"`, the browser already allows backspacing. The issue is the React state immediately converting empty to 0. Instead, don't force 0 when empty:
-
-```tsx
-onChange={(e) => {
-  const rawValue = e.target.value;
-  // Allow empty string during editing, parseFloat will handle it
-  const numValue = rawValue === '' ? 0 : parseFloat(rawValue);
-  if (!isNaN(numValue)) {
-    updateLineItem(index, "unit_price", numValue);
-  }
-}}
-```
-
-But we also need the input to show empty when the value is 0 to allow typing fresh:
-```tsx
-value={item.unit_price || ''}
-```
-
-### 3. Add "total" Field to LineItem (ManualInvoiceModal.tsx)
-
-**Update LineItem interface (around line 49):**
-```tsx
-interface LineItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  gst_included: boolean;
-  gst_exempt: boolean;
-  account_code: string;
-  line_total_ex_gst: number;
-  line_gst: number;
-  line_total_inc_gst: number;
-  total: number; // ADD THIS - matches XeroSection format
+  // Check if it's a timeout or network error
+  const isTimeout = error instanceof Error && error.name === 'TimeoutError';
+  const isNetworkError = error instanceof TypeError && error.message === 'Load failed';
+  
+  toast({
+    title: isTimeout ? "Upload Timeout" : isNetworkError ? "Network Error" : "Save Failed",
+    description: isTimeout 
+      ? "Processing took too long. The invoice was saved but file upload may have failed."
+      : isNetworkError
+      ? "Could not connect to the server. Please check your network connection."
+      : error.message || "An unexpected error occurred.",
+    variant: "destructive",
+  });
+} finally {
+  setSaving(false);
 }
 ```
 
-**Update calculateLineItem function (around line 92):**
-```tsx
-const calculateLineItem = (item: Partial<LineItem>): LineItem => {
-  const quantity = item.quantity || 0;
-  const unitPrice = item.unit_price || 0;
-  // ... existing GST calculation logic ...
-  
-  const total = quantity * unitPrice; // Base line amount before GST adjustments
-  
-  return {
-    id: item.id || genLineItemId(),
-    description: item.description || "",
-    quantity,
-    unit_price: unitPrice,
-    gst_included: gstIncluded,
-    gst_exempt: gstExempt,
-    account_code: item.account_code || "",
-    total, // ADD THIS
-    line_total_ex_gst: Math.round(line_total_ex_gst * 100) / 100,
-    line_gst: Math.round(line_gst * 100) / 100,
-    line_total_inc_gst: Math.round(line_total_inc_gst * 100) / 100,
-  };
-};
-```
+---
+
+## Response Handling Summary
+
+| Status Code | Meaning | User Message | Action |
+|-------------|---------|--------------|--------|
+| 200 | Success | "Invoice saved and file uploaded successfully" | Close modal, trigger onSuccess |
+| 415 | OCR Issue | "Invoice saved, but document processing issue" | Close modal, trigger onSuccess (invoice still saved) |
+| 406 | Validation Failed | "Invoice saved, but validation failed" | Close modal, trigger onSuccess |
+| Timeout | 5 min exceeded | "Processing took too long..." | Keep modal open (let user retry) |
+| Network Error | Connection failed | "Could not connect to server" | Keep modal open |
+| Other | Unknown | Error message | Keep modal open |
+
+---
+
+## Key Differences from AddInvoiceButton
+
+Since `ManualInvoiceModal` saves to Supabase BEFORE calling the webhook (unlike `AddInvoiceButton` which only calls webhook):
+
+1. The invoice is already saved in the database when webhook is called
+2. Webhook failures don't lose the invoice data
+3. We still close the modal and call onSuccess for non-critical webhook errors (415, 406) since the invoice exists
+4. Only for network/timeout errors do we keep the modal open so user can see the issue
 
 ---
 
@@ -188,14 +169,4 @@ const calculateLineItem = (item: Partial<LineItem>): LineItem => {
 
 | File | Changes |
 |------|---------|
-| `src/components/ManualInvoiceModal.tsx` | 1. Add `total` to LineItem interface<br>2. Add `total` to calculateLineItem return<br>3. Add `updateLineItemGst` function for atomic GST updates<br>4. Update checkbox handlers to use new function<br>5. Fix unit_price input to allow empty values |
-
----
-
-## Summary of Changes
-
-1. **GST Checkboxes**: Create atomic update function that handles mutual exclusivity in a single state update
-2. **Unit Price Input**: Allow empty string display when value is 0, parse correctly on change
-3. **Line Item Total**: Add `total` field matching XeroSection's format for consistency
-
-These fixes ensure the manual invoice entry modal behaves identically to other invoice editing sections in the application.
+| `src/components/ManualInvoiceModal.tsx` | Replace webhook try-catch block with full response handling and timeout |
