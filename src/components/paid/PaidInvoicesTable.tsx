@@ -25,6 +25,7 @@ interface PaidInvoicesTableProps {
   onInvoiceClick: (invoiceId: string) => void;
   isChangingPage?: boolean;
   onClearFilters?: () => void;
+  onSupplierClick?: (supplier: string) => void;
 }
 
 const formatDate = (dateString?: string) => {
@@ -72,6 +73,7 @@ export const PaidInvoicesTable = React.memo(function PaidInvoicesTable({
   onInvoiceClick,
   isChangingPage = false,
   onClearFilters,
+  onSupplierClick,
 }: PaidInvoicesTableProps) {
   const startIndex = currentPage * pageSize + 1;
   const endIndex = Math.min((currentPage + 1) * pageSize, totalCount);
@@ -184,8 +186,20 @@ export const PaidInvoicesTable = React.memo(function PaidInvoicesTable({
                 <TableCell className="px-4 py-5">
                   {getStatusBadge(invoice.status)}
                 </TableCell>
-                <TableCell className="px-4 py-5 truncate font-semibold text-foreground">
-                  {invoice.supplier_name || "—"}
+                <TableCell className="px-4 py-5 truncate">
+                  {invoice.supplier_name ? (
+                    <button
+                      className="font-semibold text-primary hover:text-primary/80 hover:underline underline-offset-2 transition-colors truncate max-w-full text-left"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSupplierClick?.(invoice.supplier_name!);
+                      }}
+                    >
+                      {invoice.supplier_name}
+                    </button>
+                  ) : (
+                    <span className="font-semibold text-foreground">—</span>
+                  )}
                 </TableCell>
                 <TableCell className="px-4 py-5 text-sm text-muted-foreground">
                   {invoice.entity || "—"}

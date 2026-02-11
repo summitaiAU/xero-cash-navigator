@@ -716,6 +716,7 @@ export default function PaidInvoices() {
               onInvoiceClick={handleInvoiceClick}
               isChangingPage={isChangingPage}
               onClearFilters={activeFiltersCount > 0 ? handleClearFilters : undefined}
+              onSupplierClick={handleSupplierClick}
             />
           )
         ) : (
