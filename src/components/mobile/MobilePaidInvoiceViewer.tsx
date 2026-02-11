@@ -276,6 +276,29 @@ export const MobilePaidInvoiceViewer: React.FC<MobilePaidInvoiceViewerProps> = (
           </Button>
         </div>
 
+        {/* Unmark as Paid */}
+        {(invoice.status === 'PAID' || invoice.status === 'PARTIALLY_PAID') && (
+          <div className="mx-2 mt-2">
+            <Button
+              variant="outline"
+              className="w-full h-11 text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={async () => {
+                const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
+                try {
+                  await unmarkInvoiceAsPaid(invoice.id);
+                  toast.success("Invoice unmarked as paid and moved back to payable.");
+                  onUpdate({ ...invoice, status: 'READY', paid_date: null, amount_paid: null });
+                  onBack();
+                } catch (error: any) {
+                  toast.error(error.message || "Failed to unmark invoice as paid");
+                }
+              }}
+            >
+              Unmark as Paid
+            </Button>
+          </div>
+        )}
+
         {/* Remittance Section */}
         {invoice.remittance_sent && (
           <RemittanceSection

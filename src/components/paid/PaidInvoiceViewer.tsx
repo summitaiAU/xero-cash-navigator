@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { InvoiceEditInfo } from "@/components/InvoiceEditInfo";
 import { RemittanceSection } from "@/components/RemittanceSection";
 import { Lock, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatDateSydney } from "@/lib/dateUtils";
 import { toast } from "sonner";
 
@@ -251,6 +252,30 @@ export function PaidInvoiceViewer({
                               toast.success("Remittance sent successfully");
                             }}
                           />
+                        )}
+
+                        {/* Unmark as Paid */}
+                        {(invoice.status === 'PAID' || invoice.status === 'PARTIALLY_PAID') && (
+                          <div className="border-t pt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-destructive border-destructive/30 hover:bg-destructive/10"
+                              onClick={async () => {
+                                const { unmarkInvoiceAsPaid } = await import('@/services/invoiceService');
+                                try {
+                                  await unmarkInvoiceAsPaid(invoice.id);
+                                  toast.success("Invoice unmarked as paid and moved back to payable.");
+                                  onInvoiceUpdated?.({ ...invoice, status: 'READY', paid_date: null, amount_paid: null });
+                                  onOpenChange(false);
+                                } catch (error: any) {
+                                  toast.error(error.message || "Failed to unmark invoice as paid");
+                                }
+                              }}
+                            >
+                              Unmark as Paid
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </ResizablePanel>
