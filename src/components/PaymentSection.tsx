@@ -58,7 +58,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       const items = e.clipboardData?.items;
       if (!items) return;
       
-      for (let item of items) {
+      for (const item of items) {
         if (item.type.indexOf('image') !== -1) {
           const blob = item.getAsFile();
           if (blob) {

@@ -50,9 +50,9 @@ export const useSafeOffsets = (
     window.addEventListener('load', onResize);
 
     // Fonts loading can change heights
-    // @ts-ignore - not all browsers have document.fonts
+    // @ts-expect-error temporary typing gap - not all browsers have document.fonts
     if (document.fonts?.ready) {
-      // @ts-ignore
+      // @ts-expect-error temporary typing gap
       document.fonts.ready.then(() => measure());
     }
 
