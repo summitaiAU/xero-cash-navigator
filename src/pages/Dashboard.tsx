@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { PDFViewer } from "@/components/PDFViewer";
+import { useSearchParams, useNavigate, useOutletContext } from "react-router-dom";
+import { PDFViewer, PDFViewerHandle } from "@/components/PDFViewer";
 import { XeroSection } from "@/components/XeroSection";
 import { PaymentSection } from "@/components/PaymentSection";
 import { PaidInvoiceSection } from "@/components/PaidInvoiceSection";
@@ -18,7 +18,7 @@ import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { CompactCommandBar } from "@/components/CompactCommandBar";
 import { MobileDashboard } from "@/components/mobile/MobileDashboard";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Invoice, ProcessingStatus, PaymentData } from "@/types/invoice";
+import { Invoice, ProcessingStatus, PaymentData, InvoiceViewState } from "@/types/invoice";
 import {
   fetchInvoices,
   updateInvoicePaymentStatus,
@@ -36,12 +36,15 @@ import { LogOut, User } from "lucide-react";
 import SodhiLogo from "@/assets/sodhi-logo.svg";
 import { FlaggedInvoiceSection } from "@/components/FlaggedInvoiceSection";
 import { useSafeOffsets } from "@/hooks/useSafeOffsets";
+import type { AppLayoutContext } from "@/layouts/AppLayout";
 
 export const Dashboard: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const outletContext = useOutletContext<AppLayoutContext | null>();
+  const refreshSidebarCounts = outletContext?.refreshSidebarCounts;
   const { user, signOut } = useAuth();
-  const initialView = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
+  const initialView = (searchParams.get('view') as InvoiceViewState) || 'payable';
   const isMobile = useIsMobile();
   
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -56,13 +59,16 @@ export const Dashboard: React.FC = () => {
     remittanceSent: false,
   });
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
-  const [viewState, setViewState] = useState<"payable" | "paid" | "flagged">(initialView);
+  const [viewState, setViewState] = useState<InvoiceViewState>(initialView);
   const [isViewLoading, setIsViewLoading] = useState(false);
   const [showActivityDrawer, setShowActivityDrawer] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isEditingXero, setIsEditingXero] = useState(false);
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const shimmerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pdfViewerRef = useRef<PDFViewerHandle>(null);
+  const navigationCooldownRef = useRef(false);
+  const navigationCooldownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -70,12 +76,11 @@ export const Dashboard: React.FC = () => {
 
   // Sync viewState with URL search params
   useEffect(() => {
-    const next = (searchParams.get('view') as 'payable' | 'paid' | 'flagged') || 'payable';
+    const next = (searchParams.get('view') as InvoiceViewState) || 'payable';
     if (next !== viewState) {
-      setIsViewLoading(true);
       setViewState(next);
     }
-  }, [searchParams]);
+  }, [searchParams, viewState]);
 
   // Multi-user presence tracking
   const { usersOnCurrentInvoice, isCurrentInvoiceBeingEdited } = useUserPresence({
@@ -94,7 +99,11 @@ export const Dashboard: React.FC = () => {
 
   // Calculate counts for navigation rail - MUST be before any conditional returns
   const payableCount = React.useMemo(() => 
-    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length,
+    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED' && inv.is_foreign !== true).length,
+    [allInvoices]
+  );
+  const foreignCount = React.useMemo(() =>
+    allInvoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED' && inv.is_foreign === true).length,
     [allInvoices]
   );
   const paidCount = React.useMemo(() => 
@@ -125,10 +134,10 @@ export const Dashboard: React.FC = () => {
         title: "Signed out",
         description: "You've been successfully signed out.",
       });
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Sign out failed",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred.",
         variant: "destructive",
       });
     }
@@ -185,9 +194,10 @@ export const Dashboard: React.FC = () => {
         fetchInvoices(viewState),
         Promise.all([
           fetchInvoices("payable"),
+          fetchInvoices("foreign"),
           fetchInvoices("paid"),
           fetchInvoices("flagged"),
-        ]).then(([payable, paid, flagged]) => [...payable, ...paid, ...flagged]),
+        ]).then(([payable, foreign, paid, flagged]) => [...payable, ...foreign, ...paid, ...flagged]),
       ]);
       
       setInvoices(refreshedInvoices);
@@ -231,12 +241,13 @@ export const Dashboard: React.FC = () => {
   // Load all invoices for search functionality
   const loadAllInvoices = async () => {
     try {
-      const [payable, paid, flagged] = await Promise.all([
+      const [payable, foreign, paid, flagged] = await Promise.all([
         fetchInvoices("payable"),
+        fetchInvoices("foreign"),
         fetchInvoices("paid"),
         fetchInvoices("flagged"),
       ]);
-      setAllInvoices([...payable, ...paid, ...flagged]);
+      setAllInvoices([...payable, ...foreign, ...paid, ...flagged]);
     } catch (error) {
       console.error("Failed to load all invoices for search:", error);
     }
@@ -244,6 +255,7 @@ export const Dashboard: React.FC = () => {
 
   // Load invoices whenever viewState changes
   useEffect(() => {
+    setIsViewLoading(true);
     loadInvoices().finally(() => setIsViewLoading(false));
   }, [viewState]);
 
@@ -274,6 +286,9 @@ export const Dashboard: React.FC = () => {
     return () => {
       if (shimmerTimeoutRef.current) {
         clearTimeout(shimmerTimeoutRef.current);
+      }
+      if (navigationCooldownTimeoutRef.current) {
+        clearTimeout(navigationCooldownTimeoutRef.current);
       }
     };
   }, []);
@@ -375,8 +390,28 @@ export const Dashboard: React.FC = () => {
     });
   };
 
+  const beginInvoiceNavigation = useCallback(() => {
+    if (navigationCooldownRef.current) {
+      return false;
+    }
+
+    navigationCooldownRef.current = true;
+    pdfViewerRef.current?.abort();
+
+    if (navigationCooldownTimeoutRef.current) {
+      clearTimeout(navigationCooldownTimeoutRef.current);
+    }
+
+    navigationCooldownTimeoutRef.current = setTimeout(() => {
+      navigationCooldownRef.current = false;
+      navigationCooldownTimeoutRef.current = null;
+    }, 200);
+
+    return true;
+  }, []);
+
   const handleNext = () => {
-    if (currentIndex < invoices.length - 1) {
+    if (currentIndex < invoices.length - 1 && beginInvoiceNavigation()) {
       setCurrentIndex(currentIndex + 1);
       resetProcessingStatus();
       scrollToTop();
@@ -385,7 +420,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handlePrevious = () => {
-    if (currentIndex > 0) {
+    if (currentIndex > 0 && beginInvoiceNavigation()) {
       setCurrentIndex(currentIndex - 1);
       resetProcessingStatus();
       scrollToTop();
@@ -428,7 +463,7 @@ export const Dashboard: React.FC = () => {
     }
   };
 
-  const handleXeroUpdate = async (updatedInvoice: any) => {
+  const handleXeroUpdate = async (updatedInvoice: Invoice) => {
     if (!currentInvoice) return;
 
     try {
@@ -438,6 +473,8 @@ export const Dashboard: React.FC = () => {
       // Refresh the entire invoice list to get the latest data from the database
       const refreshedInvoices = await fetchInvoices(viewState);
       setInvoices(refreshedInvoices);
+      await loadAllInvoices();
+      await refreshSidebarCounts?.();
 
       // Find the updated invoice's new position in the refreshed list
       const newIndex = refreshedInvoices.findIndex((inv) => inv.id === currentInvoiceId);
@@ -572,10 +609,11 @@ export const Dashboard: React.FC = () => {
     resetProcessingStatus();
   };
 
-  const handleViewStateChange = React.useCallback((state: "payable" | "paid" | "flagged") => {
+  const handleViewStateChange = React.useCallback((state: InvoiceViewState) => {
+    if (state === viewState || !beginInvoiceNavigation()) return;
     navigate(`/dashboard?view=${state}`);
     setCurrentIndex(0);
-  }, [navigate]);
+  }, [beginInvoiceNavigation, navigate, viewState]);
 
   const handleFlagInvoice = async (invoiceId: string) => {
     try {
@@ -613,6 +651,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleJumpToInvoice = (index: number) => {
+    if (index === currentIndex || index < 0 || index >= invoices.length || !beginInvoiceNavigation()) return;
     setCurrentIndex(index);
     resetProcessingStatus();
     scrollToTop();
@@ -621,14 +660,16 @@ export const Dashboard: React.FC = () => {
   // Handle invoice selection from search
   const handleInvoiceSelect = async (selectedInvoice: Invoice) => {
     // Determine which view the invoice belongs to and switch if necessary
-    let targetView: "payable" | "paid" | "flagged" = "payable";
+    let targetView: InvoiceViewState = "payable";
 
     if (selectedInvoice.status === "PAID") {
       targetView = "paid";
     } else if (selectedInvoice.status === "FLAGGED") {
       targetView = "flagged";
+    } else if (selectedInvoice.is_foreign === true) {
+      targetView = "foreign";
     } else {
-      // For all other statuses (READY, APPROVED, PARTIALLY_PAID), use payable view
+      // For all other non-foreign statuses (READY, APPROVED, PARTIALLY_PAID), use payable view
       targetView = "payable";
     }
 
@@ -637,6 +678,7 @@ export const Dashboard: React.FC = () => {
     // If we need to switch views, fetch and navigate
     if (targetView !== viewState) {
       console.log('[SEARCH] Switching from', viewState, 'to', targetView);
+      if (!beginInvoiceNavigation()) return;
       setLoading(true);
       setViewState(targetView);
       
@@ -669,7 +711,7 @@ export const Dashboard: React.FC = () => {
       // Same view, just navigate to the invoice
       console.log('[SEARCH] Same view, jumping to invoice');
       const invoiceIndex = invoices.findIndex((inv) => inv.id === selectedInvoice.id);
-      if (invoiceIndex !== -1) {
+      if (invoiceIndex !== -1 && invoiceIndex !== currentIndex && beginInvoiceNavigation()) {
         setCurrentIndex(invoiceIndex);
         resetProcessingStatus();
         scrollToTop();
@@ -749,6 +791,7 @@ export const Dashboard: React.FC = () => {
         onToggleHamburgerMenu={setShowHamburgerMenu}
         viewState={viewState}
         payableCount={payableCount}
+        foreignCount={foreignCount}
         flaggedCount={flaggedCount}
         reviewCount={reviewCount}
         userName={user?.email}
@@ -806,14 +849,16 @@ export const Dashboard: React.FC = () => {
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center">
                     <h2 className="text-2xl font-bold mb-4">
-                      No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : "Payable"} Invoices Found
+                      No {viewState === "paid" ? "Paid" : viewState === "flagged" ? "Flagged" : viewState === "foreign" ? "Foreign" : "Payable"} Invoices Found
                     </h2>
                     <p className="text-muted-foreground mb-4">
                       {viewState === "paid"
                         ? "No paid invoices are available to view."
                         : viewState === "flagged"
                           ? "No flagged invoices are available to view."
-                          : "No invoices are available for processing."}
+                          : viewState === "foreign"
+                            ? "No foreign invoices are available for processing."
+                            : "No invoices are available for processing."}
                     </p>
                     {viewState === "paid" && (
                       <p className="text-sm text-muted-foreground">Try switching to "Payable" to see unpaid invoices.</p>
@@ -824,7 +869,7 @@ export const Dashboard: React.FC = () => {
                 <>
                 {/* COMPLETELY FIXED LEFT COLUMN - PDF Viewer (never scrolls) */}
                 <div className="w-1/2 h-full flex-shrink-0">
-                  <PDFViewer invoice={currentInvoice} />
+                  <PDFViewer ref={pdfViewerRef} invoice={currentInvoice} />
                 </div>
 
                 {/* Subtle vertical divider */}
@@ -876,8 +921,8 @@ export const Dashboard: React.FC = () => {
                       />
                     )}
 
-                    {/* Delete Invoice Button - Only for payable invoices */}
-                    {viewState === "payable" && currentInvoice && (
+                    {/* Delete Invoice Button - Only for payable-style invoices */}
+                    {(viewState === "payable" || viewState === "foreign") && currentInvoice && (
                       <DeleteInvoiceButton
                         invoice={currentInvoice}
                         onDeleted={async () => {

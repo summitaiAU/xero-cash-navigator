@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
+
+const PDF_MOUNT_DELAY_MS = 150;
 
 interface PDFViewerProps {
   invoice: Invoice;
@@ -14,80 +16,100 @@ export interface PDFViewerHandle {
 export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice }, ref) => {
   const [pdfError, setPdfError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [shouldMount, setShouldMount] = useState(false);
+  const [mountInvoiceId, setMountInvoiceId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const invoiceIdRef = useRef(invoice.id);
   const loadStartRef = useRef<number>(0);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const mountTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  invoiceIdRef.current = invoice.id;
+
+  const clearTimer = useCallback((timerRef: React.MutableRefObject<NodeJS.Timeout | null>) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const unloadIframe = useCallback(() => {
+    try {
+      if (iframeRef.current) {
+        iframeRef.current.src = 'about:blank';
+      }
+    } catch {
+      // Safari may throw while tearing down embedded PDF frames.
+    }
+  }, []);
 
   // Expose abort() handle to parent
   useImperativeHandle(ref, () => ({
     abort() {
       try {
         console.info('[PDFViewer] Abort called - unloading iframe');
-        if (iframeRef.current) {
-          iframeRef.current.src = 'about:blank';
-        }
+        unloadIframe();
       } finally {
-        setShouldMount(false);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        clearTimer(mountTimerRef);
+        clearTimer(timeoutRef);
+        setMountInvoiceId(null);
+        setPdfError(false);
+        setIsLoading(false);
       }
     },
-  }));
+  }), [clearTimer, unloadIframe]);
 
-  // Reset state when invoice changes and delay mounting
+  // Reset state when invoice changes and delay mounting until the old iframe is gone.
   useEffect(() => {
+    clearTimer(mountTimerRef);
+    clearTimer(timeoutRef);
+    unloadIframe();
     setPdfError(false);
     setIsLoading(true);
-    setShouldMount(false);
+    setMountInvoiceId(null);
     loadStartRef.current = performance.now();
     
-    // Delay mounting by 100ms to ensure previous iframe is cleaned up
-    const timer = setTimeout(() => setShouldMount(true), 100);
+    mountTimerRef.current = setTimeout(() => {
+      if (invoiceIdRef.current === invoice.id) {
+        loadStartRef.current = performance.now();
+        setMountInvoiceId(invoice.id);
+      }
+      mountTimerRef.current = null;
+    }, PDF_MOUNT_DELAY_MS);
+
     return () => {
-      clearTimeout(timer);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearTimer(mountTimerRef);
+      clearTimer(timeoutRef);
+      unloadIframe();
     };
-  }, [invoice.id]);
+  }, [clearTimer, invoice.id, unloadIframe]);
 
   // Setup 5s timeout watchdog when iframe mounts
   useEffect(() => {
-    if (!shouldMount || pdfError) return;
+    if (mountInvoiceId !== invoice.id || pdfError) return;
 
     timeoutRef.current = setTimeout(() => {
-      if (isLoading) {
-        console.error('[PDFViewer] Iframe failed to load within 5s timeout', invoice.id);
-        setPdfError(true);
-        setIsLoading(false);
-      }
+      console.error('[PDFViewer] Iframe failed to load within 5s timeout', invoice.id);
+      setPdfError(true);
+      setIsLoading(false);
+      setMountInvoiceId(null);
     }, 5000);
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      clearTimer(timeoutRef);
     };
-  }, [shouldMount, isLoading, pdfError, invoice.id]);
-
-  // Cleanup previous iframe on invoice change and on unmount to avoid memory leaks
-  useEffect(() => {
-    const prevFrame = iframeRef.current;
-    return () => {
-      try {
-        if (prevFrame) {
-          prevFrame.src = 'about:blank';
-        }
-      } catch {}
-    };
-  }, [invoice.id]);
+  }, [clearTimer, mountInvoiceId, pdfError, invoice.id]);
 
   const handleLoad = () => {
+    if (mountInvoiceId !== invoice.id) return;
     const elapsed = performance.now() - loadStartRef.current;
     console.info('[PDFViewer] Iframe loaded', { invoiceId: invoice.id, elapsed });
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    clearTimer(timeoutRef);
     setIsLoading(false);
   };
 
   const handleError = () => {
     console.error('[PDFViewer] Iframe error', invoice.id);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    clearTimer(timeoutRef);
     setPdfError(true);
     setIsLoading(false);
   };
@@ -108,9 +130,9 @@ export const PDFViewer = forwardRef<PDFViewerHandle, PDFViewerProps>(({ invoice 
             </div>
           </div>
         )}
-        {!pdfError && shouldMount ? (
+        {!pdfError && mountInvoiceId === invoice.id ? (
           <iframe
-            key={invoice.id}
+            key={mountInvoiceId}
             ref={iframeRef}
             src={invoice.drive_embed_url}
             className="w-full h-full border border-gray-200 rounded-xl shadow-md bg-white"

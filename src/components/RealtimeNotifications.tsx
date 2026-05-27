@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useRealtimeInvoices } from '@/hooks/useRealtimeInvoices';
+import type { InvoiceViewState } from '@/types/invoice';
 
 interface RealtimeNotificationsProps {
-  viewState: 'payable' | 'paid' | 'flagged';
+  viewState: InvoiceViewState;
   onInvoiceListUpdate?: () => void;
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice } from '@/types/invoice';
+import { Invoice, InvoiceViewState } from '@/types/invoice';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
@@ -12,7 +12,7 @@ interface RealtimeInvoiceUpdate {
 }
 
 interface UseRealtimeInvoicesProps {
-  viewState: 'payable' | 'paid' | 'flagged';
+  viewState: InvoiceViewState;
   onInvoiceUpdate?: (update: RealtimeInvoiceUpdate) => void;
 }
 

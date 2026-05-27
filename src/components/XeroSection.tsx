@@ -334,6 +334,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
       invoiceDate: invoice.invoice_date,
       dueDate: invoice.due_date,
       currency: invoiceData.currency,
+      isForeign: invoice.is_foreign === true,
       gstIncluded: invoiceData.lineItems.some(item => item.gstIncluded),
       lineItems: invoiceData.lineItems.map((item, index) => {
         // Read gst_included directly from the item if available (new format)
@@ -614,6 +615,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         invoice_date: editableData.invoiceDate || null,
         due_date: editableData.dueDate || null,
         currency: editableData.currency,
+        is_foreign: editableData.isForeign === true,
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
@@ -634,6 +636,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
         invoice_date: editableData.invoiceDate,
         due_date: editableData.dueDate,
         currency: editableData.currency,
+        is_foreign: editableData.isForeign === true,
         list_items: formattedLineItems,
         subtotal: totals.subtotal,
         gst: totals.totalTax,
@@ -1302,21 +1305,46 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
           {/* Currency and Totals Section */}
           <div className="flex flex-col md:flex-row justify-between items-start gap-4">
-            {/* Currency Field */}
-            <div className="space-y-2 w-full md:w-auto">
-              <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
-              {isEditing ? (
-                <select
-                  value={editableData?.currency || 'AUD'}
-                  onChange={(e) => setEditableData({...editableData, currency: e.target.value})}
-                  className="flex h-10 w-full md:w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="AUD">AUD</option>
-                  <option value="USD">USD</option>
-                </select>
-              ) : (
-                <div className="font-medium text-sm md:text-base">{invoiceData?.currency || 'AUD'}</div>
-              )}
+            {/* Currency and Foreign Fields */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <div className="space-y-2 w-full sm:w-auto">
+                <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
+                {isEditing ? (
+                  <select
+                    value={editableData?.currency || 'AUD'}
+                    onChange={(e) => setEditableData({...editableData, currency: e.target.value})}
+                    className="flex h-10 w-full md:w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="AUD">AUD</option>
+                    <option value="USD">USD</option>
+                    <option value="NZD">NZD</option>
+                    <option value="CNY">CNY</option>
+                    <option value="HKD">HKD</option>
+                    <option value="INR">INR</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="SGD">SGD</option>
+                    <option value="JPY">JPY</option>
+                  </select>
+                ) : (
+                  <div className="font-medium text-sm md:text-base">{invoiceData?.currency || 'AUD'}</div>
+                )}
+              </div>
+              <div className="space-y-2 w-full sm:w-auto">
+                <Label className="text-sm font-medium text-muted-foreground">Foreign Invoice</Label>
+                {isEditing ? (
+                  <select
+                    value={editableData?.isForeign === true ? 'yes' : 'no'}
+                    onChange={(e) => setEditableData({...editableData, isForeign: e.target.value === 'yes'})}
+                    className="flex h-10 w-full md:w-32 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                ) : (
+                  <div className="font-medium text-sm md:text-base">{invoice.is_foreign === true ? 'Yes' : 'No'}</div>
+                )}
+              </div>
             </div>
 
             {/* Totals */}

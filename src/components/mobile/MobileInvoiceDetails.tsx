@@ -110,9 +110,15 @@ export const MobileInvoiceDetails = ({ invoice, onSupplierClick }: MobileInvoice
         )}
         
         {/* Currency */}
-        <div className="flex items-center justify-between py-2.5">
+        <div className="flex items-center justify-between py-2.5 border-b border-border/50">
           <span className="text-xs text-muted-foreground flex-shrink-0 mr-2">Currency</span>
           <span className="text-sm font-medium text-right break-words flex-1">{invoice.currency || 'AUD'}</span>
+        </div>
+
+        {/* Foreign Invoice */}
+        <div className="flex items-center justify-between py-2.5">
+          <span className="text-xs text-muted-foreground flex-shrink-0 mr-2">Foreign Invoice</span>
+          <span className="text-sm font-medium text-right break-words flex-1">{invoice.is_foreign === true ? 'Yes' : 'No'}</span>
         </div>
       </div>
     </div>

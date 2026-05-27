@@ -23,6 +23,7 @@ export const MobileReview = () => {
   // Hamburger menu state
   const [showHamburgerMenu, setShowHamburgerMenu] = useState(false);
   const [payableCount, setPayableCount] = useState(0);
+  const [foreignCount, setForeignCount] = useState(0);
   const [flaggedCount, setFlaggedCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   
@@ -38,13 +39,14 @@ export const MobileReview = () => {
     const fetchCounts = async () => {
       try {
         // Fetch invoice counts
-        const invoices = await fetchInvoices();
-        if (invoices) {
-          const payable = invoices.filter(inv => inv.status !== 'PAID' && inv.status !== 'FLAGGED' && inv.status !== 'DELETED').length;
-          const flagged = invoices.filter(inv => inv.status === 'FLAGGED').length;
-          setPayableCount(payable);
-          setFlaggedCount(flagged);
-        }
+        const [payableInvoices, foreignInvoices, flaggedInvoices] = await Promise.all([
+          fetchInvoices(),
+          fetchInvoices("foreign"),
+          fetchInvoices("flagged"),
+        ]);
+        setPayableCount(payableInvoices.length);
+        setForeignCount(foreignInvoices.length);
+        setFlaggedCount(flaggedInvoices.length);
 
         // Fetch review email count
         const { data: emails } = await fetchReviewEmailList();
@@ -135,6 +137,7 @@ export const MobileReview = () => {
         onOpenChange={setShowHamburgerMenu}
         viewState="payable"
         payableCount={payableCount}
+        foreignCount={foreignCount}
         flaggedCount={flaggedCount}
         reviewCount={reviewCount}
         userName={user?.email}

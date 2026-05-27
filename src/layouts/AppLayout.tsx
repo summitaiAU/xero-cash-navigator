@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SimpleSidebar } from "@/components/SimpleSidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
-import type { Invoice } from "@/types/invoice";
+import type { Invoice, InvoiceViewState } from "@/types/invoice";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+
+export type AppLayoutContext = {
+  refreshSidebarCounts: () => Promise<void>;
+};
 
 export const AppLayout: React.FC = () => {
   const { user, signOut } = useAuth();
@@ -22,65 +26,78 @@ export const AppLayout: React.FC = () => {
 
   // Derive current view from URL
   const searchParams = new URLSearchParams(location.search);
-  const viewState = (searchParams.get("view") as "payable" | "paid" | "flagged") || "payable";
+  const viewState = (searchParams.get("view") as InvoiceViewState) || "payable";
 
-  // Fetch all invoices for counts
-  useEffect(() => {
-    const abortController = new AbortController();
-
+  const refreshSidebarCounts = useCallback(async (signal?: AbortSignal) => {
     const fetchInvoices = async () => {
       try {
-        const { data, error } = await supabase
+        const query = supabase
           .from("invoices")
           .select("*")
-          .order("created_at", { ascending: false })
-          .abortSignal(abortController.signal);
+          .order("created_at", { ascending: false });
+        const { data, error } = signal
+          ? await query.abortSignal(signal)
+          : await query;
 
-        if (abortController.signal.aborted) return;
+        if (signal?.aborted) return;
         if (error) throw error;
-        setInvoices((data as any) || []);
-      } catch (error: any) {
-        if (error.name === 'AbortError') return;
+        setInvoices((data as Invoice[] | null) || []);
+      } catch (error) {
+        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         console.error("Error fetching invoices:", error);
       }
     };
 
     const fetchReviewCount = async () => {
       try {
-        const { count, error } = await supabase
+        const query = supabase
           .from("email_queue")
           .select("*", { count: "exact", head: true })
-          .eq("status", "review")
-          .abortSignal(abortController.signal);
+          .eq("status", "review");
+        const { count, error } = signal
+          ? await query.abortSignal(signal)
+          : await query;
 
-        if (abortController.signal.aborted) return;
+        if (signal?.aborted) return;
         if (error) throw error;
         setReviewCount(count || 0);
-      } catch (error: any) {
-        if (error.name === 'AbortError') return;
+      } catch (error) {
+        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) return;
         console.error("Error fetching review count:", error);
       }
     };
 
-    fetchInvoices();
-    fetchReviewCount();
+    await Promise.all([fetchInvoices(), fetchReviewCount()]);
+  }, []);
+
+  // Fetch all invoices for counts
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    refreshSidebarCounts(abortController.signal);
 
     return () => {
       abortController.abort();
     };
-  }, []);
+  }, [refreshSidebarCounts]);
+
+  const outletContext = useMemo<AppLayoutContext>(() => ({
+    refreshSidebarCounts: () => refreshSidebarCounts(),
+  }), [refreshSidebarCounts]);
 
   // Calculate counts
-  const { payableCount, paidCount, flaggedCount } = useMemo(() => {
-    const payable = invoices.filter(
+  const { payableCount, foreignCount, paidCount, flaggedCount } = useMemo(() => {
+    const payableStatusInvoices = invoices.filter(
       (inv) => inv.status !== "PAID" && inv.status !== "FLAGGED" && inv.status !== "DELETED"
-    ).length;
+    );
+    const payable = payableStatusInvoices.filter((inv) => inv.is_foreign !== true).length;
+    const foreign = payableStatusInvoices.filter((inv) => inv.is_foreign === true).length;
     const paid = invoices.filter(
       (inv) => inv.status === "PAID"
     ).length;
     const flagged = invoices.filter((inv) => inv.status === "FLAGGED").length;
 
-    return { payableCount: payable, paidCount: paid, flaggedCount: flagged };
+    return { payableCount: payable, foreignCount: foreign, paidCount: paid, flaggedCount: flagged };
   }, [invoices]);
 
   const handleToggleSidebar = () => {
@@ -102,6 +119,7 @@ export const AppLayout: React.FC = () => {
           viewState={viewState}
           onViewStateChange={() => {}} // Navigation handled by SimpleSidebar internally
           payableCount={payableCount}
+          foreignCount={foreignCount}
           paidCount={paidCount}
           flaggedCount={flaggedCount}
           reviewCount={reviewCount}
@@ -126,7 +144,7 @@ export const AppLayout: React.FC = () => {
             </div>
           }
         >
-          <Outlet />
+          <Outlet context={outletContext} />
         </React.Suspense>
       </main>
     </div>

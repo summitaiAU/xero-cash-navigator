@@ -1,16 +1,18 @@
-import { FileText, Flag, Mail, CheckCircle, LogOut, User } from 'lucide-react';
+import { FileText, Flag, Mail, CheckCircle, LogOut, User, Globe2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import SodhiLogo from '@/assets/sodhi-logo.svg';
+import type { InvoiceViewState } from '@/types/invoice';
 
 interface MobileHamburgerMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  viewState: 'payable' | 'paid' | 'flagged';
+  viewState: InvoiceViewState;
   payableCount: number;
+  foreignCount?: number;
   flaggedCount: number;
   reviewCount: number;
   userName?: string;
@@ -22,6 +24,7 @@ export const MobileHamburgerMenu = ({
   onOpenChange,
   viewState,
   payableCount,
+  foreignCount = 0,
   flaggedCount,
   reviewCount,
   userName,
@@ -104,6 +107,14 @@ export const MobileHamburgerMenu = ({
             count={payableCount}
             active={viewState === 'payable' && location.pathname === '/dashboard'}
             onClick={() => handleNavigation('/dashboard?view=payable')}
+            disabled={isNavigating}
+          />
+          <NavButton
+            icon={Globe2}
+            label="Foreign Invoices"
+            count={foreignCount}
+            active={viewState === 'foreign' && location.pathname === '/dashboard'}
+            onClick={() => handleNavigation('/dashboard?view=foreign')}
             disabled={isNavigating}
           />
           <NavButton

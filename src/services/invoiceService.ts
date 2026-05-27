@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice } from '@/types/invoice';
+import { Invoice, InvoiceViewState } from '@/types/invoice';
 import { auditService } from './auditService';
 import { ApiErrorLogger } from './apiErrorLogger';
 
@@ -13,7 +13,7 @@ const formatDate = (dateString?: string) => {
   });
 };
 
-export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 'payable'): Promise<Invoice[]> => {
+export const fetchInvoices = async (viewState: InvoiceViewState = 'payable'): Promise<Invoice[]> => {
   let query = supabase
     .from('invoices')
     .select('*')
@@ -23,9 +23,15 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     query = query.eq('status', 'PAID');
   } else if (viewState === 'flagged') {
     query = query.eq('status', 'FLAGGED');
+  } else if (viewState === 'foreign') {
+    query = query
+      .not('status', 'in', '(FLAGGED,PAID,DELETED)')
+      .filter('is_foreign', 'eq', true);
   } else {
-    // Payable: all statuses that aren't FLAGGED, PAID, or DELETED
-    query = query.not('status', 'in', '(FLAGGED,PAID,DELETED)');
+    // Payable: all non-foreign statuses that aren't FLAGGED, PAID, or DELETED
+    query = query
+      .not('status', 'in', '(FLAGGED,PAID,DELETED)')
+      .or('is_foreign.is.null,is_foreign.eq.false');
   }
   const { data, error } = await query;
 
@@ -74,6 +80,7 @@ export const fetchInvoices = async (viewState: 'payable' | 'paid' | 'flagged' = 
     amount_paid: Number(invoice.amount_paid) || 0,
     invoice_date: invoice.invoice_date || '',
     currency: (invoice as any).currency || 'AUD',
+    is_foreign: (invoice as { is_foreign?: boolean | null }).is_foreign === true,
     paid_date: invoice.paid_date || undefined,
     last_edited_at: invoice.last_edited_at || undefined,
     last_edited_by_user_id: invoice.last_edited_by_user_id || undefined,
@@ -458,6 +465,7 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   invoice_date?: string,
   due_date?: string,
   currency?: string,
+  is_foreign?: boolean,
   list_items?: any[],
   subtotal?: number,
   gst?: number,
@@ -510,6 +518,9 @@ export const updateInvoiceData = async (invoiceId: string, updateData: {
   }
   if (updateData.currency !== undefined && updateData.currency !== currentInvoice.currency) {
     changes.push({ field: 'currency', old_value: currentInvoice.currency, new_value: updateData.currency });
+  }
+  if (updateData.is_foreign !== undefined && updateData.is_foreign !== ((currentInvoice as { is_foreign?: boolean | null }).is_foreign === true)) {
+    changes.push({ field: 'is_foreign', old_value: (currentInvoice as { is_foreign?: boolean | null }).is_foreign === true, new_value: updateData.is_foreign });
   }
   if (updateData.list_items !== undefined && JSON.stringify(updateData.list_items) !== JSON.stringify(currentInvoice.list_items)) {
     changes.push({ field: 'list_items', old_value: currentInvoice.list_items, new_value: updateData.list_items });

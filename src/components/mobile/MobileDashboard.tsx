@@ -17,6 +17,7 @@ import { RealtimeNotifications } from '@/components/RealtimeNotifications';
 import { UpdateShimmer } from '@/components/UpdateShimmer';
 import { Button } from '@/components/ui/button';
 import { Invoice, PaymentData } from '@/types/invoice';
+import type { InvoiceViewState } from '@/types/invoice';
 import { useInvoiceLock } from '@/hooks/useInvoiceLock';
 import { useUserPresence } from '@/hooks/useUserPresence';
 import { useToast } from '@/hooks/use-toast';
@@ -32,8 +33,9 @@ interface MobileDashboardProps {
   onJumpToInvoice: (index: number) => void;
   showHamburgerMenu: boolean;
   onToggleHamburgerMenu: (open: boolean) => void;
-  viewState: 'payable' | 'paid' | 'flagged';
+  viewState: InvoiceViewState;
   payableCount: number;
+  foreignCount: number;
   flaggedCount: number;
   reviewCount: number;
   userName?: string;
@@ -58,6 +60,7 @@ export const MobileDashboard = ({
   onToggleHamburgerMenu,
   viewState,
   payableCount,
+  foreignCount,
   flaggedCount,
   reviewCount,
   userName,
@@ -212,6 +215,7 @@ export const MobileDashboard = ({
         onOpenChange={onToggleHamburgerMenu}
         viewState={viewState}
         payableCount={payableCount}
+        foreignCount={foreignCount}
         flaggedCount={flaggedCount}
         reviewCount={reviewCount}
         userName={userName}
@@ -348,9 +352,15 @@ export const MobileDashboard = ({
             <div className="flex justify-center">
               <Flag className="h-16 w-16 text-amber-500" />
             </div>
-            <h2 className="text-xl font-semibold">No Flagged Invoices</h2>
+            <h2 className="text-xl font-semibold">
+              {viewState === 'foreign' ? 'No Foreign Invoices' : viewState === 'flagged' ? 'No Flagged Invoices' : 'No Payable Invoices'}
+            </h2>
             <p className="text-sm text-muted-foreground">
-              All invoices are currently in payable or paid status. You can flag an invoice from the payable page if it needs attention.
+              {viewState === 'foreign'
+                ? 'No foreign invoices are available for processing.'
+                : viewState === 'flagged'
+                  ? 'All invoices are currently in payable or paid status. You can flag an invoice from the payable page if it needs attention.'
+                  : 'No invoices are available for processing.'}
             </p>
             <Button 
               onClick={() => navigate('/dashboard?view=payable')}

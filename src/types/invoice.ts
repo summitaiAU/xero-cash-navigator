@@ -65,6 +65,8 @@ export interface ProcessedXeroData {
   total: number;
 }
 
+export type InvoiceViewState = 'payable' | 'foreign' | 'paid' | 'flagged';
+
 export interface Invoice {
   id: string;
   invoice_number: string;
@@ -99,6 +101,7 @@ export interface Invoice {
   amount_paid?: number;
   invoice_date?: string;
   currency?: string;
+  is_foreign?: boolean;
   paid_date?: string;
   last_edited_at?: string;
   last_edited_by_user_id?: string;

@@ -1,8 +1,9 @@
 import React from "react";
-import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight, Mail, LogOut, User } from "lucide-react";
+import { FileText, CheckCircle, Flag, ChevronLeft, ChevronRight, Mail, LogOut, User, Globe2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 import SodhiLogo from "@/assets/sodhi-logo.svg";
+import type { InvoiceViewState } from "@/types/invoice";
 import {
   Tooltip,
   TooltipContent,
@@ -10,12 +11,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-type View = "payable" | "paid" | "flagged";
+type View = InvoiceViewState;
 
 export const SimpleSidebar = React.memo(function SimpleSidebar({
   viewState,
   onViewStateChange,
   payableCount = 0,
+  foreignCount = 0,
   paidCount = 0,
   flaggedCount = 0,
   reviewCount = 0,
@@ -27,6 +29,7 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
   viewState: View;
   onViewStateChange: (v: View) => void;
   payableCount?: number;
+  foreignCount?: number;
   paidCount?: number;
   flaggedCount?: number;
   reviewCount?: number;
@@ -159,6 +162,13 @@ export const SimpleSidebar = React.memo(function SimpleSidebar({
             count={payableCount}
             active={viewState === "payable" && location.pathname === "/dashboard"}
             onClick={() => navigate("/dashboard?view=payable")}
+          />
+          <Btn
+            icon={Globe2}
+            label="Foreign Invoices"
+            count={foreignCount}
+            active={viewState === "foreign" && location.pathname === "/dashboard"}
+            onClick={() => navigate("/dashboard?view=foreign")}
           />
           <Btn
             icon={Flag}

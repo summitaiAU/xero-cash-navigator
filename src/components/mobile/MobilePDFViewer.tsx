@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AlertTriangle, ExternalLink, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Invoice } from '@/types/invoice';
+
+const PDF_MOUNT_DELAY_MS = 150;
 
 interface MobilePDFViewerProps {
   invoice: Invoice;
@@ -12,15 +14,53 @@ export const MobilePDFViewer = ({ invoice }: MobilePDFViewerProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages] = useState(1); // PDF.js integration would be needed for actual page count
+  const [mountInvoiceId, setMountInvoiceId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const invoiceIdRef = useRef(invoice.id);
+  const mountTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  invoiceIdRef.current = invoice.id;
+
+  const clearMountTimer = useCallback(() => {
+    if (mountTimerRef.current) {
+      clearTimeout(mountTimerRef.current);
+      mountTimerRef.current = null;
+    }
+  }, []);
+
+  const unloadIframe = useCallback(() => {
+    try {
+      if (iframeRef.current) {
+        iframeRef.current.src = 'about:blank';
+      }
+    } catch {
+      // Safari may throw while tearing down embedded PDF frames.
+    }
+  }, []);
 
   useEffect(() => {
+    clearMountTimer();
+    unloadIframe();
     setPdfError(false);
     setIsLoading(true);
     setCurrentPage(1);
-  }, [invoice.id]);
+    setMountInvoiceId(null);
+
+    mountTimerRef.current = setTimeout(() => {
+      if (invoiceIdRef.current === invoice.id) {
+        setMountInvoiceId(invoice.id);
+      }
+      mountTimerRef.current = null;
+    }, PDF_MOUNT_DELAY_MS);
+
+    return () => {
+      clearMountTimer();
+      unloadIframe();
+    };
+  }, [clearMountTimer, invoice.id, unloadIframe]);
 
   const handleLoad = () => {
+    if (mountInvoiceId !== invoice.id) return;
     setIsLoading(false);
   };
 
@@ -41,10 +81,10 @@ export const MobilePDFViewer = ({ invoice }: MobilePDFViewerProps) => {
           </div>
         )}
         
-        {!pdfError ? (
+        {!pdfError && mountInvoiceId === invoice.id ? (
           <>
             <iframe
-              key={invoice.id}
+              key={mountInvoiceId}
               ref={iframeRef}
               src={invoice.drive_embed_url}
               className="w-full h-full rounded-lg shadow-md bg-white border border-border"
@@ -82,7 +122,7 @@ export const MobilePDFViewer = ({ invoice }: MobilePDFViewerProps) => {
               </div>
             )}
           </>
-        ) : (
+        ) : !pdfError ? null : (
           <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-card rounded-lg border border-border">
             <AlertTriangle className="h-12 w-12 text-warning mb-4" />
             <h4 className="text-lg font-medium mb-2">Unable to display PDF</h4>

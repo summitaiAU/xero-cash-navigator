@@ -956,6 +956,14 @@ export const AddInvoiceWorkspace = ({
                             <SelectContent>
                               <SelectItem value="AUD">AUD</SelectItem>
                               <SelectItem value="USD">USD</SelectItem>
+                              <SelectItem value="NZD">NZD</SelectItem>
+                              <SelectItem value="CNY">CNY</SelectItem>
+                              <SelectItem value="HKD">HKD</SelectItem>
+                              <SelectItem value="INR">INR</SelectItem>
+                              <SelectItem value="EUR">EUR</SelectItem>
+                              <SelectItem value="GBP">GBP</SelectItem>
+                              <SelectItem value="SGD">SGD</SelectItem>
+                              <SelectItem value="JPY">JPY</SelectItem>
                             </SelectContent>
                           </Select>
                           {validationErrors.currency && (
