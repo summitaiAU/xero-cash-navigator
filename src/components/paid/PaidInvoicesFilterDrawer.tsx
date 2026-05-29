@@ -144,15 +144,17 @@ export function PaidInvoicesFilterDrawer({
       case "thisMonth":
         from = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 1));
         break;
-      case "lastMonth":
+      case "lastMonth": {
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         from = getDateStringSydney(lastMonth);
         to = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
-      case "thisQuarter":
+      }
+      case "thisQuarter": {
         const quarter = Math.floor(today.getMonth() / 3);
         from = getDateStringSydney(new Date(today.getFullYear(), quarter * 3, 1));
         break;
+      }
     }
 
     setLocalFilters({ ...localFilters, invoiceDateFrom: from, invoiceDateTo: to });
@@ -184,15 +186,17 @@ export function PaidInvoicesFilterDrawer({
       case "thisMonth":
         from = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 1));
         break;
-      case "lastMonth":
+      case "lastMonth": {
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         from = getDateStringSydney(lastMonth);
         to = getDateStringSydney(new Date(today.getFullYear(), today.getMonth(), 0));
         break;
-      case "thisQuarter":
+      }
+      case "thisQuarter": {
         const quarter = Math.floor(today.getMonth() / 3);
         from = getDateStringSydney(new Date(today.getFullYear(), quarter * 3, 1));
         break;
+      }
     }
 
     setLocalFilters({ ...localFilters, paidDateFrom: from, paidDateTo: to });

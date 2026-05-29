@@ -93,7 +93,7 @@ export async function fetchReviewEmailList(
   // Start with base query - include:
   // 1. Emails with status='review' (not yet reviewed)
   // 2. Emails reviewed today in Sydney timezone
-  // @ts-ignore
+  // @ts-expect-error temporary typing gap
   let query = supabase
     .from("email_queue")
     .select(baseSelect, { count: "exact" })
@@ -106,25 +106,25 @@ export async function fetchReviewEmailList(
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const searchTerm = `%${filters.searchQuery.trim()}%`;
       console.log("[emailReviewService] Applying search filter:", searchTerm);
-      // @ts-ignore
+      // @ts-expect-error temporary typing gap
       query = query.or(
         `subject.ilike.${searchTerm},from_name.ilike.${searchTerm},from_email.ilike.${searchTerm},snippet_text.ilike.${searchTerm}`
       );
     }
 
     // Apply sorting: unreviewed first (reviewed_at is null), then by newest date
-    // @ts-ignore
+    // @ts-expect-error temporary typing gap
     query = query
       .order("reviewed_at", { ascending: true, nullsFirst: true })
       .order("date_received", { ascending: false, nullsFirst: false });
 
     // Apply pagination
-    // @ts-ignore
+    // @ts-expect-error temporary typing gap
     query = query.range(offset, offset + PAGE_SIZE - 1);
 
     console.log("[emailReviewService] Executing query...");
     
-    // @ts-ignore
+    // @ts-expect-error temporary typing gap
     const { data, error, count } = await query;
 
     console.log("[emailReviewService] Query result:", { 
@@ -221,7 +221,7 @@ export async function fetchReviewEmails(
 ): Promise<{ data: NormalizedEmail[]; error: Error | null; count: number }> {
   try {
     // Fetch email queue records with pre-parsed fields
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data: emailQueueData, error: emailError, count } = await supabase
       .from("email_queue")
       .select(
@@ -244,7 +244,7 @@ export async function fetchReviewEmails(
 
     // Fetch all attachments for these emails
     const emailIds = emailQueueData.map((e: any) => e.id);
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
       .select("id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at")
@@ -324,7 +324,7 @@ export async function fetchEmailContent(
   emailId: string
 ): Promise<{ data: EmailContent | null; error: Error | null }> {
   try {
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data, error } = await supabase
       .from("email_queue")
       .select(
@@ -387,7 +387,7 @@ export async function fetchEmailAttachments(
 ): Promise<{ data: EmailAttachment[]; error: Error | null }> {
   try {
     console.log(`[fetchEmailAttachments] Fetching metadata only for email ${emailId}`);
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data, error } = await (supabase as any)
       .from("email_attachments")
       .select(
@@ -433,7 +433,7 @@ export async function fetchAttachmentById(
 
     console.log(`[Cache MISS] Fetching attachment ${attachmentId} with full data`);
     
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data, error } = await (supabase as any)
       .from("email_attachments")
       .select(
@@ -474,7 +474,7 @@ export async function fetchEmailById(
   emailId: string
 ): Promise<{ data: NormalizedEmail | null; error: Error | null }> {
   try {
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data: emailData, error: emailError } = await supabase
       .from("email_queue")
       .select(
@@ -491,7 +491,7 @@ export async function fetchEmailById(
       return { data: null, error: new Error("Email not found") };
     }
 
-    // @ts-ignore - Supabase type inference has issues with complex queries
+    // @ts-expect-error temporary typing gap - Supabase type inference has issues with complex queries
     const { data: attachmentsData, error: attachmentsError } = await (supabase as any)
       .from("email_attachments")
       .select("id, email_id, filename, mime_type, mime_detected, size_bytes, status, error_code, error_message, previewable, viewer_kind, unsupported_reason, text_excerpt, data_base64url, safe_html, eml_headers, created_at, updated_at")

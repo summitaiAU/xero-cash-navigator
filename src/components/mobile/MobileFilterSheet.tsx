@@ -55,12 +55,13 @@ const calculateDateRange = (preset: string): { from: string; to: string } | null
         from: getDateStringSydney(todayStart),
         to: getDateStringSydney(todayEnd),
       };
-    case 'yesterday':
+    case 'yesterday': {
       const yesterday = subDays(todayStart, 1);
       return {
         from: getDateStringSydney(startOfDay(yesterday)),
         to: getDateStringSydney(endOfDay(yesterday)),
       };
+    }
     case 'last7days':
       return {
         from: getDateStringSydney(subDays(todayStart, 7)),
@@ -76,23 +77,25 @@ const calculateDateRange = (preset: string): { from: string; to: string } | null
         from: getDateStringSydney(startOfMonth(now)),
         to: getDateStringSydney(endOfMonth(now)),
       };
-    case 'lastMonth':
+    case 'lastMonth': {
       const lastMonth = subMonths(now, 1);
       return {
         from: getDateStringSydney(startOfMonth(lastMonth)),
         to: getDateStringSydney(endOfMonth(lastMonth)),
       };
+    }
     case 'thisQuarter':
       return {
         from: getDateStringSydney(startOfQuarter(now)),
         to: getDateStringSydney(endOfQuarter(now)),
       };
-    case 'lastQuarter':
+    case 'lastQuarter': {
       const lastQuarter = subQuarters(now, 1);
       return {
         from: getDateStringSydney(startOfQuarter(lastQuarter)),
         to: getDateStringSydney(endOfQuarter(lastQuarter)),
       };
+    }
     case 'thisYear':
       return {
         from: getDateStringSydney(startOfYear(now)),
