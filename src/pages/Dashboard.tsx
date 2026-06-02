@@ -69,6 +69,7 @@ export const Dashboard: React.FC = () => {
   const pdfViewerRef = useRef<PDFViewerHandle>(null);
   const navigationCooldownRef = useRef(false);
   const navigationCooldownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingInvoiceSelectionRef = useRef<{ view: InvoiceViewState; invoiceId: string } | null>(null);
   const { toast } = useToast();
 
   // Current invoice for easy access
@@ -151,7 +152,16 @@ export const Dashboard: React.FC = () => {
       const fetchedInvoices = await fetchInvoices(viewState);
       console.log("Fetched invoices:", fetchedInvoices.length);
       setInvoices(fetchedInvoices);
-      setCurrentIndex(0); // Reset to first invoice when switching views
+
+      const pendingSelection = pendingInvoiceSelectionRef.current;
+      if (pendingSelection?.view === viewState) {
+        const invoiceIndex = fetchedInvoices.findIndex((inv) => inv.id === pendingSelection.invoiceId);
+        setCurrentIndex(invoiceIndex !== -1 ? invoiceIndex : 0);
+        pendingInvoiceSelectionRef.current = null;
+      } else {
+        pendingInvoiceSelectionRef.current = null;
+        setCurrentIndex(0); // Reset to first invoice when switching views
+      }
       setCompletedInvoices(new Set()); // Reset completed tracking
 
       if (showToast) {
@@ -216,10 +226,26 @@ export const Dashboard: React.FC = () => {
         });
       } else {
         // Invoice was deleted or moved to different view
+        const refreshedCurrentInvoice = allRefreshedInvoices.find((inv) => inv.id === currentInvoiceId);
+        const isPayableStatus = refreshedCurrentInvoice
+          && refreshedCurrentInvoice.status !== "PAID"
+          && refreshedCurrentInvoice.status !== "FLAGGED"
+          && refreshedCurrentInvoice.status !== "DELETED";
+        const movedToForeign = viewState === "payable" && isPayableStatus && refreshedCurrentInvoice.is_foreign === true;
+        const movedToPayable = viewState === "foreign" && isPayableStatus && refreshedCurrentInvoice.is_foreign !== true;
+
         setCurrentIndex(0);
         toast({
-          title: "Invoice Removed",
-          description: "The invoice you were viewing is no longer in this view.",
+          title: movedToForeign
+            ? "Invoice moved to Foreign Invoices"
+            : movedToPayable
+              ? "Invoice moved to Payable"
+              : "Invoice Removed",
+          description: movedToForeign
+            ? "Your changes were saved. This invoice is no longer shown in Payable."
+            : movedToPayable
+              ? "Your changes were saved. This invoice is no longer shown in Foreign Invoices."
+              : "The invoice you were viewing is no longer in this view.",
         });
       }
     } catch (error) {
@@ -611,6 +637,7 @@ export const Dashboard: React.FC = () => {
 
   const handleViewStateChange = React.useCallback((state: InvoiceViewState) => {
     if (state === viewState || !beginInvoiceNavigation()) return;
+    pendingInvoiceSelectionRef.current = null;
     navigate(`/dashboard?view=${state}`);
     setCurrentIndex(0);
   }, [beginInvoiceNavigation, navigate, viewState]);
@@ -679,34 +706,10 @@ export const Dashboard: React.FC = () => {
     if (targetView !== viewState) {
       console.log('[SEARCH] Switching from', viewState, 'to', targetView);
       if (!beginInvoiceNavigation()) return;
-      setLoading(true);
-      setViewState(targetView);
-      
-      try {
-        // Fetch invoices for the new view
-        const newViewInvoices = await fetchInvoices(targetView);
-        console.log(`[SEARCH] Loaded ${newViewInvoices.length} invoices for ${targetView}`);
-        setInvoices(newViewInvoices);
-
-        // Find the invoice in the new view
-        const invoiceIndex = newViewInvoices.findIndex((inv) => inv.id === selectedInvoice.id);
-        if (invoiceIndex !== -1) {
-          setCurrentIndex(invoiceIndex);
-        } else {
-          setCurrentIndex(0);
-        }
-        resetProcessingStatus();
-        scrollToTop();
-      } catch (error) {
-        console.error("Failed to load invoices for new view:", error);
-        toast({
-          title: "Error",
-          description: "Failed to switch views. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
+      pendingInvoiceSelectionRef.current = { view: targetView, invoiceId: selectedInvoice.id };
+      navigate(`/dashboard?view=${targetView}`);
+      resetProcessingStatus();
+      scrollToTop();
     } else {
       // Same view, just navigate to the invoice
       console.log('[SEARCH] Same view, jumping to invoice');
