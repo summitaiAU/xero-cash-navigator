@@ -1436,12 +1436,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                         {formatCurrency(totals.totalTax)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-base md:text-lg font-bold border-t border-border pt-2">
+                    <div className="flex justify-between gap-4 text-base md:text-lg font-bold border-t border-border pt-2">
                       <span>Total:</span>
-                      <div className="flex items-center gap-2">
-                        <span className={isEditing ? 'text-blue-600' : ''}>{formatCurrency(totals.total)}</span>
-                        {!isEditing && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
-                      </div>
+                      <span className={`text-right ${isEditing ? 'text-blue-600' : ''}`}>{formatCurrency(totals.total)}</span>
                     </div>
                   </>
                 );
