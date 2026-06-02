@@ -1334,9 +1334,9 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
           </div>
 
           {/* Currency and Totals Section */}
-          <div className="flex flex-col md:flex-row justify-between items-start gap-4">
+          <div className={`flex flex-col md:flex-row justify-between items-start gap-4 ${isEditing ? 'md:flex-wrap' : ''}`}>
             {/* Currency and Foreign Fields */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <div className={`flex flex-col sm:flex-row gap-4 w-full ${isEditing ? 'md:min-w-[18rem] md:flex-1 md:flex-wrap' : 'md:w-auto'}`}>
               <div className="space-y-2 w-full sm:w-auto">
                 <Label className="text-sm font-medium text-muted-foreground">Currency</Label>
                 {isEditing ? (
@@ -1412,7 +1412,7 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
             </div>
 
             {/* Totals */}
-            <div className="w-full md:w-auto md:max-w-sm space-y-2 bg-muted/30 rounded-lg p-4">
+            <div className={`w-full space-y-2 bg-muted/30 rounded-lg p-4 ${isEditing ? 'md:w-64 md:min-w-[16rem] md:max-w-sm md:flex-shrink-0' : 'md:w-auto md:max-w-sm'}`}>
               {(() => {
                 const totals = isEditing && editableData 
                   ? calculateInvoiceTotals(editableData.lineItems)

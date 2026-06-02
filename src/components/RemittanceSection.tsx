@@ -25,6 +25,7 @@ export const RemittanceSection: React.FC<RemittanceSectionProps> = ({
   const [imageData, setImageData] = useState<string | null>(null);
   const [email, setEmail] = useState(invoice.remittance_email || '');
   const [ccJonathon, setCcJonathon] = useState(false);
+  const [ccSharon, setCcSharon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [showAddEmail, setShowAddEmail] = useState(false);
@@ -93,6 +94,7 @@ export const RemittanceSection: React.FC<RemittanceSectionProps> = ({
       formData.append('xero_invoice_id', invoice.xero_bill_id);
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('send_to_sharon', ccSharon.toString());
       formData.append('row_id', invoice.id);
 
       const response = await fetch('https://sodhipg.app.n8n.cloud/webhook/5be72df6-ae48-4250-9e16-57b4f15a1ff6', {
@@ -422,16 +424,28 @@ export const RemittanceSection: React.FC<RemittanceSectionProps> = ({
             )}
           </div>
 
-          {/* CC Jonathon */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="cc-jonathon-remittance"
-              checked={ccJonathon}
-              onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
-            />
-            <Label htmlFor="cc-jonathon-remittance" className="text-sm">
-              CC Jonathon
-            </Label>
+          {/* CC Recipients */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="cc-jonathon-remittance"
+                checked={ccJonathon}
+                onCheckedChange={(checked) => setCcJonathon(checked as boolean)}
+              />
+              <Label htmlFor="cc-jonathon-remittance" className="text-sm">
+                CC Jonathon
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="cc-sharon-remittance"
+                checked={ccSharon}
+                onCheckedChange={(checked) => setCcSharon(checked as boolean)}
+              />
+              <Label htmlFor="cc-sharon-remittance" className="text-sm">
+                CC Sharon
+              </Label>
+            </div>
           </div>
 
           {/* Action Buttons */}

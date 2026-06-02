@@ -29,6 +29,7 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
   const [imageData, setImageData] = useState<string | null>(null);
   const [email, setEmail] = useState(invoice.remittance_email || '');
   const [ccJonathon, setCcJonathon] = useState(false);
+  const [ccSharon, setCcSharon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
   const [showPartialPaymentModal, setShowPartialPaymentModal] = useState(false);
@@ -177,6 +178,7 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
       formData.append('xero_invoice_id', invoice.xero_bill_id);
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('send_to_sharon', ccSharon.toString());
       formData.append('row_id', invoice.id);
 
       const response = await ApiErrorLogger.fetchWithLogging(
@@ -193,6 +195,7 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
               invoice_number: invoice.invoice_number,
               xero_invoice_id: invoice.xero_bill_id,
               send_to_jonathon: ccJonathon,
+              send_to_sharon: ccSharon,
               row_id: invoice.id
             },
             invoiceNumber: invoice.invoice_number,
@@ -446,6 +449,16 @@ export const MobilePayment: React.FC<MobilePaymentProps> = ({
             />
             <label htmlFor="cc-jonathon" className="text-xs text-muted-foreground">
               CC Jonathon
+            </label>
+          </div>
+          <div className="flex items-center space-x-2 mt-2">
+            <Checkbox
+              id="cc-sharon-mobile"
+              checked={ccSharon}
+              onCheckedChange={(checked) => setCcSharon(checked as boolean)}
+            />
+            <label htmlFor="cc-sharon-mobile" className="text-xs text-muted-foreground">
+              CC Sharon
             </label>
           </div>
         </div>

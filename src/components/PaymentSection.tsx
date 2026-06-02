@@ -41,6 +41,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<string>('Bank Transfer');
   const [dragOver, setDragOver] = useState(false);
   const [ccJonathon, setCcJonathon] = useState(false);
+  const [ccSharon, setCcSharon] = useState(false);
   const [sendingRemittance, setSendingRemittance] = useState(false);
   const [remittanceResponse, setRemittanceResponse] = useState<string | null>(null);
   const [selectedEmailForRemittance, setSelectedEmailForRemittance] = useState('');
@@ -149,6 +150,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       formData.append('xero_invoice_id', invoice.xero_bill_id);
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('send_to_sharon', ccSharon.toString());
       formData.append('row_id', invoice.id);
 
       console.log('Calling N8N webhook to send remittance', {
@@ -171,6 +173,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               invoice_number: invoice.invoice_number,
               xero_invoice_id: invoice.xero_bill_id,
               send_to_jonathon: ccJonathon,
+              send_to_sharon: ccSharon,
               row_id: invoice.id
             },
             invoiceNumber: invoice.invoice_number,
@@ -276,6 +279,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
       formData.append('xero_invoice_id', invoice.xero_bill_id);
       formData.append('invoice_number', invoice.invoice_number);
       formData.append('send_to_jonathon', ccJonathon.toString());
+      formData.append('send_to_sharon', ccSharon.toString());
       formData.append('row_id', invoice.id);
 
       console.log('Calling N8N webhook to send remittance', {
@@ -298,6 +302,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               invoice_number: invoice.invoice_number,
               xero_invoice_id: invoice.xero_bill_id,
               send_to_jonathon: ccJonathon,
+              send_to_sharon: ccSharon,
               row_id: invoice.id
             },
             invoiceNumber: invoice.invoice_number,
@@ -511,7 +516,7 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
               selectedEmail={selectedEmailForRemittance}
             />
 
-            {/* Only show CC Jonathon if there are actual emails (not just default) */}
+            {/* Only show CC options if there are actual emails (not just default) */}
             {(() => {
               const hasRealEmails = invoice.remittance_email || 
                                    invoice.supplier_email_on_invoice || 
@@ -528,6 +533,16 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                     />
                     <Label htmlFor="cc-jonathon" className="text-sm">
                       CC Jonathon
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="cc-sharon"
+                      checked={ccSharon}
+                      onCheckedChange={(checked) => setCcSharon(checked as boolean)}
+                    />
+                    <Label htmlFor="cc-sharon" className="text-sm">
+                      CC Sharon
                     </Label>
                   </div>
                 </div>
