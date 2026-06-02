@@ -526,6 +526,32 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
     setEditableData({ ...editableData, lineItems: updatedLineItems });
   };
 
+  const setAllLineItemsGstIncluded = (checked: boolean) => {
+    if (!editableData) return;
+    setEditableData({
+      ...editableData,
+      lineItems: editableData.lineItems.map((item) => ({
+        ...item,
+        gstIncluded: checked,
+        gstExempt: checked ? false : item.gstExempt || false,
+        taxType: checked ? 'INPUT' : (item.gstExempt ? 'NONE' : 'INPUT'),
+      })),
+    });
+  };
+
+  const setAllLineItemsGstExempt = (checked: boolean) => {
+    if (!editableData) return;
+    setEditableData({
+      ...editableData,
+      lineItems: editableData.lineItems.map((item) => ({
+        ...item,
+        gstExempt: checked,
+        gstIncluded: checked ? false : item.gstIncluded || false,
+        taxType: checked ? 'NONE' : 'INPUT',
+      })),
+    });
+  };
+
   const addLineItem = () => {
     if (!editableData) return;
     setEditableData({
@@ -717,6 +743,10 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
 
   const isLoading = dataLoading || loading;
   const hasInvoiceData = !!invoiceData;
+  const editableLineItems = editableData?.lineItems || [];
+  const hasEditableLineItems = editableLineItems.length > 0;
+  const allLineItemsGstIncluded = hasEditableLineItems && editableLineItems.every((item) => item.gstIncluded === true);
+  const allLineItemsGstExempt = hasEditableLineItems && editableLineItems.every((item) => item.gstExempt === true);
 
   return (
     <div className="dashboard-card p-4 md:p-6 relative">
@@ -1345,6 +1375,40 @@ export const XeroSection: React.FC<XeroSectionProps> = ({
                   <div className="font-medium text-sm md:text-base">{invoice.is_foreign === true ? 'Yes' : 'No'}</div>
                 )}
               </div>
+              {isEditing && (
+                <>
+                  <div className="space-y-2 w-full sm:w-auto">
+                    <Label htmlFor={`bulk-gst-included-${invoice.id}`} className="text-sm font-medium text-muted-foreground">
+                      GST INCL
+                    </Label>
+                    <div className="flex h-10 items-center">
+                      <input
+                        id={`bulk-gst-included-${invoice.id}`}
+                        type="checkbox"
+                        checked={allLineItemsGstIncluded}
+                        disabled={!hasEditableLineItems}
+                        onChange={(e) => setAllLineItemsGstIncluded(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2 w-full sm:w-auto">
+                    <Label htmlFor={`bulk-gst-exempt-${invoice.id}`} className="text-sm font-medium text-muted-foreground">
+                      GST EXMT
+                    </Label>
+                    <div className="flex h-10 items-center">
+                      <input
+                        id={`bulk-gst-exempt-${invoice.id}`}
+                        type="checkbox"
+                        checked={allLineItemsGstExempt}
+                        disabled={!hasEditableLineItems}
+                        onChange={(e) => setAllLineItemsGstExempt(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Totals */}
